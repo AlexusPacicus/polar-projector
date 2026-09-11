@@ -14,9 +14,10 @@
 > in `docs/LEDGER.md` seq 40-43. The extraction exists so this manuscript can be reproduced with
 > numpy alone, without the substrate's fastapi/torch dependency stack.
 >
-> Status: DRAFT. Sections 1–3 are grounded (verified against `polar_projector/projector.py` and
-> reproduced by `tools/verify_polar_delta_table.py`, which CI runs on every push). Sections 4–7
-> are scaffolding only — see the TODO notes — and must not be treated as final until reviewed.
+> Status: DRAFT. Sections 1–3 are grounded (verified against `polar_projector/projector.py`,
+> reproduced by `tools/verify_polar_delta_table.py` which CI runs on every push, and — for §3.4 —
+> by `bench/drift.py` against the frozen corpus in `bench/data/`). Sections 4–7 are scaffolding
+> only — see the TODO notes — and must not be treated as final until reviewed.
 >
 > Terminology: the title and body deliberately keep the native Traianus/Ulpia vocabulary
 > ("Latent Tension Dissipation," "Collision Layer," tension/dissipation language) rather than a
@@ -49,6 +50,14 @@ stateless entry point and \( \approx 6.3\,\mu\text{s} \) once the local frame is
 active context — flat across corpus sizes from 1,000 to 25,000 vectors, consistent with the
 operator's proven independence from \( N \).
 
+Against a growing corpus of 2,221 embedded text chunks, the operator holds previously-placed points
+exactly fixed across every incremental step, while seed-pinned UMAP and t-SNE refits relocate them
+by roughly the full width of the layout at each step. That stability is not free: on the same
+corpus the operator preserves high-dimensional neighborhoods measurably worse than either baseline
+(trustworthiness 0.66 against 0.90–0.92). We report this as a trade — exact positional stability
+and a step roughly two orders of magnitude cheaper, paid for in fidelity — rather than as a
+dominating result.
+
 ## 1. Introduction
 
 Representing information via continuous vector embeddings rigidly couples two independent
@@ -60,8 +69,15 @@ operational dimensions:
 Reusing global visualization techniques (such as t-SNE or UMAP) to manage local interaction state
 introduces two fundamental limitations. First, stochastic re-optimization alters existing
 coordinates upon incremental updates, producing spatial drift that disrupts the user's spatial
-mental model (Boechler, 2001). Second, global graph-layout algorithms scale quadratically
-(\( O(N^2) \)), saturating the execution thread as corpus size grows.
+mental model (Boechler, 2001); §3.4 measures this directly, and finds that under refitting both
+methods relocate previously-placed points by roughly the full width of the layout at every
+incremental step even with their random seed pinned. Second, global graph-layout algorithms scale
+quadratically (\( O(N^2) \)), saturating the execution thread as corpus size grows.
+
+That measurement does not run one way. §3.4 also finds that the operator pays for its stability in
+neighborhood fidelity, and that one configuration of UMAP — fitted once, extended by
+`transform()` — is stable across most incremental steps. The contribution argued here is a
+different point on that trade-off, not a dominating one.
 
 The Polar Projector resolves these bottlenecks by formulating a distinct computational primitive: a
 local, deterministic \( O(d) \) hot loop that operates exclusively on the active contextual
@@ -168,7 +184,13 @@ reading would most need to be trustworthy.
 
 ## 3. Numerical Behavior
 
-Benchmarked locally over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
+All figures in this section were measured on one machine: Apple M1 (8 cores), 8 GB RAM, macOS
+15.6, Python 3.11.6, NumPy 2.4.1. The machine is passively cooled, so sustained runs are subject to
+thermal throttling; the run-to-run spreads reported below are what that variability amounts to in
+practice. Absolute microsecond figures are properties of this host, not of the operator — the
+claims that do not depend on the host are the *scaling* behaviour and the *ratios* between arms.
+
+Benchmarked over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
 
 | Corpus Size (N) | Polar Projector Mean (µs) | Polar Projector p95 (µs) | \( O(N^2) \) Force Simulation |
 |---|---|---|---|
@@ -254,6 +276,79 @@ collapses toward its \( 2\delta \) floor (Proposition 2).
 rows within a 5% tolerance band — the two small-\( \delta \) rows deviated by 9–12%, consistent
 with the theoretical ≈4.5% sampling error at that N in the near-collinear regime. This table
 supersedes it.
+
+### 3.4 Positional Stability Under Incremental Growth
+
+§1 claims that stochastic global projections inherit spatial drift under incremental updates and
+that a local deterministic operator does not. That claim was an assertion resting on a citation;
+this section measures it, against a corpus with real semantic structure rather than synthetic
+blobs: 2,221 sentence-chunks of Spinoza's *Ethics* embedded at \( d = 384 \) and
+L2-normalized. The corpus grows in reading order from 500 chunks in batches of 250, and at each of
+the 7 transitions we measure how far the points **already present and unchanged** moved.
+
+*Method.* Layouts produced by UMAP and t-SNE are defined only up to a similarity transform, so raw
+displacement largely measures global reorientation — which an interface could absorb by
+re-anchoring its camera, and which the baselines should not be charged for. Displacement is
+therefore reported after full Procrustes alignment (translation, rotation, scale), and normalized
+by each embedding's own RMS radius, since the coordinate spaces are not commensurable (UMAP's units
+are arbitrary; the operator's are \( (\lambda, d_{esc}) \) with \( \lambda \in [-1,1] \)). A value
+of 1.0 means points moved as far as the layout is wide. Both baselines run with a fixed
+`random_state`: demonstrating that an unseeded stochastic method is unstable would prove nothing,
+so what is reported is the drift that *survives* seeding. Alignment is not a cosmetic correction —
+for UMAP under refitting it reduces the median p95 from 5.81 to 1.16, so roughly 80% of the
+apparent movement is global reorientation that the charitable reading forgives.
+
+| Arm | Median step | Worst step | Still steps | Trustworthiness |
+|---|---|---|---|---|
+| Polar Projector, fixed anchor | **0.0000** | 0.0000 | 7/7 | 0.6639 |
+| Polar Projector, moving anchor | 0.2984 | 0.6138 | 0/7 | 0.6208 |
+| UMAP, fit once + `transform()` | 0.0000 | 1.0725 | 5/7 | 0.7681 |
+| UMAP, refit per step | 1.1607 | 1.2527 | 0/7 | 0.9049 |
+| t-SNE, refit per step | 1.1408 | 1.2439 | 0/7 | **0.9197** |
+
+Aligned p95 displacement per growth step; "still" counts steps under \( 10^{-9} \).
+Trustworthiness (\( k = 15 \)) of the final layout against the source 384D space measures
+neighborhood preservation. Apple M1, 8 GB, macOS 15.6, Python 3.11.6, NumPy 2.4.1;
+`bench/drift.py`, deterministic under a fixed seed and reproduced bit-for-bit across runs.
+
+*What holds.* Under refitting — the path required to keep a global layout faithful as a corpus
+grows — both baselines relocate previously-placed points by roughly the full width of the layout,
+at every single step, with the seed pinned. This is not seed noise; it is what refitting does. The
+operator with a fixed anchor is exactly still at all 7 steps, to float64 rounding.
+
+*What does not.* Three results cut against the simple reading, and are stated here rather than
+left for a reader to find.
+
+First, UMAP fitted once and extended by `transform()` is **not** the unstable arm §1 implies — it
+is bimodal. It is exactly still for 5 of 7 steps and then relocates by 1.07. Averaging across
+steps yields 0.21, a figure that describes neither of the two things that actually happen; the
+aggregation here is median-and-worst for that reason. Whether intermittent relocation is better or
+worse than steady drift is not settled by this measurement: a spatial mental model that is
+confirmed five times and then violated may be harmed more than one that is never trusted. We flag
+this as a question (§6), not as a result in our favour.
+
+Second, and most directly against us: **the operator is the least faithful arm in the table.** Its
+trustworthiness (0.66 fixed, 0.62 moving) sits well below the refit baselines (0.90–0.92) and
+below fit-once (0.77). Part of that gap is a category difference — the operator never constructs a
+global layout, and trustworthiness scores exactly the thing it does not attempt. But it is not
+purely a category error: \( (\lambda, d_{esc}) \) is consumed as a planar position by at least one
+system built on this operator, and under that use the metric is a fair question. The conclusion
+this section supports is therefore a trade, not a victory: **exact positional stability and a step
+roughly two orders of magnitude cheaper, paid for in neighborhood fidelity.**
+
+Third, the moving-anchor arm drifts. It must: the operator's output is anchor-relative by
+construction, so \( \lambda \) and \( d_{esc} \) change when \( c_1 \) does, and a paper reporting
+only the fixed-anchor row would be claiming a stability the operator does not have. What the
+measurement shows is that this drift stays bounded (0.13–0.61 across steps) and never exhibits the
+relocation spikes of fit-once UMAP. The defensible claim is accordingly narrower than "no drift",
+and stronger: **drift is a deterministic function of one explicit, caller-controlled variable, not
+of hidden stochastic state and not of corpus size.**
+
+*Scope.* Comparing a per-interaction local operator against global layout algorithms is a
+task-level comparison, not an algorithm-level one: these methods do not compute the same object.
+It is included because §1 names them as what practitioners reach for, and a claim about displacing
+them should be measured rather than asserted. The mismatch is a limitation of the comparison, and
+the trustworthiness column is where it shows.
 
 ## 4. Extensions
 
@@ -381,12 +476,24 @@ does an incoming vector relate to one active local state) inherits spatial drift
 underlying data can render at different apparent positions across runs or incremental updates, so
 spatial proximity stops reliably encoding semantic proximity. The Polar Projector does not inherit
 this, by construction (Props 1–3, and the canonical `argmin` tie-break of Proposition 2's fallback
-in particular), independent of anything else about the system that adopts it. This matters beyond
-raw correctness: HCI research on hypertext navigation shows users build a persistent spatial mental
-model of the interface they interact with, and that instability in that layout measurably degrades
-navigation and orientation (Boechler, 2001) — a stable, reproducible operator is valuable for the
-signal it produces (\( \lambda, d_{esc} \)), independent of any claim about how a downstream system
-renders or persists positions.
+in particular), independent of anything else about the system that adopts it. §3.4 turns that
+construction argument into a measurement: across seven incremental growth steps the operator is
+exactly still while seed-pinned refits of both baselines relocate points by about the width of the
+layout each time. This matters beyond raw correctness: HCI research on hypertext navigation shows
+users build a persistent spatial mental model of the interface they interact with, and that
+instability in that layout measurably degrades navigation and orientation (Boechler, 2001) — a
+stable, reproducible operator is valuable for the signal it produces (\( \lambda, d_{esc} \)),
+independent of any claim about how a downstream system renders or persists positions.
+
+Two qualifications belong here rather than in a footnote, because both weaken the paragraph above.
+The stability is *conditional on the anchor*: \( \lambda \) and \( d_{esc} \) are anchor-relative,
+so a system that moves \( c_1 \) moves its output too (§3.4 measures that arm at 0.13–0.61 per
+step). What the operator removes is not change but *unattributable* change — drift becomes a
+deterministic function of a variable the caller sets, rather than of hidden optimizer state. And
+the stability is *paid for*: §3.4 finds the operator preserves high-dimensional neighborhoods
+worse than either baseline (0.66 against 0.90–0.92). A reader weighing this operator against UMAP
+should weigh that number too; determinism is the contribution being argued, not a claim of
+across-the-board superiority.
 
 The structurally closest prior art to the *shape* of this computation, rather than to its purpose,
 is random-hyperplane locality-sensitive hashing (Charikar, 2002): both reduce to an inner product
@@ -416,6 +523,20 @@ mode from two directions.
 > open problem, not a connected argument, and forcing narrative transitions between unrelated
 > questions would manufacture connections that aren't there.
 
+- **Is intermittent relocation better or worse than steady drift?** §3.4 found UMAP fitted once and
+  extended by `transform()` to be bimodal — exactly still for 5 of 7 growth steps, then relocating
+  by 1.07. Our own moving-anchor arm does the opposite: it always moves a little (0.13–0.61) and
+  never spikes. Which profile damages a user's spatial mental model more is an empirical HCI
+  question that this paper's measurements cannot answer, and we decline to assume the answer
+  favours us. Boechler (2001) establishes that instability degrades navigation; it does not
+  distinguish these two shapes of instability.
+- **The fidelity gap, and whether it is reducible.** §3.4 measures the operator at 0.66
+  trustworthiness against 0.90–0.92 for the global baselines. Part of that is a category
+  difference — the operator does not attempt a global layout — but the number is not therefore
+  dismissible, since \( (\lambda, d_{esc}) \) is in fact consumed as a planar position. Open: what
+  is the achievable ceiling for a local, deterministic, \( O(d) \) operator on this metric, whether
+  the multi-axis extension of §4.1 raises it by giving the frame more than one degree of freedom,
+  and whether a trustworthiness figure is even the right instrument for a per-interaction signal.
 - **Tightness of the \( \epsilon_{collinear} \) vs. \( \delta \) bound in Proposition 2.** The
   guarantee \( \|v_{dipole}\|_2 \geq \min(\epsilon_{collinear}, 2\delta) \) is a worst-case bound;
   whether it is ever loose enough in practice to matter — whether real collinear configurations
