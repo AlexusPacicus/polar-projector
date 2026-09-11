@@ -19,6 +19,13 @@ require a deep-learning stack — here it requires `pip install numpy`.
 Git history for every extracted file is preserved, so each figure in the paper traces back to the
 commit that produced it.
 
+**This repository is canonical for the operator.** Traianus keeps a vendored copy of
+`projector.py` while its v1.0.0 release freeze holds — depending on this package would touch its
+pinned `pyproject.toml` and tie a frozen release to an unpublished `0.1.0`. The duplication is a
+deliberate, time-boxed trade, not an accident: changes land here first and are ported by hand, and
+when the freeze lifts the copy is deleted in favour of a real dependency. A fix applied only on the
+Traianus side would make the paper's reference implementation stop matching what actually runs.
+
 ## Install
 
 ```bash

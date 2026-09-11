@@ -1,4 +1,11 @@
-"""Polar Projector: stateless orthogonal decomposition over S^{d-1}."""
+"""Polar Projector: stateless orthogonal decomposition over S^{d-1}.
+
+Canonical source for this operator. A vendored mirror lives inside the Traianus
+substrate (traianus/geometry/polar_projector.py) for as long as its v1.0.0
+release freeze holds. Changes belong here first and are ported there by hand;
+this repository is the copy CI verifies against the figures published in
+paper/polar-projector-paper.md.
+"""
 
 from typing import NamedTuple
 
