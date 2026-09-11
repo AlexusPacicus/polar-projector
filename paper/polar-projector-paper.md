@@ -1,4 +1,4 @@
-# The Polar Projector: A Local O(d) Subspace Operator for Latent Tension Dissipation
+# The Polar Projector: A Deterministic Local O(d) Subspace Operator for Stable Spatial Embedding Navigation
 
 **Author:**
 **Affiliation:**
@@ -16,15 +16,8 @@
 >
 > Status: DRAFT. Sections 1–3 are grounded (verified against `polar_projector/projector.py`,
 > reproduced by `tools/verify_polar_delta_table.py` which CI runs on every push, and — for §3.4 —
-> by `bench/drift.py` against the frozen corpus in `bench/data/`). Sections 4–7 are scaffolding
+> by `bench/drift.py` against the frozen corpus in `bench/data/`). Sections 4–6 are scaffolding
 > only — see the TODO notes — and must not be treated as final until reviewed.
->
-> Terminology: the title and body deliberately keep the native Traianus/Ulpia vocabulary
-> ("Latent Tension Dissipation," "Collision Layer," tension/dissipation language) rather than a
-> neutralized external-venue framing, so this paper stays consistent with the rest of the project's
-> documentation. This is a considered choice, not an oversight — an external reviewer unfamiliar
-> with the project vocabulary may push back on the physical-metaphor framing in the title; the
-> Notation table (below) is the intended bridge to standard terminology on first encounter.
 
 ---
 
@@ -38,12 +31,13 @@ static corpus visualization, they are ill-suited for hot-path control, where loc
 continuity and deterministic repeatability are required.
 
 To address this, we present the **Polar Projector**: a local subspace operator that acts as a
-deterministic \( O(d) \) *Collision Layer* for managing interaction state in volatile memory. The
+deterministic \( O(d) \) projection layer for managing interaction state in volatile memory. The
 operator evaluates an incoming vector (\( v_n \)) against an active local anchor, operating
 completely isolated from persistent disk storage and independently of global corpus size
-(\( N \)). We show that the projection is governed by a latent-energy conservation principle, and
-that collinearity singularities in the tangent plane are mitigated by a deterministic canonical
-fallback in the anchor's null space (a deterministic backward support perpendicular).
+(\( N \)). We show that the projection is governed by an orthogonal decomposition identity — the
+squared norm of the projected residual splits exactly into the aligned and residual components
+along a local contrast axis — and that collinearity singularities in the tangent plane are
+mitigated by a deterministic fallback direction in the anchor's orthogonal complement.
 
 The benchmark suite measured projection latency at \( \approx 13.7\,\mu\text{s} \) with the
 stateless entry point and \( \approx 6.3\,\mu\text{s} \) once the local frame is prepared once per
@@ -81,9 +75,9 @@ different point on that trade-off, not a dominating one.
 
 The Polar Projector resolves these bottlenecks by formulating a distinct computational primitive: a
 local, deterministic \( O(d) \) hot loop that operates exclusively on the active contextual
-complement, deriving a projection coefficient (\( \lambda \in [-1.0, 1.0] \), the *Affective
-Voltage*) and an orthogonal exploration residue (\( d_{esc} \), the *Escape Distance*) without
-modifying or re-evaluating the global persistent corpus, with correctness guarantees proven in §2.
+complement, deriving a projection coefficient (\( \lambda \in [-1.0, 1.0] \)) and an orthogonal
+residual (\( d_{esc} \)) without modifying or re-evaluating the global persistent corpus, with
+correctness guarantees proven in §2.
 
 A third bottleneck — synchronous I/O blocking the interaction loop — is addressed at the systems
 level within the Traianus substrate, where this operator's output feeds a signal-filtering stage
@@ -93,23 +87,26 @@ reported in §3 are included only for deployment context, not as a claim proven 
 
 ## Notation
 
-This paper reuses domain-specific terms coined in the wider Traianus/Ulpia project. Each is a
-proper technical object defined formally in §2; this table gives the standard-terminology
-equivalent on first encounter, for readers unfamiliar with the project vocabulary.
-
-| Term (this paper) | Symbol | Standard equivalent |
-|---|---|---|
-| Active Contextual Anchor | \( c_1 \) | reference/anchor centroid |
-| Collision Layer / Polar Projector | \( P_\perp \) | rank-1 orthogonal projector, \( I - \hat{c}_1\hat{c}_1^T \), applied associatively |
-| dipole vector | \( v_{dipole} \) | local basis direction (difference of projected secondary centroids) |
-| Affective Voltage | \( \lambda \) | clipped least-squares projection coefficient of \( r \) onto \( v_{dipole} \) |
-| Escape Distance | \( d_{esc} \) | orthogonal residual norm after regressing out \( v_{dipole} \) |
+| Symbol | Meaning |
+|---|---|
+| \( v_n \in \mathbb{R}^d \) | incoming input vector |
+| \( c_1 \in \mathbb{R}^d \) | local anchor centroid (reference vector) |
+| \( \hat{c}_1 \) | normalized anchor, \( c_1 / \|c_1\|_2 \), with a zero-guard |
+| \( P_\perp \) | rank-1 orthogonal projector \( I - \hat{c}_1\hat{c}_1^T \), applied associatively |
+| \( c_A, c_B \in \mathbb{R}^d \) | secondary pole centroids (difference of projected centroids) |
+| \( v_{dipole} \) | contrast axis: local basis direction \( P_\perp c_A - P_\perp c_B \) |
+| \( u_\perp \) | deterministic null-space fallback direction (perpendicular to \( \hat{c}_1 \)) |
+| \( r \) | residual \( P_\perp(v_n - c_1) \) |
+| \( \lambda \) | clipped least-squares projection coefficient of \( r \) onto \( v_{dipole} \) |
+| \( d_{esc} \) | orthogonal residual norm after regressing out \( v_{dipole} \) |
+| \( E_\lambda \) | aligned energy \( \lambda^2 \|v_{dipole}\|_2^2 \) |
+| \( E_{esc} \) | residual energy \( d_{esc}^2 \) |
 
 ## 2. Main Result
 
 *Proposition 1 (Complexity and Associative Equivalence).* Let \( v_n \in \mathbb{R}^d \) be an
-incoming interaction vector, \( c_1 \in \mathbb{R}^d \) the Active Contextual Anchor, and
-\( c_A, c_B \in \mathbb{R}^d \) secondary dipole centroids selected from a bounded active codebook
+input vector, \( c_1 \in \mathbb{R}^d \) the local anchor centroid, and
+\( c_A, c_B \in \mathbb{R}^d \) secondary pole centroids selected from a bounded active codebook
 \( C \) ( \( |C| = K \leq 256 \) ). The anchor is normalized with a zero-guard threshold
 \( \epsilon_{norm} > 0 \):
 
@@ -156,24 +153,24 @@ product, and vector-norm reduction with one scalar square root and a single scal
 per-stimulus `evaluate()` hot loop the §3 latency figures characterize — so its benefit is
 implementation simplicity for that one branch, not a change to the paper's headline latency claims.
 
-*Proposition 3 (Latent Energy Decomposition).* Let \( r = P_\perp(v_n - c_1) \),
+*Proposition 3 (Orthogonal Decomposition).* Let \( r = P_\perp(v_n - c_1) \),
 \( \lambda^* = \langle r, v_{dipole} \rangle / \|v_{dipole}\|_2^2 \),
-\( \lambda = \text{clip}(\lambda^*, -1, 1) \) (the *Affective Voltage*), and
-\( d_{esc} = \|r - \lambda \cdot v_{dipole}\|_2 \) (the *Escape Distance*). Decomposing
+\( \lambda = \text{clip}(\lambda^*, -1, 1) \) (the projection coefficient), and
+\( d_{esc} = \|r - \lambda \cdot v_{dipole}\|_2 \) (the orthogonal residual). Decomposing
 \( r = \lambda v_{dipole} + (r - \lambda v_{dipole}) \):
 
 \[ \|r\|_2^2 = \|\lambda v_{dipole}\|_2^2 + d_{esc}^2 + 2\lambda(\lambda^* - \lambda)\|v_{dipole}\|_2^2 \]
 
 When \( |\lambda^*| \leq 1 \), \( \lambda = \lambda^* \) and the cross-term vanishes: exact
 Pythagorean equality. When \( |\lambda^*| > 1 \) (saturation), the cross-term is strictly positive:
-the clip dissipates latent energy rather than conserving it exactly. ∎
+the clip leaves the components no longer summing to \( \|r\|_2^2 \). ∎
 
 *Corollary (Energy Form).* The decomposition above is native to squared (energy) units. Writing
-\( E_\lambda = \lambda^2 \|v_{dipole}\|_2^2 \) (channeled energy — computable from \( \lambda \) and
+\( E_\lambda = \lambda^2 \|v_{dipole}\|_2^2 \) (aligned energy — computable from \( \lambda \) and
 the frame's already-stored \( \|v_{dipole}\|_2^2 \), at no extra cost) and
-\( E_{esc} = d_{esc}^2 \) (dissipated energy), the exact case reads
-\( \|r\|_2^2 = E_\lambda + E_{esc} \): a direct sum of energies, matching this paper's *Latent
-Tension Dissipation* framing more literally than the linear quantities \( \lambda, d_{esc} \) do.
+\( E_{esc} = d_{esc}^2 \) (residual energy), the exact case reads
+\( \|r\|_2^2 = E_\lambda + E_{esc} \): a direct sum of energies — the squared-unit form of the same
+orthogonal split as the linear quantities \( \lambda, d_{esc} \).
 This is an exposition device, not an implementation instruction: \( E_{esc} \) must still be
 computed by squaring the numerically stable vector-form residual of §3.2
 (\( \|r - \lambda v_{dipole}\|_2^2 \)), never via the algebraically expanded
@@ -227,14 +224,14 @@ accounts for 50.2% of a stateless call, so hoisting it out of the loop leaves **
 interaction** whenever the active context outlives a single stimulus. The stateless baseline here
 (13.68 µs) is consistent with the 13.65–13.73 µs range measured independently in the table above.
 
-### 3.2 Conditioning of the Escape Distance
+### 3.2 Conditioning of the Orthogonal Residual
 
 Proposition 3's decomposition is an exact identity, and rearranging it expresses \( d_{esc} \)
 purely in scalars already computed for \( \lambda \):
 \( d_{esc}^2 = \langle r,r \rangle - 2\lambda\langle r, v_{dipole} \rangle + \lambda^2\|v_{dipole}\|_2^2 \),
 which is 1.23× faster than evaluating \( \|r - \lambda v_{dipole}\|_2 \) directly. It is, however,
 not a usable substitute: it subtracts nearly equal quantities as \( d_{esc} \) shrinks relative to
-\( \|r\|_2 \). Against a construction whose exact escape distance is known analytically:
+\( \|r\|_2 \). Against a construction whose exact residual is known analytically:
 
 | \( d_{esc}/\|r\|_2 \) | Vector-form rel. error | Scalar-form rel. error |
 |---|---|---|
@@ -254,7 +251,7 @@ incidental.
 
 Varying the fallback scale \( \delta \) (Proposition 2) under the controlled collinearity scenario
 (\( d = 384 \), fixed seed) traces the sensitivity of \( \lambda \) and \( d_{esc} \) to the
-canonical fallback:
+fallback direction:
 
 | \( \delta \) | \( \sigma^2_\lambda \) | \( \sigma^2_{d_{esc}} \) | \( R = \sigma^2_\lambda / \sigma^2_{d_{esc}} \) |
 |---|---|---|---|
@@ -499,13 +496,13 @@ The structurally closest prior art to the *shape* of this computation, rather th
 is random-hyperplane locality-sensitive hashing (Charikar, 2002): both reduce to an inner product
 against a reference direction. The two solve different problems. LSH is stochastic by design and
 targets approximate similarity search over an entire corpus; the Polar Projector is deterministic,
-uses one semantically-chosen anchor rather than a random one, and answers a local tension/collision
+uses one semantically-chosen anchor rather than a random one, and answers a local directional
 question against an active state, not a retrieval question over the whole dataset. This is the most
 likely reviewer objection, so it is stated here directly rather than left implicit.
 
 *A reading in terms of known and unknown.* Proposition 3's energy split (§2, Corollary) admits a
-plain epistemic gloss worth stating once, explicitly, rather than left implicit in the
-tension/energy vocabulary: \( E_\lambda \) is the portion of an incoming stimulus's energy that the
+plain epistemic gloss worth stating once, explicitly, rather than left implicit in the energy
+decomposition: \( E_\lambda \) is the portion of an incoming stimulus's energy that the
 active local frame already explains — it lies along an axis built from two previously-observed
 centroids — while \( E_{esc} \) is the portion that frame cannot account for. This reading has a
 boundary worth stating alongside it, not hiding: a centroid is, by the defining property of the

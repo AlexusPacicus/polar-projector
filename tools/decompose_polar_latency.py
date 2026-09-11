@@ -135,7 +135,7 @@ def _adversarial_conditioning(p: PolarProjector, frame) -> None:
     """Drive d_esc/||r|| toward zero, where the scalar form subtracts near-equal terms.
 
     Constructs r = alpha*v_hat + eps*w with w orthogonal to both the anchor and the
-    dipole, so the exact escape distance is eps by construction and both formulations
+    dipole, so the exact orthogonal residual is eps by construction and both formulations
     can be scored against a known truth rather than against each other.
     """
     v_norm = math.sqrt(frame.v_dipole_norm_sq)

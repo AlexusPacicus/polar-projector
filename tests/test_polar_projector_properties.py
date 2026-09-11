@@ -2,7 +2,7 @@
 
 Deterministic seeded sweeps (numpy + stdlib only): repeatable execution for
 fixed inputs in a fixed floating-point environment (lambda stays bounded, and
-escape distance satisfies the triangle inequality).
+the orthogonal residual satisfies the triangle inequality).
 
 Dimensions/seed counts are declarative @pytest.mark.parametrize (not
 hardcoded loops). L2 normalization makes the invariant geometry invariant

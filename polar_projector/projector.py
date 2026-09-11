@@ -42,8 +42,8 @@ class PolarProjector:
     - Canonical u⊥: k = argmin|ĉ₁[i]|, u⊥ = normalize(e_k - ⟨e_k, ĉ₁⟩ĉ₁)
     - Dipole vector: v_dipole = cₐ⊥ - c_b⊥ (non-collinear) or 2δ·u⊥ (collinear)
     - Residual: r = P⊥(vₙ - c₁)
-    - Affective voltage: λ = ⟨r, v_dipole⟩ / ||v_dipole||², clamped to [-1, 1]
-    - Escape distance: d_esc = ||r - λ·v_dipole||
+    - Projection coefficient: λ = ⟨r, v_dipole⟩ / ||v_dipole||², clamped to [-1, 1]
+    - Orthogonal residual: d_esc = ||r - λ·v_dipole||
     """
 
     def __init__(
@@ -257,8 +257,8 @@ class PolarProjector:
 
         Returns:
             Tuple (centroid_id, lambda_val, d_esc) where:
-            - lambda_val ∈ [-1.0, 1.0] (affective voltage)
-            - d_esc ≥ 0 (escape distance)
+            - lambda_val ∈ [-1.0, 1.0] (projection coefficient)
+            - d_esc ≥ 0 (orthogonal residual)
 
         Raises:
             ValueError: If v_n does not match the frame's dimension.
@@ -273,13 +273,13 @@ class PolarProjector:
         # Projected residual
         r = self._project_perp(v_n - frame.c_1, frame.c1_hat)
 
-        # Affective voltage λ = ⟨r, v_dipole⟩ / ||v_dipole||², clamped.
+        # Projection coefficient λ = ⟨r, v_dipole⟩ / ||v_dipole||², clamped.
         # prepare() rejects a degenerate frame, so the denominator is positive here.
         lambda_val = float(
             np.clip(np.dot(r, frame.v_dipole) / frame.v_dipole_norm_sq, -1.0, 1.0)
         )
 
-        # Escape distance d_esc = ||r - λ·v_dipole||, kept in vector space: the
+        # Orthogonal residual d_esc = ||r - λ·v_dipole||, kept in vector space: the
         # algebraically equivalent scalar form loses all precision once
         # d_esc/||r|| falls below ~1e-6 (tools/decompose_polar_latency.py).
         d_esc = float(np.linalg.norm(r - lambda_val * frame.v_dipole))
@@ -309,7 +309,7 @@ class PolarProjector:
 
         Returns:
             Tuple (centroid_id, lambda_val, d_esc) where:
-            - lambda_val ∈ [-1.0, 1.0] (affective voltage)
-            - d_esc ≥ 0 (escape distance)
+            - lambda_val ∈ [-1.0, 1.0] (projection coefficient)
+            - d_esc ≥ 0 (orthogonal residual)
         """
         return self.evaluate(v_n, self.prepare(c_1, c_A, c_B), centroid_id)

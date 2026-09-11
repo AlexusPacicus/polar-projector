@@ -2,8 +2,8 @@
 
 A stateless, deterministic **O(d)** orthogonal decomposition operator over the unit sphere
 \( S^{d-1} \). Given a stimulus vector and a local frame — a static anchor plus a dipole pair — it
-returns an affective voltage \( \lambda \in [-1, 1] \) along the dipole axis and an escape distance
-\( d_{esc} \geq 0 \) orthogonal to it.
+returns a projection coefficient \( \lambda \in [-1, 1] \) along the dipole axis and an orthogonal
+residual \( d_{esc} \geq 0 \) perpendicular to it.
 
 Cost is independent of corpus size \( N \): the operator never touches persistent storage and never
 compares a stimulus against the corpus. It is the reference implementation accompanying the
