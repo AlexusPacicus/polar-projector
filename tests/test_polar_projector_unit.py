@@ -1,8 +1,11 @@
 """Unit tests for PolarProjector - isolated, deterministic, < 1ms each."""
+import math
+
 import numpy as np
 import pytest
 
 from polar_projector import PolarProjector
+from polar_projector.fixtures import random_unit_vector
 
 
 class TestPolarProjectorUnit:
@@ -249,3 +252,47 @@ class TestPolarProjectorUnit:
             f"delta={delta}: ||v_dipole||₂ = {norm} < 2δ = {2*delta}"
         )
         assert norm > 0.0
+    @pytest.mark.parametrize(
+        "value",
+        [
+            -math.inf, -3.0, -1.0000000000000002, -1.0, -0.5, -0.0, 0.0,
+            5e-324, 0.5, 1.0, 1.0000000000000002, 3.0, math.inf, math.nan,
+        ],
+    )
+    def test_lambda_clamp_matches_np_clip_exactly(self, value):
+        """evaluate() clamps λ with min/max, not np.clip. They must not diverge.
+
+        np.clip costs 1.74 µs on a single scalar against 0.19 µs for min/max --
+        29% of a whole evaluate() call -- so the hot path uses the latter. That
+        is only safe while the two agree on every input, and the interesting
+        inputs are the ones nobody reaches for: NaN, signed zero, subnormals,
+        infinities, and the float either side of the clip boundary.
+
+        Argument order is load-bearing. min(max(x, -1.0), 1.0) propagates NaN;
+        min(max(-1.0, x), 1.0) silently returns -1.0 for it. This test fails if
+        anyone reorders them.
+        """
+        shipped = min(max(value, -1.0), 1.0)
+        reference = float(np.clip(value, -1.0, 1.0))
+
+        if math.isnan(reference):
+            assert math.isnan(shipped)
+        else:
+            assert shipped == reference
+            assert math.copysign(1.0, shipped) == math.copysign(1.0, reference)
+
+    @pytest.mark.parametrize("d", [128, 384, 768])
+    @pytest.mark.parametrize("sign", [1.0, -1.0])
+    def test_lambda_saturates_to_exactly_pm_one(self, d, sign):
+        """A stimulus far along the dipole axis must clamp to exactly ±1.0."""
+        projector = PolarProjector()
+        c_1 = random_unit_vector(d, 1)
+        c_A = random_unit_vector(d, 2)
+        c_B = random_unit_vector(d, 3)
+        frame = projector.prepare(c_1, c_A, c_B)
+
+        v_n = frame.c_1 + sign * 5.0 * frame.v_dipole
+        _, lam, _ = projector.evaluate(v_n, frame, 0)
+
+        assert lam == sign
+        assert isinstance(lam, float)

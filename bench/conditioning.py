@@ -92,7 +92,7 @@ def scalar_form(
     """
     r = projector._project_perp(v_n - frame.c_1, frame.c1_hat)
     rv = float(np.dot(r, frame.v_dipole))
-    lam = float(np.clip(rv / frame.v_dipole_norm_sq, -1.0, 1.0))
+    lam = min(max(rv / frame.v_dipole_norm_sq, -1.0), 1.0)  # same clamp as evaluate()
     sq = float(np.dot(r, r)) - 2.0 * lam * rv + lam * lam * frame.v_dipole_norm_sq
     return lam, (math.sqrt(sq) if sq > 0.0 else 0.0), sq
 

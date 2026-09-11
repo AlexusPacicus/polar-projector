@@ -98,6 +98,9 @@ REFERENCE_ARM = "polar_evaluate"
 SWEEP_DIMS = (16, 64, 256, 384, 1024, 4096, 8192)
 N_SWEEP = 1_000
 
+#: Corpus sizes for the flatness-in-N table of section 3.
+SWEEP_NS = (1_000, 2_221, 4_000, 25_000)
+
 
 def synthetic_corpus(n: int, d: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Random unit vectors and a frame, reproducing the section 3.1 setup."""
@@ -260,6 +263,33 @@ def dimension_sweep(reps: int, warmup: int) -> dict[str, Any]:
     return out
 
 
+def corpus_size_sweep(reps: int, warmup: int) -> dict[str, Any]:
+    """Stateless per-call cost as the corpus grows, for the table in section 3.
+
+    Proposition 1 says cost is independent of N. This is the measurement that
+    table reports, re-derived here because the figures it published were taken
+    before the lambda clamp changed and would otherwise disagree with 3.1.
+    """
+    out: dict[str, Any] = {}
+    rows = []
+    print("[n-sweep] stateless cost vs corpus size\n")
+    for n in SWEEP_NS:
+        vectors, c_1, c_A, c_B = synthetic_corpus(n, D)
+        projector = PolarProjector()
+        arms: dict[str, Callable[[int], Any]] = {
+            "polar_project": lambda i, v=vectors: projector.project(v[i], c_1, c_A, c_B, i),
+        }
+        stats = interleave(arms, n, reps=reps, warmup=warmup)["polar_project"]
+        out[str(n)] = stats
+        rows.append([f"{n:,}", f"{stats['mean']:.2f}", f"{stats['p95']:.2f}",
+                     f"{working_set_mb(n, D):.1f}", f"{stats['spread'] * 100:.1f}%"])
+
+    print_table(["N", "mean us", "p95 us", "working set MB", "spread"], rows,
+                [12, 11, 11, 18, 9])
+    print("Proposition 1 predicts a flat column\n")
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=RESULTS_DIR / "latency.json")
@@ -270,6 +300,8 @@ def main() -> int:
                         help="tiny run to prove the script executes; not a measurement")
     parser.add_argument("--sweep", action="store_true",
                         help="also measure cost vs dimension (section 3.1.2, exploratory)")
+    parser.add_argument("--n-sweep", action="store_true",
+                        help="also measure stateless cost vs corpus size (section 3)")
     args = parser.parse_args()
 
     reps, warmup = (1, 50) if args.smoke else (args.reps, args.warmup)
@@ -281,6 +313,8 @@ def main() -> int:
     results: dict[str, Any] = {c: run_corpus(c, n_calls, reps, warmup) for c in corpora}
     if args.sweep:
         results["dimension_sweep"] = dimension_sweep(reps, warmup)
+    if args.n_sweep:
+        results["corpus_size_sweep"] = corpus_size_sweep(reps, warmup)
 
     if args.smoke:
         print("SMOKE RUN — parameters are not the published protocol; no result written")

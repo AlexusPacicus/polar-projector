@@ -39,8 +39,8 @@ squared norm of the projected residual splits exactly into the aligned and resid
 along a local contrast axis — and that collinearity singularities in the tangent plane are
 mitigated by a deterministic fallback direction in the anchor's orthogonal complement.
 
-The benchmark suite measured projection latency at \( \approx 13.7\,\mu\text{s} \) with the
-stateless entry point and \( \approx 6.3\,\mu\text{s} \) once the local frame is prepared once per
+The benchmark suite measured projection latency at \( \approx 11.6\,\mu\text{s} \) with the
+stateless entry point and \( \approx 4.6\,\mu\text{s} \) once the local frame is prepared once per
 active context — flat across corpus sizes from 1,000 to 25,000 vectors, consistent with the
 operator's proven independence from \( N \).
 
@@ -191,13 +191,16 @@ Benchmarked over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
 
 | Corpus Size (N) | Polar Projector Mean (µs) | Polar Projector p95 (µs) | \( O(N^2) \) Force Simulation |
 |---|---|---|---|
-| 1,000 | 13.65 | 14.20 | 0.955 s |
-| 2,221 | 13.66 | 14.54 | 5.595 s |
-| 4,000 | 13.68 | 14.12 | 19.800 s |
-| 25,000 | 13.73 | 13.88 | 767.2 s (least-squares fit \( 1.228 \times 10^{-6} N^2 \), extrapolated) |
+| 1,000 | 11.46 | 11.92 | 0.955 s |
+| 2,221 | 11.61 | 11.79 | 5.595 s |
+| 4,000 | 11.61 | 12.21 | 19.800 s |
+| 25,000 | 11.58 | 12.00 | 767.2 s (least-squares fit \( 1.228 \times 10^{-6} N^2 \), extrapolated) |
 
-Projection latency stays flat as \( N \) grows — consistent with Proposition 1's independence from
-corpus size — while the \( O(N^2) \) force baseline it replaces grows quadratically.
+Projection latency stays flat as \( N \) grows — 1.3% across a 25× corpus and a 25× working set,
+consistent with Proposition 1's independence from corpus size — while the \( O(N^2) \) force
+baseline it replaces grows quadratically. The polar column is `bench/latency.py --n-sweep`, 3
+repetitions per row; the \( O(N^2) \) column is the substrate measurement it was originally
+compared against and is reproduced unchanged.
 
 *Deployment context (not a claim of this paper — see §1 scope note):* within the Traianus
 substrate, the persistence layer consuming this operator's output measured 25,000 embeddings
@@ -214,15 +217,15 @@ and `evaluate()` (per-stimulus) separates the two costs:
 
 | Stage | Mean (µs) | p95 (µs) |
 |---|---|---|
-| Full stateless call | 13.68 | 14.64 |
-| `prepare()` — invariant frame | 6.87 | 7.18 |
-| `evaluate()` — per stimulus | 6.34 | 6.68 |
+| Full stateless call | 11.64 | 12.39 |
+| `prepare()` — invariant frame | 6.90 | 7.18 |
+| `evaluate()` — per stimulus | 4.56 | 4.81 |
 
 Means over three runs of 25,000 stimuli each at \( d = 384 \), float64, fixed seeds
 (`tools/decompose_polar_latency.py`); run-to-run spread is under 2%. Frame construction
-accounts for 50.2% of a stateless call, so hoisting it out of the loop leaves **2.16× less work per
+accounts for 59.3% of a stateless call, so hoisting it out of the loop leaves **2.55× less work per
 interaction** whenever the active context outlives a single stimulus. The stateless baseline here
-(13.68 µs) is consistent with the 13.65–13.73 µs range measured independently in the table above.
+(11.64 µs) is consistent with the 11.46–11.61 µs range measured independently in the table above.
 
 #### 3.1.1 Cost Relative to Primitives of the Same Complexity Class
 
@@ -232,38 +235,38 @@ a planar local coordinate could require:
 
 | Arm | Mean (µs) | p50 | p95 | p99 | Relative cost |
 |---|---|---|---|---|---|
-| Random projection, \( (2 \times d) \) matrix-vector | 1.01 | 1.00 | 1.04 | 1.12 | 0.16× |
-| Multi-anchor cosine, \( K = 3 \) | 1.15 | 1.12 | 1.25 | 1.33 | 0.18× |
-| **`evaluate()` — prepared frame** | **6.27** | 6.17 | 6.42 | 6.91 | **1.00×** |
-| `project()` — stateless | 13.49 | 13.33 | 13.62 | 14.87 | 2.15× |
-| Sliding-window PCA, \( W = 32 \) | 291.94 | 285.75 | 309.96 | 369.86 | 46.58× |
+| Random projection, \( (2 \times d) \) matrix-vector | 1.03 | 1.04 | 1.08 | 1.12 | 0.23× |
+| Multi-anchor cosine, \( K = 3 \) | 1.14 | 1.12 | 1.21 | 1.29 | 0.25× |
+| **`evaluate()` — prepared frame** | **4.57** | 4.50 | 4.79 | 5.03 | **1.00×** |
+| `project()` — stateless | 11.75 | 11.54 | 12.50 | 13.32 | 2.57× |
+| Sliding-window PCA, \( W = 32 \) | 292.55 | 287.75 | 316.67 | 360.40 | 64.02× |
 
 Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
 after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
-is 0.3–0.5% on the polar arms and 3–14% on the sub-microsecond and SVD arms.
+is 2.4–2.8% on the polar arms and under 3% elsewhere.
 
 Three things this establishes, and one it does not.
 
-*The published §3.1 figures reproduce from an independent script.* `project()` measures 13.49 µs
-here against 13.68 µs there, `evaluate()` 6.27 against 6.34, and their ratio 2.15× against the
-published 2.16× — on a different corpus, with a different harness and a different frame.
+*The §3.1 figures reproduce from an independent script.* `project()` measures 11.75 µs here against
+11.64 µs there, `evaluate()` 4.57 against 4.56, and their ratio 2.57× against 2.55× — on a different
+corpus, with a different harness and a different frame.
 
 *Working set is not the confound it appeared to be.* The Spinoza corpus is 6.8 MB and largely
 cache-resident on this host; the synthetic corpus of §3.1 is 76.8 MB and is not. Repeating the
-whole experiment at \( N = 25{,}000 \) moves `evaluate()` from 6.27 to 6.39 µs — **1.9% for 11× the
+whole experiment at \( N = 25{,}000 \) moves `evaluate()` from 4.57 to 4.59 µs — **0.4% for 11× the
 working set.** The operator's per-call cost is not memory-bound at these sizes, so figures from the
 two corpora are comparable after all.
 
-*The operator is not at the floor.* It costs **6.2× a random projection** and 5.5× a three-anchor
+*The operator is not at the floor.* It costs **4.4× a random projection** and 4.0× a three-anchor
 cosine. That gap is the price of what it additionally computes — anchor isolation, a contrast axis,
 and a residual orthogonal to it — and it is a real cost, not a rounding error. What the operator
 buys against the other end of the table is larger: a locally adaptive frame by sliding-window SVD
-costs **46.6×** the prepared evaluation, which is the comparison that matters for a hot path.
+costs **64.0×** the prepared evaluation, which is the comparison that matters for a hot path.
 
 *What this does not establish is that the gap is arithmetic.* At \( d = 384 \), NumPy's per-call
 dispatch dominates: `np.dot` costs 0.433 µs on a 2-element input and 0.460 µs on a 384-element one
 — 192× the floating-point work for 6% of the time. Per-call latency at this dimension therefore
-tracks the **number of array operations** a method issues, not its flop count, and the 6.2× gap to
+tracks the **number of array operations** a method issues, not its flop count, and the 4.4× gap to
 the floor is close to the ratio of NumPy calls the two arms make. The \( O(d) \) claim of
 Proposition 1 is an asymptotic statement about the operator; these microseconds do not test it at
 this dimension, and a reader should not read the table as if they did. §3.1.2 measures where
@@ -277,29 +280,29 @@ Sweeping the prepared hot path and the random-projection floor across dimension:
 
 | \( d \) | `evaluate()` (µs) | Floor (µs) | Ratio | vs. \( d = 16 \) |
 |---|---|---|---|---|
-| 16 | 5.50 | 0.65 | 8.50× | 1.00× |
-| 64 | 5.44 | 0.68 | 8.01× | 0.99× |
-| 256 | 6.06 | 0.91 | 6.64× | 1.10× |
-| 384 | 6.15 | 1.00 | 6.15× | 1.12× |
-| 1024 | 7.13 | 1.60 | 4.45× | 1.30× |
-| 4096 | 12.83 | 4.62 | 2.78× | 2.33× |
-| 8192 | 29.60 | 8.52 | 3.47× | 5.38× |
+| 16 | 4.18 | 0.72 | 5.78× | 1.00× |
+| 64 | 4.12 | 0.74 | 5.58× | 0.99× |
+| 256 | 4.54 | 0.90 | 5.07× | 1.09× |
+| 384 | 4.58 | 1.08 | 4.25× | 1.10× |
+| 1024 | 5.64 | 1.64 | 3.43× | 1.35× |
+| 4096 | 11.00 | 4.62 | 2.38× | 2.63× |
+| 8192 | 25.18 | 8.63 | 2.92× | 6.03× |
 
 1,000 vectors per dimension, 3 repetitions, 1,000 warmup iterations, arms interleaved;
 `bench/latency.py --sweep`. Exploratory: this sweep was specified after §3.1.1's registered run, in
 response to what it showed, and is not covered by that experiment's pre-registration.
 
 The prediction holds. From \( d = 16 \) to \( d = 64 \) — four times the arithmetic — per-call cost
-*falls* slightly, from 5.50 to 5.44 µs. At \( d = 384 \), the dimension every published figure in
-this paper is measured at, `evaluate()` costs 1.12× what it costs at \( d = 16 \) despite doing 24×
-the floating-point work. **Roughly 88% of the operator's per-call cost at \( d = 384 \) is fixed
-overhead independent of dimension**, and about 0.65 µs of it is the \( O(d) \) work Proposition 1
+*falls* slightly, from 4.18 to 4.12 µs. At \( d = 384 \), the dimension every published figure in
+this paper is measured at, `evaluate()` costs 1.10× what it costs at \( d = 16 \) despite doing 24×
+the floating-point work. **Roughly 90% of the operator's per-call cost at \( d = 384 \) is fixed
+overhead independent of dimension**, and about 0.4 µs of it is the \( O(d) \) work Proposition 1
 describes.
 
 The crossover sits between \( d = 1{,}024 \) and \( d = 4{,}096 \). Above it the curve turns linear
-and the gap to the floor collapses — from 8.50× at \( d = 16 \) to 2.78× at \( d = 4{,}096 \),
+and the gap to the floor collapses — from 5.78× at \( d = 16 \) to 2.38× at \( d = 4{,}096 \),
 approaching the ratio of vector passes the two methods actually make. The widening at
-\( d = 8{,}192 \) (3.47×) is a memory effect, not an arithmetic one: a 65 MB working set at that
+\( d = 8{,}192 \) (2.92×) is a memory effect, not an arithmetic one: a 65 MB working set at that
 dimension no longer sits in cache.
 
 Two consequences, both of which narrow this paper's claims rather than widening them. First, the
@@ -310,12 +313,22 @@ lever that would most reduce cost at \( d = 384 \) is **issuing fewer array oper
 less arithmetic; a fused or compiled implementation of the same mathematics would close most of the
 gap to the floor without changing a single flop.
 
+That second claim is not left as an inference — it was tested by removing exactly one array
+operation. `evaluate()` clamps \( \lambda \) into \( [-1, 1] \), and clamping a single scalar
+through `np.clip` enters NumPy's ufunc machinery for 1.74 µs — 29% of the whole call — where
+`min(max(x, -1), 1)` does it in 0.19 µs. The two are bit-for-bit identical on every input, including
+NaN, signed zero, subnormals, infinities and the float either side of the boundary, so the
+substitution changes no value this paper reports. It made `evaluate()` **1.37× faster**, from 6.23
+to 4.56 µs, for zero change in arithmetic. Every latency figure in §3 reflects the substitution;
+every table of *values* — §3.2, §3.3, §3.4 — is unchanged by it, which is the check that the two
+forms really are equivalent.
+
 ### 3.2 Conditioning of the Orthogonal Residual
 
 Proposition 3's decomposition is an exact identity, and rearranging it expresses \( d_{esc} \)
 purely in scalars already computed for \( \lambda \):
 \( d_{esc}^2 = \langle r,r \rangle - 2\lambda\langle r, v_{dipole} \rangle + \lambda^2\|v_{dipole}\|_2^2 \),
-which is 1.23× faster than evaluating \( \|r - \lambda v_{dipole}\|_2 \) directly. It is, however,
+which is 1.47× faster than evaluating \( \|r - \lambda v_{dipole}\|_2 \) directly. It is, however,
 not a usable substitute: it subtracts nearly equal quantities as \( d_{esc} \) shrinks relative to
 \( \|r\|_2 \). Against a construction whose exact residual is known analytically:
 
@@ -349,10 +362,14 @@ defensive measure, and the one the arithmetic suggests — would pass those two 
 argument against the scalar form is therefore not that it is inaccurate near collinearity but that
 its inaccuracy is undetectable from inside.
 
-The cost of refusing it is real and small: measured over 25,000 stimuli at \( d = 384 \), the
-vector form runs at 6.26 µs against the scalar form's 5.14 µs — the scalar rearrangement is
-**1.22× faster**, reproducing the 1.23× reported above from an independent script. That is the
-whole of what is given up.
+The cost of refusing it is real, and it grew. Measured over 25,000 stimuli at \( d = 384 \), the
+vector form runs at 4.56 µs against the scalar form's 3.10 µs — the scalar rearrangement is
+**1.47× faster**. That margin was 1.23× before §3.1.2's clamp substitution removed 1.7 µs of fixed
+overhead from both arms; subtracting a constant from both sides of a ratio moves it, and the honest
+reading is that the residual computation is a larger share of a leaner call than it was of a fatter
+one. Refusing the scalar form now costs about a third of the hot path rather than a fifth. The
+argument is unchanged — a third of the hot path is not worth a silently wrong answer — but the
+price is stated at its current value, not its more flattering old one.
 
 ### 3.3 δ-Sweep Behavior
 

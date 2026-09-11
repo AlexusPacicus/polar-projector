@@ -53,8 +53,8 @@ for i, v in enumerate(stimuli):
 
 Anchor normalization, dipole-pole projection and dipole construction depend only on
 \( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
-context. At \( d = 384 \), float64, frame construction is **50.2%** of a stateless call
-(13.68 µs → `prepare` 6.87 µs + `evaluate` 6.34 µs), so the prepared form does **2.16× less work per
+context. At \( d = 384 \), float64, frame construction is **59.3%** of a stateless call
+(11.64 µs → `prepare` 6.90 µs + `evaluate` 4.56 µs), so the prepared form does **2.55× less work per
 interaction** whenever the context outlives a single stimulus.
 
 `prepare()` fails loudly rather than returning plausible garbage: non-1-D inputs, mismatched pole
