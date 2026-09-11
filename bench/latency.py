@@ -93,6 +93,11 @@ SEED_ANCHOR, SEED_POLE_A, SEED_POLE_B, SEED_BASE = 1, 2, 3, 1000
 
 REFERENCE_ARM = "polar_evaluate"
 
+# Dimension sweep (section 3.1.2). Exploratory: added after E2's headline run,
+# to answer a question that run raised rather than one it was designed to ask.
+SWEEP_DIMS = (16, 64, 256, 384, 1024, 4096, 8192)
+N_SWEEP = 1_000
+
 
 def synthetic_corpus(n: int, d: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Random unit vectors and a frame, reproducing the section 3.1 setup."""
@@ -208,6 +213,53 @@ def run_corpus(name: str, n_calls: int, reps: int, warmup: int) -> dict[str, Any
             "d": int(vectors.shape[1]), "working_set_mb": mb, "arms": stats}
 
 
+def dimension_sweep(reps: int, warmup: int) -> dict[str, Any]:
+    """Cost of the prepared hot path as d grows, against the O(d) floor.
+
+    Section 3.1.1 measures at a single dimension and finds the result dominated
+    by NumPy per-call dispatch rather than arithmetic. That makes the headline
+    table silent about Proposition 1, whose claim is asymptotic. This sweep
+    locates the crossover: the dimension at which issuing the operations stops
+    costing more than performing them.
+
+    Exploratory, and labelled as such. It was specified after E2's registered
+    run, in response to what that run showed.
+    """
+    rng = np.random.default_rng(SEED)
+    out: dict[str, Any] = {}
+
+    print("[sweep] cost vs dimension — where dispatch stops dominating\n")
+    rows = []
+    for d in SWEEP_DIMS:
+        vectors = np.ascontiguousarray(rng.standard_normal((N_SWEEP, d)))
+        vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+        c_1, c_A, c_B = (np.ascontiguousarray(rng.standard_normal(d)) for _ in range(3))
+
+        projector = PolarProjector()
+        frame = projector.prepare(c_1, c_A, c_B)
+        rp = np.ascontiguousarray(rng.standard_normal((2, d)) / np.sqrt(d))
+
+        arms: dict[str, Callable[[int], Any]] = {
+            "polar_evaluate": lambda i, f=frame, v=vectors, p=projector: p.evaluate(v[i], f, i),
+            "random_projection": lambda i, m=rp, v=vectors: m @ v[i],
+        }
+        stats = interleave(arms, N_SWEEP, reps=reps, warmup=warmup)
+
+        ev = stats["polar_evaluate"]["mean"]
+        fl = stats["random_projection"]["mean"]
+        out[str(d)] = {"polar_evaluate": ev, "random_projection": fl, "ratio": ev / fl}
+        base = out[str(SWEEP_DIMS[0])]["polar_evaluate"]
+        rows.append([str(d), f"{ev:.2f}", f"{fl:.2f}", f"{ev / fl:.2f}x", f"{ev / base:.2f}x"])
+
+    print_table(
+        ["d", "evaluate us", "floor us", "evaluate/floor", "vs d=16"],
+        rows,
+        [10, 14, 12, 17, 11],
+    )
+    print("if cost were dispatch-bound, 'evaluate us' is flat in d; if arithmetic-bound, linear\n")
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=RESULTS_DIR / "latency.json")
@@ -216,6 +268,8 @@ def main() -> int:
     parser.add_argument("--warmup", type=int, default=WARMUP)
     parser.add_argument("--smoke", action="store_true",
                         help="tiny run to prove the script executes; not a measurement")
+    parser.add_argument("--sweep", action="store_true",
+                        help="also measure cost vs dimension (section 3.1.2, exploratory)")
     args = parser.parse_args()
 
     reps, warmup = (1, 50) if args.smoke else (args.reps, args.warmup)
@@ -224,7 +278,9 @@ def main() -> int:
     print_header("E2 latency", f"hot path vs O(d) primitives, d={D}, float64")
 
     corpora = ["spinoza", "synthetic"] if args.corpus == "both" else [args.corpus]
-    results = {c: run_corpus(c, n_calls, reps, warmup) for c in corpora}
+    results: dict[str, Any] = {c: run_corpus(c, n_calls, reps, warmup) for c in corpora}
+    if args.sweep:
+        results["dimension_sweep"] = dimension_sweep(reps, warmup)
 
     if args.smoke:
         print("SMOKE RUN — parameters are not the published protocol; no result written")
