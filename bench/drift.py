@@ -53,6 +53,7 @@ import numpy as np
 from _harness import (
     RESULTS_DIR,
     SEED,
+    dipole_poles,
     load_corpus,
     print_header,
     write_result,
@@ -203,14 +204,7 @@ def _initial_frame(
     vectors: np.ndarray, parts: list[str], size: int
 ) -> tuple[np.ndarray, np.ndarray]:
     """Dipole poles from the two largest parts present in the initial window."""
-    window = parts[:size]
-    present = sorted(set(window), key=lambda p: -window.count(p))
-    if len(present) < 2:
-        raise SystemExit("ERR: initial window spans fewer than two parts")
-
-    pole_a = vectors[:size][[i for i, p in enumerate(window) if p == present[0]]].mean(axis=0)
-    pole_b = vectors[:size][[i for i, p in enumerate(window) if p == present[1]]].mean(axis=0)
-    return pole_a, pole_b
+    return dipole_poles(vectors[:size], parts[:size])
 
 
 def arm_polar_fixed(

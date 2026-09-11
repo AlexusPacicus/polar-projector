@@ -98,6 +98,21 @@ def load_corpus() -> tuple[np.ndarray, list[str]]:
     return vectors, [entry["part"] for entry in labels]
 
 
+def dipole_poles(vectors: np.ndarray, parts: Sequence[str]) -> tuple[np.ndarray, np.ndarray]:
+    """Dipole poles from the two most-represented parts of a labelled corpus.
+
+    The contrast axis has to come from somewhere, and picking it by corpus
+    structure rather than by hand keeps the frame a property of the data.
+    """
+    present = sorted(set(parts), key=lambda p: -list(parts).count(p))
+    if len(present) < 2:
+        raise SystemExit("ERR: corpus window spans fewer than two parts")
+
+    pole_a = vectors[[i for i, p in enumerate(parts) if p == present[0]]].mean(axis=0)
+    pole_b = vectors[[i for i, p in enumerate(parts) if p == present[1]]].mean(axis=0)
+    return pole_a, pole_b
+
+
 def working_set_mb(n: int, d: int, itemsize: int = 8) -> float:
     """Bytes a corpus occupies, in MB. Disclosed because it decides the regime.
 
@@ -174,6 +189,9 @@ def interleave(
     Arm order is rotated each repetition so that no arm is permanently first
     (and therefore permanently measured on the coolest machine).
     """
+    # Carriage-return progress is for a human watching a long run. Piped into a
+    # file or a commit message it is just noise, so it is suppressed there.
+    progress = progress and sys.stdout.isatty()
     names = list(arms)
     per_arm: dict[str, list[dict[str, float]]] = {name: [] for name in names}
 
@@ -181,11 +199,11 @@ def interleave(
         order = names[rep % len(names) :] + names[: rep % len(names)]
         for name in order:
             if progress:
-                print(f"  rep {rep + 1}/{reps}: {name:<24}", end="\r", flush=True)
+                print(f"  rep {rep + 1}/{reps}: {name:<28}", end="\r", flush=True)
             per_arm[name].append(summarize(measure(arms[name], n_calls, warmup=warmup)))
 
     if progress:
-        print(" " * 60, end="\r")
+        print(" " * 72, end="\r", flush=True)
     return {name: aggregate(per_arm[name]) for name in names}
 
 
