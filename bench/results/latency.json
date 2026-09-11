@@ -1,0 +1,143 @@
+{
+  "experiment": "E2",
+  "config": {
+    "seed": 42,
+    "d": 384,
+    "window": 32,
+    "k_anchors": 3,
+    "reps": 3,
+    "warmup": 1000,
+    "reference_arm": "polar_evaluate"
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "spinoza": {
+      "n_calls": 2221,
+      "n_corpus": 2221,
+      "d": 384,
+      "working_set_mb": 6.822912,
+      "arms": {
+        "random_projection": {
+          "mean": 1.0095862224223324,
+          "p50": 1.0,
+          "p95": 1.042,
+          "p99": 1.125,
+          "min": 0.916,
+          "spread": 0.03340155225169253,
+          "reps": 3.0,
+          "relative_cost": 0.1610632501362611
+        },
+        "multi_anchor_cosine": {
+          "mean": 1.1533498424133275,
+          "p50": 1.125,
+          "p95": 1.25,
+          "p99": 1.333,
+          "min": 1.041,
+          "spread": 0.06328686479881614,
+          "reps": 3.0,
+          "relative_cost": 0.18399842434213268
+        },
+        "polar_evaluate": {
+          "mean": 6.268259342638451,
+          "p50": 6.167,
+          "p95": 6.417,
+          "p99": 6.907800000000008,
+          "min": 6.0,
+          "spread": 0.002622504956972448,
+          "reps": 3.0,
+          "relative_cost": 1.0
+        },
+        "polar_project": {
+          "mean": 13.489668617739754,
+          "p50": 13.334,
+          "p95": 13.625,
+          "p99": 14.866800000000007,
+          "min": 13.041,
+          "spread": 0.005479538195455403,
+          "reps": 3.0,
+          "relative_cost": 2.1520597474292837
+        },
+        "sliding_window_pca": {
+          "mean": 291.9448257541648,
+          "p50": 285.75,
+          "p95": 309.958,
+          "p99": 369.85860000000014,
+          "min": 273.334,
+          "spread": 0.1386490926231987,
+          "reps": 3.0,
+          "relative_cost": 46.575103197832696
+        }
+      }
+    },
+    "synthetic": {
+      "n_calls": 25000,
+      "n_corpus": 25000,
+      "d": 384,
+      "working_set_mb": 76.8,
+      "arms": {
+        "random_projection": {
+          "mean": 1.02823672,
+          "p50": 1.0,
+          "p95": 1.084,
+          "p99": 1.167,
+          "min": 0.875,
+          "spread": 0.370887629844614,
+          "reps": 3.0,
+          "relative_cost": 0.16100305839143464
+        },
+        "multi_anchor_cosine": {
+          "mean": 1.19039716,
+          "p50": 1.125,
+          "p95": 1.291,
+          "p99": 1.416,
+          "min": 1.041,
+          "spread": 0.17709292922036196,
+          "reps": 3.0,
+          "relative_cost": 0.18639441651186894
+        },
+        "polar_evaluate": {
+          "mean": 6.3864421600000005,
+          "p50": 6.292,
+          "p95": 6.667,
+          "p99": 7.042,
+          "min": 6.0,
+          "spread": 0.006638337737642573,
+          "reps": 3.0,
+          "relative_cost": 1.0
+        },
+        "polar_project": {
+          "mean": 13.64339392,
+          "p50": 13.5,
+          "p95": 14.125,
+          "p99": 15.208,
+          "min": 13.0,
+          "spread": 0.0014046680842298117,
+          "reps": 3.0,
+          "relative_cost": 2.1363058770738164
+        },
+        "sliding_window_pca": {
+          "mean": 305.02201056,
+          "p50": 297.2915,
+          "p95": 331.58605,
+          "p99": 418.79657999999927,
+          "min": 276.667,
+          "spread": 0.009472736982800834,
+          "reps": 3.0,
+          "relative_cost": 47.760866366321245
+        }
+      }
+    }
+  }
+}

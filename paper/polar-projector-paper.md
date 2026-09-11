@@ -224,6 +224,50 @@ accounts for 50.2% of a stateless call, so hoisting it out of the loop leaves **
 interaction** whenever the active context outlives a single stimulus. The stateless baseline here
 (13.68 µs) is consistent with the 13.65–13.73 µs range measured independently in the table above.
 
+#### 3.1.1 Cost Relative to Primitives of the Same Complexity Class
+
+§3.1 compares the operator only against itself, so it establishes that the frame can be hoisted but
+not whether what remains is cheap. Bracketing the prepared hot path between the least and most work
+a planar local coordinate could require:
+
+| Arm | Mean (µs) | p50 | p95 | p99 | Relative cost |
+|---|---|---|---|---|---|
+| Random projection, \( (2 \times d) \) matrix-vector | 1.01 | 1.00 | 1.04 | 1.12 | 0.16× |
+| Multi-anchor cosine, \( K = 3 \) | 1.15 | 1.12 | 1.25 | 1.33 | 0.18× |
+| **`evaluate()` — prepared frame** | **6.27** | 6.17 | 6.42 | 6.91 | **1.00×** |
+| `project()` — stateless | 13.49 | 13.33 | 13.62 | 14.87 | 2.15× |
+| Sliding-window PCA, \( W = 32 \) | 291.94 | 285.75 | 309.96 | 369.86 | 46.58× |
+
+Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
+after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
+is 0.3–0.5% on the polar arms and 3–14% on the sub-microsecond and SVD arms.
+
+Three things this establishes, and one it does not.
+
+*The published §3.1 figures reproduce from an independent script.* `project()` measures 13.49 µs
+here against 13.68 µs there, `evaluate()` 6.27 against 6.34, and their ratio 2.15× against the
+published 2.16× — on a different corpus, with a different harness and a different frame.
+
+*Working set is not the confound it appeared to be.* The Spinoza corpus is 6.8 MB and largely
+cache-resident on this host; the synthetic corpus of §3.1 is 76.8 MB and is not. Repeating the
+whole experiment at \( N = 25{,}000 \) moves `evaluate()` from 6.27 to 6.39 µs — **1.9% for 11× the
+working set.** The operator's per-call cost is not memory-bound at these sizes, so figures from the
+two corpora are comparable after all.
+
+*The operator is not at the floor.* It costs **6.2× a random projection** and 5.5× a three-anchor
+cosine. That gap is the price of what it additionally computes — anchor isolation, a contrast axis,
+and a residual orthogonal to it — and it is a real cost, not a rounding error. What the operator
+buys against the other end of the table is larger: a locally adaptive frame by sliding-window SVD
+costs **46.6×** the prepared evaluation, which is the comparison that matters for a hot path.
+
+*What this does not establish is that the gap is arithmetic.* At \( d = 384 \), NumPy's per-call
+dispatch dominates: `np.dot` costs 0.433 µs on a 2-element input and 0.460 µs on a 384-element one
+— 192× the floating-point work for 6% of the time. Per-call latency at this dimension therefore
+tracks the **number of array operations** a method issues, not its flop count, and the 6.2× gap to
+the floor is close to the ratio of NumPy calls the two arms make. The \( O(d) \) claim of
+Proposition 1 is an asymptotic statement about the operator; these microseconds do not test it at
+this dimension, and a reader should not read the table as if they did.
+
 ### 3.2 Conditioning of the Orthogonal Residual
 
 Proposition 3's decomposition is an exact identity, and rearranging it expresses \( d_{esc} \)
