@@ -266,7 +266,49 @@ dispatch dominates: `np.dot` costs 0.433 µs on a 2-element input and 0.460 µs 
 tracks the **number of array operations** a method issues, not its flop count, and the 6.2× gap to
 the floor is close to the ratio of NumPy calls the two arms make. The \( O(d) \) claim of
 Proposition 1 is an asymptotic statement about the operator; these microseconds do not test it at
-this dimension, and a reader should not read the table as if they did.
+this dimension, and a reader should not read the table as if they did. §3.1.2 measures where
+dispatch stops dominating.
+
+#### 3.1.2 Where Dispatch Stops Dominating
+
+The caveat above is testable: if the cost at \( d = 384 \) is dispatch rather than arithmetic, then
+per-call latency should be flat in \( d \) until the arithmetic becomes large enough to matter.
+Sweeping the prepared hot path and the random-projection floor across dimension:
+
+| \( d \) | `evaluate()` (µs) | Floor (µs) | Ratio | vs. \( d = 16 \) |
+|---|---|---|---|---|
+| 16 | 5.50 | 0.65 | 8.50× | 1.00× |
+| 64 | 5.44 | 0.68 | 8.01× | 0.99× |
+| 256 | 6.06 | 0.91 | 6.64× | 1.10× |
+| 384 | 6.15 | 1.00 | 6.15× | 1.12× |
+| 1024 | 7.13 | 1.60 | 4.45× | 1.30× |
+| 4096 | 12.83 | 4.62 | 2.78× | 2.33× |
+| 8192 | 29.60 | 8.52 | 3.47× | 5.38× |
+
+1,000 vectors per dimension, 3 repetitions, 1,000 warmup iterations, arms interleaved;
+`bench/latency.py --sweep`. Exploratory: this sweep was specified after §3.1.1's registered run, in
+response to what it showed, and is not covered by that experiment's pre-registration.
+
+The prediction holds. From \( d = 16 \) to \( d = 64 \) — four times the arithmetic — per-call cost
+*falls* slightly, from 5.50 to 5.44 µs. At \( d = 384 \), the dimension every published figure in
+this paper is measured at, `evaluate()` costs 1.12× what it costs at \( d = 16 \) despite doing 24×
+the floating-point work. **Roughly 88% of the operator's per-call cost at \( d = 384 \) is fixed
+overhead independent of dimension**, and about 0.65 µs of it is the \( O(d) \) work Proposition 1
+describes.
+
+The crossover sits between \( d = 1{,}024 \) and \( d = 4{,}096 \). Above it the curve turns linear
+and the gap to the floor collapses — from 8.50× at \( d = 16 \) to 2.78× at \( d = 4{,}096 \),
+approaching the ratio of vector passes the two methods actually make. The widening at
+\( d = 8{,}192 \) (3.47×) is a memory effect, not an arithmetic one: a 65 MB working set at that
+dimension no longer sits in cache.
+
+Two consequences, both of which narrow this paper's claims rather than widening them. First, the
+microsecond figures in §3 and §3.1.1 characterize a NumPy implementation at a dimension where NumPy
+overhead dominates — they are not a measurement of Proposition 1's asymptotic claim, and the
+crossover dimension is where a reader should expect that claim to become visible. Second, the
+lever that would most reduce cost at \( d = 384 \) is **issuing fewer array operations**, not doing
+less arithmetic; a fused or compiled implementation of the same mathematics would close most of the
+gap to the floor without changing a single flop.
 
 ### 3.2 Conditioning of the Orthogonal Residual
 
