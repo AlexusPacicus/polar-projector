@@ -38,10 +38,17 @@ Both baselines run with a fixed random_state. Demonstrating that an unseeded
 stochastic method is unstable would prove nothing; the drift shown here is what
 survives seeding, and comes from refitting rather than from randomness.
 
-Deterministic, offline, CPU-only. Requires the [bench] extra.
+Deterministic, offline, CPU-only.
+
+The baseline arms need the [bench] extra and fail loudly without it, since
+without umap-learn or scikit-learn there is no arm to run. The two polar arms
+need numpy alone; their trustworthiness column is reported as n/a rather than
+as a number when scikit-learn is absent, so the operator's own results stay
+reproducible from a numpy-only install.
 
 Usage:
     python bench/drift.py
+    python bench/drift.py --arms polar_fixed polar_moving   # numpy only
     python bench/drift.py --out bench/results/drift.json
 """
 
@@ -127,15 +134,33 @@ def displacement_stats(previous: np.ndarray, current: np.ndarray) -> dict[str, f
     }
 
 
-def trustworthiness(high: np.ndarray, low: np.ndarray, k: int) -> float:
+def trustworthiness(high: np.ndarray, low: np.ndarray, k: int) -> float | None:
     """How well a 2D layout preserves high-dimensional neighborhoods (0..1).
 
     Quantifies the cost of arm 1's stability: a fit-once model stays perfectly
     still precisely because it stops accounting for what arrived after it.
+
+    Returns None when scikit-learn is absent. The polar arms need numpy and
+    nothing else — that separation is the reason this package exists apart from
+    the substrate — so a reader reproducing only the operator should not be
+    blocked by a metric that exists to characterize the baselines. The UMAP and
+    t-SNE arms still fail loudly without their dependencies, since without them
+    there is no arm to run at all.
+
+    The absence is reported as null, never as a number: a missing measurement
+    and a measured zero must not be confusable downstream.
     """
-    from sklearn.manifold import trustworthiness as sk_trustworthiness
+    try:
+        from sklearn.manifold import trustworthiness as sk_trustworthiness
+    except ImportError:
+        return None
 
     return float(sk_trustworthiness(high, low, n_neighbors=k))
+
+
+def _fmt_trust(value: float | None, width: int) -> str:
+    """Render a possibly-absent metric without letting it read as a result."""
+    return f"{value:>{width}.4f}" if value is not None else f"{'n/a':>{width}}"
 
 
 # --- arms -------------------------------------------------------------------
@@ -279,7 +304,7 @@ def main() -> int:
         worst = max(s["aligned_p95"] for s in steps)
         print(
             f"[{name}] {elapsed:6.1f}s | worst aligned p95 drift {worst:.4f} "
-            f"| final trustworthiness {fidelity:.4f}"
+            f"| final trustworthiness {_fmt_trust(fidelity, 6)}"
         )
 
     # Aggregated ACROSS steps by median and worst case, never by mean: at least
@@ -294,11 +319,14 @@ def main() -> int:
         still = sum(1 for v in per_step if v < 1e-9)
         print(
             f"{name:<16}{float(np.median(per_step)):>13.4f}{max(per_step):>12.4f}"
-            f"{still:>8}/{len(per_step):<4}{res['final_trustworthiness']:>9.4f}"
+            f"{still:>8}/{len(per_step):<4}{_fmt_trust(res['final_trustworthiness'], 9)}"
         )
     print("-" * 63)
     print("aligned p95 displacement per growth step, normalized by the embedding's RMS radius")
     print("1.0 = points moved as far as the layout is wide; 'still' = steps under 1e-9")
+    if any(res["final_trustworthiness"] is None for res in results.values()):
+        print("trustworthiness reported as n/a: scikit-learn is not installed "
+              "(pip install -e '.[bench]')")
 
     write_result(
         args.out,

@@ -88,7 +88,7 @@ pip install -e ".[test,repro]"
 | `tools/verify_paper_tables.py` | §3.2 and §3.3 independent re-derivation, PASS/MISMATCH per cell |
 | `bench/latency.py` | §3.1.1 cost vs. O(d) primitives, §3.1.2 dimension sweep |
 | `bench/conditioning.py` | §3.2 conditioning sweep and form latency |
-| `bench/drift.py` | §3.4 positional stability (needs the `[bench]` extra) |
+| `bench/drift.py` | §3.4 positional stability (baseline arms need the `[bench]` extra) |
 | `bench/batched.py` | §4.2 batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
