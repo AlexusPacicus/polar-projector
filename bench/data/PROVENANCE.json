@@ -1,0 +1,28 @@
+{
+  "source": "data/spinoza/part*_manifest.json (committed artifacts only)",
+  "builder": "tools/experiments/tooling/freeze_spinoza_embeddings.py",
+  "encoder": {
+    "model_id": "all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "offline": true
+  },
+  "representation": "384D, L2-normalized, float32",
+  "n_chunks": 2221,
+  "chunks_per_part": {
+    "P1_GOD": 409,
+    "P2_MIND": 458,
+    "P3_AFFECTS": 627,
+    "P4_BONDAGE": 507,
+    "P5_POWER": 220
+  },
+  "manifest_sha256": {
+    "part1_god_manifest.json": "848c2ad98645c79820354b861532cb22e8acbf030d4d53d961b8eebc9f2696fe",
+    "part2_mind_manifest.json": "0aa584037d237318f8a0f343403e1a0fb9c7ce90bb9cd9096607404c7523ccdf",
+    "part3_affects_manifest.json": "7ef2f0aa66b383c80872bf35ab2e17b5d6bcee42b08113688b5db8d1b4ec4e06",
+    "part4_bondage_manifest.json": "8aa3e2d7159f1d105ad7a0f2ba95ebd23f466bdde02e10e5ac34cc0c23daf501",
+    "part5_power_manifest.json": "29b937dfb7fdea6e6efbd1fafc5fb7d7d604ace2d833dea75047e24babafdd70"
+  },
+  "embeddings_sha256": "eafb0e97172830f2404e96fa08d74bf6cccc0b6cbe84d47b790a476603e7d8d1",
+  "labels_sha256": "1d60699353d810f089730c6203ee28f9c416e3004b60781bc965cec284097f4f",
+  "comparable_telemetry": "data/spinoza/telemetry/v5.json (accumulated_12345, 2221 nodes)"
+}
