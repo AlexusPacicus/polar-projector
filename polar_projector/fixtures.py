@@ -43,3 +43,49 @@ def simulate_drift_trajectory(
         v = v + noise
         v = v / np.linalg.norm(v)
     return trajectory
+
+
+def near_collinear_stimulus(
+    c_1: NDArray[np.float64],
+    c1_hat: NDArray[np.float64],
+    v_dipole: NDArray[np.float64],
+    ratio: float,
+    seed: int = 77,
+) -> tuple[NDArray[np.float64], float]:
+    """Stimulus lying almost entirely along the dipole axis, with a known residual.
+
+    Builds v_n = c_1 + alpha*v_hat + eps*w, where w is orthogonal to both the
+    normalized anchor and the dipole direction. The orthogonal residual of the
+    result is therefore exactly eps, analytically rather than to within the
+    precision of whatever computed it -- which is what lets the two algebraic
+    forms of d_esc be scored against a truth instead of against each other.
+
+    alpha is fixed at half the dipole norm, keeping |lambda| = 0.5 and away from
+    the clip, so the measurement isolates conditioning from saturation.
+
+    This is the construction behind manuscript section 3.2. It ships with the
+    package, rather than living in the benchmark scripts, so that section
+    reproduces from an installed distribution.
+
+    Args:
+        c_1: Anchor centroid (d,).
+        c1_hat: Normalized anchor, as prepare() computes it (d,).
+        v_dipole: Dipole vector from a prepared frame (d,).
+        ratio: Target d_esc / ||r||, approached from above as ratio -> 0.
+        seed: Seed for the orthogonal perturbation direction.
+
+    Returns:
+        Tuple (v_n, d_esc_exact).
+    """
+    d = c_1.shape[0]
+    v_norm = float(np.sqrt(np.dot(v_dipole, v_dipole)))
+    v_hat = v_dipole / v_norm
+
+    w = random_unit_vector(d, seed)
+    w = w - np.dot(w, c1_hat) * c1_hat
+    w = w - np.dot(w, v_hat) * v_hat
+    w = w / np.linalg.norm(w)
+
+    alpha = 0.5 * v_norm
+    eps = alpha * ratio
+    return c_1 + alpha * v_hat + eps * w, eps
