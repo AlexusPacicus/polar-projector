@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+      - name: Test suite
+        run: pytest -q
+
+  quality:
+    name: Lint, types, coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # Pinned toolchain: CI must behave exactly like the verified local env.
+          pip install -e ".[test,repro]"
+          pip install "ruff==0.16.5" "mypy==1.19.1" coverage
+      - name: Ruff
+        run: ruff check polar_projector/ tests/ tools/
+      - name: Mypy
+        run: mypy polar_projector/
+      - name: Coverage gate (100% over the operator)
+        run: |
+          coverage run -m pytest -q
+          coverage report --include="polar_projector/*" --fail-under=100
+      - name: Paper tables still reproduce (§3.3)
+        run: python tools/verify_polar_delta_table.py

@@ -1,6 +1,6 @@
 """Decompose PolarProjector per-call cost into frame-invariant vs per-vector work.
 
-The published figure (~13.7 us/call, docs/papers/polar-projector-paper.md §3) is measured
+The published figure (~13.7 us/call, paper/polar-projector-paper.md §3) is measured
 against the stateless API, which rebuilds the local frame — normalized anchor, projected
 dipole poles, dipole vector, its squared norm — on every call, even though the benchmark
 holds c_1/c_A/c_B fixed across all iterations. This measures how much of the per-call cost
@@ -17,22 +17,16 @@ quantities when d_esc is small relative to ||r|| and can underflow negative befo
 The decomposition calls the projector's own private helpers rather than re-implementing
 them, so the split measures the identical code paths that project() executes.
 
-Read-only, offline, deterministic (fixed seeds). numpy + traianus only.
+Read-only, offline, deterministic (fixed seeds). numpy only — no substrate dependency.
 """
 
 import math
-import sys
 import time
-from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-sys.path.insert(0, str(REPO_ROOT))
-
-from tests.fixtures.polar_fixtures import random_unit_vector
-from traianus.geometry.polar_projector import PolarProjector
+from polar_projector import PolarProjector
+from polar_projector.fixtures import random_unit_vector
 
 D = 384
 N_VECTORS = 25_000

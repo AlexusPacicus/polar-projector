@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "polar-projector"
+version = "0.1.0"
+description = "Stateless O(d) orthogonal decomposition operator over the unit sphere S^(d-1)"
+readme = "README.md"
+license = { text = "AGPL-3.0-or-later" }
+requires-python = ">=3.11"
+authors = [{ name = "Alexis Zapfer" }]
+keywords = ["geometry", "projection", "subspace", "embeddings", "numerical-analysis"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Typing :: Typed",
+]
+
+# The operator is numpy and nothing else. This is the point of the package:
+# reproducing the manuscript's numerical sections must not require a deep
+# learning stack.
+dependencies = ["numpy>=2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0.0"]
+# Exact pin of the environment the published figures were measured in.
+# Runtime deliberately allows a looser range; reproduction does not.
+repro = ["numpy==2.4.1"]
+
+[project.urls]
+Source = "https://github.com/AlexusPacicus/polar-projector"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["polar_projector*"]
+
+[tool.coverage.run]
+source = ["polar_projector"]
+branch = false
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]
+
+# Explicit lint contract: Traianus relies on an implicit local ruff config, so
+# its CI and a contributor's machine can disagree. Pinned here instead.
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "RUF"]
+# The project writes its mathematics in Unicode on purpose (ĉ₁, ‖·‖₂, −); the
+# confusable check would otherwise demand ASCII hyphens inside formulae.
+allowed-confusables = ["−", "×", "⟨", "⟩"]

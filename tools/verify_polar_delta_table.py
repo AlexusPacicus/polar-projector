@@ -1,9 +1,9 @@
 """Verify the Polar Projector delta-sweep table reported in section 3.3 of
-docs/papers/polar-projector-paper.md.
+paper/polar-projector-paper.md.
 
 Reproduces the §3.3 collinearity scenario on a controlled corpus of 10,000
 stimulus vectors in d=384 with a fixed seed (matching
-tools/experiments/generate_polar_delta_table.py, which produced the published
+tools/generate_polar_delta_table.py, which produced the published
 table), sweeping the constructor scale factor delta in
 {0.001, 0.01, 0.05, 0.1, 0.2, 0.5}, and measures:
 
@@ -12,30 +12,24 @@ table), sweeping the constructor scale factor delta in
     R             = sigma2_lambda / sigma2_esc
 
 against the published values. Reports PASS / MISMATCH per cell using a
-relative tolerance. Read-only, offline (numpy + traianus only).
+relative tolerance. Read-only, offline (numpy only — no substrate dependency).
 """
 
-import sys
-from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-
-sys.path.insert(0, str(REPO_ROOT))
-
-from tests.fixtures.polar_fixtures import (
+from polar_projector import PolarProjector
+from polar_projector.fixtures import (
     collinear_centroids,
     random_unit_vector,
 )
-from traianus.geometry.polar_projector import PolarProjector
 
 D = 384
 N_VECTORS = 10_000
 DELTAS = (0.001, 0.010, 0.050, 0.100, 0.200, 0.500)
 RTOL = 0.03  # ~2.8% 2-sigma sampling bound on the variances at N=10,000
 
-# Published values from §3.3 of docs/papers/polar-projector-paper.md.
+# Published values from §3.3 of paper/polar-projector-paper.md.
 PUBLISHED = {
     0.001: (9.782e-1, 3.535e-6, 276747.31),
     0.010: (7.994e-1, 3.886e-6, 205690.72),

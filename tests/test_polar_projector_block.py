@@ -3,12 +3,12 @@ import time
 
 import numpy as np
 
-from tests.fixtures.polar_fixtures import (
+from polar_projector import PolarProjector
+from polar_projector.fixtures import (
     collinear_centroids,
     random_unit_vector,
     simulate_drift_trajectory,
 )
-from traianus.geometry.polar_projector import PolarProjector
 
 
 class TestPolarProjectorBlock:

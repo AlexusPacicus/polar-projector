@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from traianus.geometry.polar_projector import PolarProjector
+from polar_projector import PolarProjector
 
 
 class TestPolarProjectorUnit:

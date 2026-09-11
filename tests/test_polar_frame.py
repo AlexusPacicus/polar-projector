@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from traianus.geometry.polar_projector import PolarFrame, PolarProjector
+from polar_projector import PolarFrame, PolarProjector
 
 DIMS = (128, 384, 768)
 SEEDS = range(10)

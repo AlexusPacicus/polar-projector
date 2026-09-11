@@ -9,16 +9,11 @@ Standard error of a sample variance: SE(sigma2) ~= sigma2 * sqrt(2/(N-1)).
 At N=10,000, sqrt(2/9999) ~= 1.41%, so the 2-sigma bound is ~2.8%.
 """
 
-import sys
-from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT))
-
-from tests.fixtures.polar_fixtures import collinear_centroids, random_unit_vector
-from traianus.geometry.polar_projector import PolarProjector
+from polar_projector import PolarProjector
+from polar_projector.fixtures import collinear_centroids, random_unit_vector
 
 D = 384
 N_VECTORS = 10_000

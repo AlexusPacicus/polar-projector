@@ -11,7 +11,7 @@ to d; the small dimension set only guards shape/index parity.
 import numpy as np
 import pytest
 
-from traianus.geometry.polar_projector import PolarProjector
+from polar_projector import PolarProjector
 
 DIMS = (128, 384, 768)
 DIMS_LIGHT = (128, 384)

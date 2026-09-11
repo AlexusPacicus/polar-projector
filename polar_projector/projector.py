@@ -127,7 +127,7 @@ class PolarProjector:
 
         Closed form: since e_k is one-hot, ⟨e_k, ĉ₁⟩ = ĉ₁[k], and because ‖ĉ₁‖₂ = 1,
         ‖e_k - ĉ₁[k]·ĉ₁‖₂ reduces algebraically to sqrt(1 - ĉ₁[k]²) (see the Remark
-        after Proposition 2 in docs/papers/polar-projector-paper.md §2). This builds
+        after Proposition 2 in paper/polar-projector-paper.md §2). This builds
         u⊥ directly by scaling ĉ₁ and overwriting index k, with no e_k allocation,
         no dot product, and no vector-norm reduction — same result, fewer passes.
 
@@ -274,7 +274,7 @@ class PolarProjector:
 
         # Escape distance d_esc = ||r - λ·v_dipole||, kept in vector space: the
         # algebraically equivalent scalar form loses all precision once
-        # d_esc/||r|| falls below ~1e-6 (tools/experiments/decompose_polar_latency.py).
+        # d_esc/||r|| falls below ~1e-6 (tools/decompose_polar_latency.py).
         d_esc = float(np.linalg.norm(r - lambda_val * frame.v_dipole))
 
         return (centroid_id, lambda_val, d_esc)
