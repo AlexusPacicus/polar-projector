@@ -46,37 +46,25 @@ Usage:
 """
 
 import argparse
-import json
-import platform
-import sys
 import time
 from pathlib import Path
 
 import numpy as np
+from _harness import (
+    RESULTS_DIR,
+    SEED,
+    load_corpus,
+    print_header,
+    write_result,
+)
 
 from polar_projector import PolarProjector
 
-BENCH_DIR = Path(__file__).resolve().parent
-DATA_DIR = BENCH_DIR / "data"
-
-SEED = 42
 N_INITIAL = 500
 BATCH = 250
 UMAP_NEIGHBORS = 15
 UMAP_MIN_DIST = 0.1
 TRUSTWORTHINESS_K = 15
-
-
-def load_corpus() -> tuple[np.ndarray, list[str]]:
-    """Frozen Spinoza embeddings in reading order, with their part labels."""
-    vectors = np.load(DATA_DIR / "embeddings.npy").astype(np.float64)
-    labels = json.loads((DATA_DIR / "labels.json").read_text(encoding="utf-8"))
-    if len(labels) != vectors.shape[0]:
-        raise SystemExit(
-            f"ERR: {vectors.shape[0]} vectors but {len(labels)} labels — "
-            "the frozen artifact is inconsistent; re-run the freezer."
-        )
-    return vectors, [entry["part"] for entry in labels]
 
 
 def growth_schedule(n_total: int) -> list[int]:
@@ -261,16 +249,15 @@ ARMS = {
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=BENCH_DIR / "results" / "drift.json")
+    parser.add_argument("--out", type=Path, default=RESULTS_DIR / "drift.json")
     parser.add_argument("--arms", nargs="*", choices=sorted(ARMS), default=sorted(ARMS))
     args = parser.parse_args()
 
     vectors, parts = load_corpus()
     sizes = growth_schedule(vectors.shape[0])
 
-    print(f"E1 drift — {vectors.shape[0]} chunks, d={vectors.shape[1]}")
-    print(f"growth: {sizes[0]} then +{BATCH} to {sizes[-1]} ({len(sizes)} steps)")
-    print(f"host: {platform.platform()} | python {sys.version.split()[0]} | numpy {np.__version__}\n")
+    print_header("E1 drift", f"{vectors.shape[0]} chunks, d={vectors.shape[1]}")
+    print(f"growth: {sizes[0]} then +{BATCH} to {sizes[-1]} ({len(sizes)} steps)\n")
 
     results: dict[str, dict] = {}
     for name in args.arms:
@@ -319,33 +306,20 @@ def main() -> int:
     print("aligned p95 displacement per growth step, normalized by the embedding's RMS radius")
     print("1.0 = points moved as far as the layout is wide; 'still' = steps under 1e-9")
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(
-        json.dumps(
-            {
-                "config": {
-                    "seed": SEED,
-                    "n_initial": N_INITIAL,
-                    "batch": BATCH,
-                    "sizes": sizes,
-                    "umap_n_neighbors": UMAP_NEIGHBORS,
-                    "umap_min_dist": UMAP_MIN_DIST,
-                    "trustworthiness_k": TRUSTWORTHINESS_K,
-                },
-                "host": {
-                    "platform": platform.platform(),
-                    "processor": platform.processor(),
-                    "python": sys.version.split()[0],
-                    "numpy": np.__version__,
-                },
-                "results": results,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    write_result(
+        args.out,
+        experiment="E1",
+        config={
+            "seed": SEED,
+            "n_initial": N_INITIAL,
+            "batch": BATCH,
+            "sizes": sizes,
+            "umap_n_neighbors": UMAP_NEIGHBORS,
+            "umap_min_dist": UMAP_MIN_DIST,
+            "trustworthiness_k": TRUSTWORTHINESS_K,
+        },
+        results=results,
     )
-    print(f"\nwrote {args.out}")
     return 0
 
 

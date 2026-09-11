@@ -40,7 +40,7 @@ jobs:
           pip install -e ".[test,repro]"
           pip install "ruff==0.16.5" "mypy==1.19.1" coverage
       - name: Ruff
-        run: ruff check polar_projector/ tests/ tools/
+        run: ruff check polar_projector/ tests/ tools/ bench/
       - name: Mypy
         run: mypy polar_projector/
       - name: Coverage gate (100% over the operator)
