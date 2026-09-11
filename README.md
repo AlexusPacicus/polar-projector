@@ -76,12 +76,19 @@ pip install -e ".[test,repro]"
 |---|---|
 | `tools/decompose_polar_latency.py` | §3.1 frame vs. per-stimulus cost, §3.2 `d_esc` conditioning |
 | `tools/generate_polar_delta_table.py` | §3.3 δ-sweep table (N = 10,000) |
-| `tools/verify_polar_delta_table.py` | §3.3 independent re-derivation, PASS/MISMATCH per cell |
+| `tools/verify_paper_tables.py` | §3.2 and §3.3 independent re-derivation, PASS/MISMATCH per cell |
+| `bench/latency.py` | §3.1.1 cost vs. O(d) primitives, §3.1.2 dimension sweep |
+| `bench/conditioning.py` | §3.2 conditioning sweep and form latency |
+| `bench/drift.py` | §3.4 positional stability (needs the `[bench]` extra) |
 
 The deterministic constructions these scripts use ship inside the package as
 `polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed
-distribution without cloning this repository. CI runs the §3.3 verification on every push, so a
-change that silently moves a published number fails the build.
+distribution without cloning this repository. CI runs the §3.2 and §3.3 verifications on every
+push, so a change that silently moves a published number fails the build.
+
+Scripts under `bench/` write their results as JSON to `bench/results/`, in a common
+`{experiment, config, host, thread_env, results}` envelope; `bench/_harness.py` documents the
+timing protocol they share.
 
 ## Tests
 

@@ -1,0 +1,162 @@
+{
+  "experiment": "E3",
+  "config": {
+    "seed": 42,
+    "d": 384,
+    "n_latency": 25000,
+    "reps": 3,
+    "warmup": 1000,
+    "exponents": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ]
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "sweep": [
+      {
+        "ratio": 0.1,
+        "exact": 0.07308669654844428,
+        "vector_rel_err": 0.0,
+        "scalar_rel_err": 7.215484644970927e-15,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 0.01,
+        "exact": 0.007308669654844429,
+        "vector_rel_err": 9.494058743382797e-16,
+        "scalar_rel_err": 1.2021851883808468e-12,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 0.001,
+        "exact": 0.0007308669654844429,
+        "vector_rel_err": 1.1719228761363142e-14,
+        "scalar_rel_err": 1.0512326212544176e-10,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 0.0001,
+        "exact": 7.308669654844429e-05,
+        "vector_rel_err": 9.271541741584764e-14,
+        "scalar_rel_err": 1.1224676751341111e-08,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-05,
+        "exact": 7.308669654844429e-06,
+        "vector_rel_err": 1.1052836698686735e-12,
+        "scalar_rel_err": 4.4602808787111687e-07,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-06,
+        "exact": 7.308669654844428e-07,
+        "vector_rel_err": 6.512243998585311e-12,
+        "scalar_rel_err": 6.813955027070821e-05,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-07,
+        "exact": 7.308669654844428e-08,
+        "vector_rel_err": 9.839477998696723e-11,
+        "scalar_rel_err": 0.0011796065869525895,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-08,
+        "exact": 7.308669654844429e-09,
+        "vector_rel_err": 6.698138863216084e-10,
+        "scalar_rel_err": 1.0,
+        "scalar_negative_under_sqrt": true
+      },
+      {
+        "ratio": 1e-09,
+        "exact": 7.308669654844429e-10,
+        "vector_rel_err": 1.5147610505763653e-08,
+        "scalar_rel_err": 1.0,
+        "scalar_negative_under_sqrt": true
+      },
+      {
+        "ratio": 1e-10,
+        "exact": 7.308669654844429e-11,
+        "vector_rel_err": 1.5893264570074813e-07,
+        "scalar_rel_err": 1.0,
+        "scalar_negative_under_sqrt": true
+      },
+      {
+        "ratio": 1e-11,
+        "exact": 7.308669654844428e-12,
+        "vector_rel_err": 3.7318847007677684e-08,
+        "scalar_rel_err": 1440.6730575227773,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-12,
+        "exact": 7.308669654844429e-13,
+        "vector_rel_err": 1.0292368417691862e-05,
+        "scalar_rel_err": 1.0,
+        "scalar_negative_under_sqrt": true
+      },
+      {
+        "ratio": 1e-13,
+        "exact": 7.308669654844428e-14,
+        "vector_rel_err": 8.759225530039679e-05,
+        "scalar_rel_err": 144166.30575227772,
+        "scalar_negative_under_sqrt": false
+      },
+      {
+        "ratio": 1e-14,
+        "exact": 7.308669654844429e-15,
+        "vector_rel_err": 8.16553901181979e-06,
+        "scalar_rel_err": 1.0,
+        "scalar_negative_under_sqrt": true
+      }
+    ],
+    "latency": {
+      "vector_form": {
+        "mean": 6.2555846,
+        "p50": 6.167,
+        "p95": 6.5,
+        "p99": 6.875,
+        "min": 5.875,
+        "spread": 0.04296865875652935,
+        "reps": 3.0
+      },
+      "scalar_form": {
+        "mean": 5.139011480000001,
+        "p50": 5.084,
+        "p95": 5.375,
+        "p99": 5.625,
+        "min": 4.791,
+        "spread": 0.011130514150943285,
+        "reps": 3.0
+      }
+    },
+    "scalar_speedup": 1.2172739104291705
+  }
+}

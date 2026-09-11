@@ -47,5 +47,5 @@ jobs:
         run: |
           coverage run -m pytest -q
           coverage report --include="polar_projector/*" --fail-under=100
-      - name: Paper tables still reproduce (§3.3)
-        run: python tools/verify_polar_delta_table.py
+      - name: Paper tables still reproduce (§3.2, §3.3)
+        run: python tools/verify_paper_tables.py

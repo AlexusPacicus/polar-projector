@@ -1,6 +1,6 @@
 """Generate the Polar Projector delta-sweep table for the manuscript.
 
-Reproduces the same construction as `verify_polar_delta_table.py` (§5
+Reproduces the same construction as `verify_paper_tables.py` (§5
 collinearity scenario, d=384, fixed seed) but at a sample size chosen so the
 2-sigma sampling bound on the reported variances is below 3%, instead of the
 ~9% bound at N=1000 that produced the mismatch flagged during review.
