@@ -301,15 +301,23 @@ def main() -> int:
             f"| final trustworthiness {fidelity:.4f}"
         )
 
-    print(f"\n{'arm':<16}{'aligned p50':>13}{'aligned p95':>13}{'raw p95':>11}{'trust':>9}")
-    print("-" * 62)
+    # Aggregated ACROSS steps by median and worst case, never by mean: at least
+    # one arm is bimodal over steps (exactly still, then a large relocation),
+    # and a mean reports neither of the two things that actually happen.
+    print(
+        f"\n{'arm':<16}{'median step':>13}{'worst step':>12}{'still steps':>13}{'trust':>9}"
+    )
+    print("-" * 63)
     for name, res in results.items():
-        p50 = float(np.mean([s["aligned_p50"] for s in res["steps"]]))
-        p95 = float(np.mean([s["aligned_p95"] for s in res["steps"]]))
-        raw = float(np.mean([s["raw_p95"] for s in res["steps"]]))
-        print(f"{name:<16}{p50:>13.4f}{p95:>13.4f}{raw:>11.4f}{res['final_trustworthiness']:>9.4f}")
-    print("-" * 62)
-    print("displacement normalized by each embedding's RMS radius; 1.0 = as far as the layout is wide")
+        per_step = [s["aligned_p95"] for s in res["steps"]]
+        still = sum(1 for v in per_step if v < 1e-9)
+        print(
+            f"{name:<16}{float(np.median(per_step)):>13.4f}{max(per_step):>12.4f}"
+            f"{still:>8}/{len(per_step):<4}{res['final_trustworthiness']:>9.4f}"
+        )
+    print("-" * 63)
+    print("aligned p95 displacement per growth step, normalized by the embedding's RMS radius")
+    print("1.0 = points moved as far as the layout is wide; 'still' = steps under 1e-9")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
