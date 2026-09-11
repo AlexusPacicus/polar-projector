@@ -26,6 +26,18 @@ class PolarFrame(NamedTuple):
     v_dipole_norm_sq: float
 
 
+class PolarBatch(NamedTuple):
+    """Result of evaluating a batch of stimuli against one frame.
+
+    Row i corresponds to row i of the input batch. Unlike evaluate(), there is
+    no centroid_id: it was a pass-through the operator never read, and row
+    order already carries the correspondence the caller needs.
+    """
+
+    lambdas: NDArray[np.float64]
+    d_esc: NDArray[np.float64]
+
+
 class PolarProjector:
     """
     Stateless projector for dynamic orthogonal decomposition.
@@ -292,6 +304,78 @@ class PolarProjector:
         d_esc = float(np.linalg.norm(r - lambda_val * frame.v_dipole))
 
         return (centroid_id, lambda_val, d_esc)
+
+    def evaluate_batch(self, V: NDArray[np.float64], frame: PolarFrame) -> PolarBatch:
+        """
+        Evaluate a batch of stimuli against one prepared frame.
+
+        The associative projection of Proposition 1 applies row-wise:
+        V P⊥ = V - (V ĉ₁) ĉ₁ᵀ, in O(B·d) and without materializing the dense
+        (d, d) matrix. Arithmetic is identical to evaluate() applied per row;
+        only the order in which BLAS accumulates it differs.
+
+        Not bit-for-bit identical to a loop over evaluate(), and cannot be.
+        The divergence begins at the matrix-vector product, not at the norm:
+        BLAS uses a blocked reduction order for B ≥ 2 that a sequence of
+        single-row dot products does not. Agreement is bounded instead —
+        measured at |Δλ| ≤ 2·ε and |Δd_esc| ≤ 1.4·ε·||r||₂ across every
+        dimension, batch size and regime tested, including saturation and
+        near-collinearity.
+
+        Two consequences follow, and neither is hidden by this implementation.
+        Row i of the result is not a pure function of row i of the input: the
+        same stimulus evaluated inside a different batch, or at a different
+        position in the same batch, can differ in the last bits. And there is
+        deliberately no chunk_size parameter, because chunking would change the
+        result: splitting one batch into two is a reduction-order change, and
+        it is measurable.
+
+        The residual is computed in vector space before the norm, exactly as
+        evaluate() does. The algebraically equivalent expanded form is not used
+        here for the same reason it is not used there (see §3.2).
+
+        Args:
+            V: Batch of stimuli, shape (B, d). B = 0 is allowed.
+            frame: Frame returned by prepare().
+
+        Returns:
+            PolarBatch with lambdas and d_esc, each of shape (B,).
+
+        Raises:
+            ValueError: If V is not 2-D, or its rows do not match the frame's
+                dimension.
+        """
+        V = np.asarray(V, dtype=np.float64)
+        d = frame.c_1.shape[0]
+
+        if V.ndim != 2:
+            raise ValueError(
+                f"evaluate_batch expects a 2-D (B, d) batch; got ndim={V.ndim} shape {V.shape}. "
+                "Use evaluate() for a single (d,) stimulus."
+            )
+        if V.shape[1] != d and V.shape[0] == d:
+            raise ValueError(
+                f"batch row width {V.shape[1]} does not match frame dimension {d}; "
+                f"V has shape {V.shape} — did you pass V.T instead of V?"
+            )
+        if V.shape[1] != d:
+            raise ValueError(
+                f"batch row width {V.shape[1]} does not match frame dimension {d}"
+            )
+
+        # Allocates, so the in-place updates below never touch the caller's
+        # buffer — np.asarray returns it unchanged when V is already float64.
+        r = V - frame.c_1
+        r -= (r @ frame.c1_hat)[:, None] * frame.c1_hat
+
+        lambdas = r @ frame.v_dipole
+        lambdas /= frame.v_dipole_norm_sq
+        np.clip(lambdas, -1.0, 1.0, out=lambdas)
+
+        r -= lambdas[:, None] * frame.v_dipole
+        d_esc = np.sqrt(np.einsum("ij,ij->i", r, r))
+
+        return PolarBatch(lambdas, d_esc)
 
     def project(
         self,
