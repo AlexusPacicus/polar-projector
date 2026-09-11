@@ -14,10 +14,11 @@
 > in `docs/LEDGER.md` seq 40-43. The extraction exists so this manuscript can be reproduced with
 > numpy alone, without the substrate's fastapi/torch dependency stack.
 >
-> Status: DRAFT. Sections 1–3 are grounded (verified against `polar_projector/projector.py`,
-> reproduced by `tools/verify_paper_tables.py` which CI runs on every push, and — for §3.4 —
-> by `bench/drift.py` against the frozen corpus in `bench/data/`). Sections 4–6 are scaffolding
-> only — see the TODO notes — and must not be treated as final until reviewed.
+> Status: DRAFT. Sections 1–3 and §4.2 are grounded (verified against
+> `polar_projector/projector.py`, reproduced by `tools/verify_paper_tables.py` which CI runs on
+> every push, and — for §3.4 and §4.2 — by `bench/drift.py` and `bench/batched.py` against the
+> frozen corpus in `bench/data/`). The rest of §4, and §5–6, are scaffolding only — see the TODO
+> notes — and must not be treated as final until reviewed.
 
 ---
 
@@ -474,8 +475,9 @@ the trustworthiness column is where it shows.
 ## 4. Extensions
 
 > TODO — draft, not reviewed. Candidate directions, scoped strictly to the Polar Projector itself
-> (not the broader Ulpia/Traianus system). None of the mechanisms below exist in
-> `polar_projector/projector.py` today — each is a proposed direction, not a description of
+> (not the broader Ulpia/Traianus system). §4.2 is the exception and is no longer a proposal:
+> `evaluate_batch()` ships, and that subsection reports measurements. §4.1, §4.3 and §4.4 do not
+> exist in `polar_projector/projector.py` — each is a proposed direction, not a description of
 > current code.
 
 ### 4.1 Multi-Axis Tangent Frames and the Tripolar Model
@@ -497,27 +499,79 @@ across distant manifold regions without losing the \( \mathcal{O}(d) \) linear-t
 guarantee. Nothing about this extension is concurrent or timing-related — it is a purely geometric
 generalization of the single-anchor construction to multiple simultaneous anchors.
 
-### 4.2 Batched Subspace Evaluation and Direct Energy Computation
+### 4.2 Batched Subspace Evaluation
+
+*This subsection is not scaffolding: `evaluate_batch()` ships in
+`polar_projector/projector.py` and the figures below are measured by `bench/batched.py`.*
 
 The associative projection \( P^\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \) extends
-directly to batched inputs \( V \in \mathbb{R}^{B \times d} \). Evaluating
+directly to batched inputs \( V \in \mathbb{R}^{B \times d} \):
 
 \[ V P^\perp = V - (V \hat{c}_1) \hat{c}_1^T \]
 
-the operator would process \( B \) candidate interaction vectors against a fixed frame
-\( (c_1, c_A, c_B) \) in \( \mathcal{O}(B \cdot d) \) floating-point operations, without
-instantiating a dense intermediate \( d \times d \) matrix — the same associative identity as
-Proposition 1, applied row-wise.
+which evaluates \( B \) stimuli against a fixed frame in \( \mathcal{O}(B \cdot d) \) without
+instantiating a dense \( d \times d \) intermediate — Proposition 1's identity applied row-wise.
+Against a Python loop over `evaluate()`, both arms measured under the same protocol
+(\( d = 384 \), float64, \( N = 16{,}384 \)):
 
-In high-throughput hot loops, `evaluate()` could return the squared orthogonal residual energy
-\( E_{esc} = \|r_{esc}\|_2^2 \) (§2, Corollary) instead of \( d_{esc} = \sqrt{E_{esc}} \), skipping
-the square-root instruction. The practical benefit today is exactly that — one fewer instruction
-per call — not gradient-safety: avoiding the singularity of \( \frac{d}{dx}\sqrt{x} \) at
-\( x \to 0 \) only matters if a downstream consumer differentiates through \( E_{esc} \), and no
-current Traianus consumer does (the substrate is a deterministic control plane, not a
-gradient-based pipeline; see §1 scope note). As with the Corollary in §2, this must compute
-\( E_{esc} \) by squaring the numerically stable vector-form residual, never the algebraically
-expanded form §3.2 already showed loses precision near collinearity.
+| \( B \) | Loop (µs/vec) | Batched (µs/vec) | Speedup | Vectors/s | Temporaries (MB) |
+|---|---|---|---|---|---|
+| 1 | 5.380 | 13.874 | **0.39×** | 72,075 | 0.01 |
+| 4 | 5.464 | 3.649 | 1.50× | 274,064 | 0.04 |
+| 16 | 4.689 | 1.568 | 2.99× | 637,692 | 0.15 |
+| 64 | 4.904 | 1.102 | 4.45× | 907,198 | 0.59 |
+| 256 | 4.610 | 0.893 | **5.16×** | 1,119,291 | 2.36 |
+| 1,024 | 4.468 | 1.283 | 3.48× | 779,626 | 9.44 |
+| 4,096 | 4.481 | 1.624 | 2.76× | 615,720 | 37.75 |
+
+*The gain is bounded and non-monotone.* Speedup peaks at \( B = 256 \) and **falls thereafter**,
+to 2.76× by \( B = 4{,}096 \) — the opposite of the "larger batches are better" reading the
+identity invites. The last column explains it: the implementation holds three \( (B \times d) \)
+temporaries, and at \( B = 256 \) they occupy 2.36 MB, while at \( B = 1{,}024 \) they occupy
+9.44 MB and stop fitting alongside the input in this host's shared L2. Past that point the routine
+is memory-bandwidth bound and batching buys less, not more. A caller choosing a batch size should
+choose one that keeps \( 3Bd \) floats in cache, not the largest one available.
+
+*At \( B = 1 \) batching is 2.6× slower than not batching.* This is reported because omitting it
+would be choosing the range that flatters the result: a batch of one pays the setup and receives no
+amortization. `evaluate()` remains the right entry point for a single stimulus.
+
+*What the speedup is made of.* §3.1.2 established that at \( d = 384 \) per-call cost is dominated
+by the number of array operations issued, not by arithmetic. The batched path issues a fixed number
+of NumPy calls regardless of \( B \), so what it amortizes is dispatch overhead — roughly 4.5 µs per
+vector in the loop — rather than floating-point work. The flop count is unchanged. This is why the
+ceiling is around 5× and not an order of magnitude, and why the ceiling is set by memory traffic
+once dispatch has been amortized away.
+
+*Agreement is bounded, not exact.* The batched path is **not** bitwise identical to a loop over
+`evaluate()`, and the divergence begins at the matrix-vector product rather than at the norm: BLAS
+switches to a blocked reduction order once \( B \geq 2 \), which a sequence of single-row dot
+products does not use. Measured across all batch sizes above, the deviation is at most
+\( 0.19\,\varepsilon \) in \( \lambda \) and \( 2.02\,\varepsilon\|r\|_2 \) in \( d_{esc} \). The
+normalization by \( \|r\|_2 \) is not cosmetic: the error in \( d_{esc} \) is amplified by
+\( \|r\|_2/d_{esc} \), so a *relative* tolerance would pass on generic stimuli and fail in exactly
+the near-collinear regime of §3.2.
+
+Two consequences follow, and the implementation documents both rather than leaving them to be
+discovered. First, \( \texttt{evaluate\_batch}(V)_i \) **is not a pure function of** \( V_i \) and
+the frame: permuting a batch and un-permuting the result is not bitwise stable at \( B = 64 \),
+\( 1{,}024 \) or \( 4{,}096 \), though the magnitude is last-bit
+(\( \leq 0.12\,\varepsilon \) in \( \lambda \), \( \leq 2.2 \times 10^{-16} \) in \( d_{esc} \)).
+This qualifies the "deterministic execution for fixed inputs" claim §2 makes for the scalar path:
+it holds there, and holds for the batched path only at fixed batch composition and order. Second,
+the API exposes **no chunk size parameter**, because splitting a batch is a reduction-order change
+and would silently alter results.
+
+*The square root is free, so the energy form is not implemented.* An earlier draft of this section
+proposed returning \( E_{esc} = \|r_{esc}\|_2^2 \) instead of \( d_{esc} \) to skip the square-root
+instruction in hot loops. Measured, that saving is **1.0–1.6%** across \( B \in \{64, 1{,}024,
+4{,}096\} \) — one square root against \( d = 384 \) multiply-accumulates, which is within the
+run-to-run spread of the measurement itself. The proposal is therefore withdrawn rather than
+shipped: adding a second return shape to the API to save nothing measurable would be a cost with no
+corresponding benefit. The Corollary of §2 stands as an exposition device, which is all it claimed
+to be, and \( E_{esc} \) remains available to any caller as `d_esc ** 2` — which is precisely the
+"square the numerically stable vector-form residual" the Corollary requires, and never the expanded
+form §3.2 measured losing all precision near collinearity.
 
 ### 4.3 Adaptive Scale Calibration
 

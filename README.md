@@ -49,7 +49,16 @@ centroid_id, lam, d_esc = projector.project(v_n, c_1, c_A, c_B, centroid_id=7)
 frame = projector.prepare(c_1, c_A, c_B)
 for i, v in enumerate(stimuli):
     centroid_id, lam, d_esc = projector.evaluate(v, frame, i)
+
+# Batched: one frame, many stimuli, V of shape (B, d).
+lambdas, d_escs = projector.evaluate_batch(V, frame)
 ```
+
+`evaluate_batch()` is worth up to **5.2× per vector**, peaking around `B = 256` and *falling* for
+larger batches once its three `(B, d)` temporaries stop fitting in cache — at `B = 1` it is 2.6×
+slower than `evaluate()`. It is not bitwise identical to a loop over `evaluate()`: BLAS reorders
+the reduction at `B ≥ 2`, so a row's result is not a pure function of that row. Deviation is
+bounded at 0.19 ε in λ and 2.02 ε‖r‖ in `d_esc`. See §4.2.
 
 Anchor normalization, dipole-pole projection and dipole construction depend only on
 \( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
@@ -80,6 +89,7 @@ pip install -e ".[test,repro]"
 | `bench/latency.py` | §3.1.1 cost vs. O(d) primitives, §3.1.2 dimension sweep |
 | `bench/conditioning.py` | §3.2 conditioning sweep and form latency |
 | `bench/drift.py` | §3.4 positional stability (needs the `[bench]` extra) |
+| `bench/batched.py` | §4.2 batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
 `polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed

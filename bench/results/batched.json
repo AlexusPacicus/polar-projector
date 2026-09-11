@@ -1,0 +1,142 @@
+{
+  "experiment": "E4",
+  "config": {
+    "seed": 42,
+    "d": 384,
+    "n_corpus": 16384,
+    "batch_sizes": [
+      1,
+      4,
+      16,
+      64,
+      256,
+      1024,
+      4096
+    ],
+    "reps": 3,
+    "warmup": 50
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "throughput": {
+      "1": {
+        "scalar_loop_us_per_vec": 5.380203125,
+        "evaluate_batch_us_per_vec": 13.87440625,
+        "speedup": 0.38777898153299356,
+        "vectors_per_second": 72075.1563693041
+      },
+      "4": {
+        "scalar_loop_us_per_vec": 5.46434765625,
+        "evaluate_batch_us_per_vec": 3.64877734375,
+        "speedup": 1.4975832015647366,
+        "vectors_per_second": 274064.40727683826
+      },
+      "16": {
+        "scalar_loop_us_per_vec": 4.688560546874999,
+        "evaluate_batch_us_per_vec": 1.5681552734375,
+        "speedup": 2.989857335107744,
+        "vectors_per_second": 637691.9536851309
+      },
+      "64": {
+        "scalar_loop_us_per_vec": 4.903514892578125,
+        "evaluate_batch_us_per_vec": 1.1022956542968751,
+        "speedup": 4.448457066362967,
+        "vectors_per_second": 907197.6253393408
+      },
+      "256": {
+        "scalar_loop_us_per_vec": 4.609764282226562,
+        "evaluate_batch_us_per_vec": 0.8934225463867187,
+        "speedup": 5.159668625858947,
+        "vectors_per_second": 1119291.2066572688
+      },
+      "1024": {
+        "scalar_loop_us_per_vec": 4.468391357421876,
+        "evaluate_batch_us_per_vec": 1.28266650390625,
+        "speedup": 3.4836735377541834,
+        "vectors_per_second": 779625.8785542357
+      },
+      "4096": {
+        "scalar_loop_us_per_vec": 4.481094421386719,
+        "evaluate_batch_us_per_vec": 1.624114990234375,
+        "speedup": 2.75909923147748,
+        "vectors_per_second": 615719.9496420452
+      }
+    },
+    "agreement": {
+      "1": {
+        "max_dlambda_over_eps": 0.0,
+        "max_desc_over_eps_r": 0.5000424099674056
+      },
+      "4": {
+        "max_dlambda_over_eps": 0.1875,
+        "max_desc_over_eps_r": 1.5012177977824288
+      },
+      "16": {
+        "max_dlambda_over_eps": 0.1875,
+        "max_desc_over_eps_r": 1.5012177977824288
+      },
+      "64": {
+        "max_dlambda_over_eps": 0.109375,
+        "max_desc_over_eps_r": 1.5015807639439283
+      },
+      "256": {
+        "max_dlambda_over_eps": 0.109375,
+        "max_desc_over_eps_r": 2.0183799034440923
+      },
+      "1024": {
+        "max_dlambda_over_eps": 0.140625,
+        "max_desc_over_eps_r": 2.0183799034440923
+      },
+      "4096": {
+        "max_dlambda_over_eps": 0.1875,
+        "max_desc_over_eps_r": 2.0183799034440923
+      }
+    },
+    "sqrt_cost": {
+      "64": {
+        "with_sqrt_us": 10.361525000000002,
+        "without_sqrt_us": 10.24566,
+        "saving": 0.011182234275360137
+      },
+      "1024": {
+        "with_sqrt_us": 143.092915,
+        "without_sqrt_us": 140.744395,
+        "saving": 0.016412552641058453
+      },
+      "4096": {
+        "with_sqrt_us": 586.28606,
+        "without_sqrt_us": 580.2488000000001,
+        "saving": 0.010297464688142077
+      }
+    },
+    "row_order": {
+      "64": {
+        "bitwise_identical": false,
+        "max_dlambda_over_eps": 0.046875,
+        "max_ddesc_abs": 1.1102230246251565e-16
+      },
+      "1024": {
+        "bitwise_identical": false,
+        "max_dlambda_over_eps": 0.125,
+        "max_ddesc_abs": 1.1102230246251565e-16
+      },
+      "4096": {
+        "bitwise_identical": false,
+        "max_dlambda_over_eps": 0.125,
+        "max_ddesc_abs": 2.220446049250313e-16
+      }
+    }
+  }
+}
