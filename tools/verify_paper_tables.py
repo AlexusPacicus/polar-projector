@@ -221,6 +221,8 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
 
     # §3.2 positional stability
     for arm, med, worst, still, trust in [
+        ("random_fixed", "0.0000", "0.0000", 7, "0.5535"),
+        ("pca_fit_once", "0.0000", "0.0000", 7, "0.6811"),
         ("polar_fixed", "0.0000", "0.0000", 7, "0.6639"),
         ("polar_moving", "0.2984", "0.6138", 0, "0.6208"),
         ("umap_fit_once", "0.0000", "1.0725", 5, "0.7681"),
@@ -234,7 +236,9 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
         out.append((f"§3.2 {arm} trustworthiness", trust, dri[arm]["final_trustworthiness"]))
 
     # §3.3 same-part retrieval
-    for arm, med, final, worst in [("polar_fixed", "1.57", "1.59", "1.17"),
+    for arm, med, final, worst in [("random_fixed", "1.09", "1.10", "0.99"),
+                                   ("pca_fit_once", "1.47", "1.48", "1.01"),
+                                   ("polar_fixed", "1.57", "1.59", "1.17"),
                                    ("polar_moving", "1.39", "1.34", "1.17"),
                                    ("umap_fit_once", "1.57", "1.57", "1.12"),
                                    ("umap_refit", "2.05", "2.41", "1.12"),
@@ -243,6 +247,42 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
         out.append((f"§3.3 {arm} median lift", med, statistics.median(L)))
         out.append((f"§3.3 {arm} final lift", final, L[-1]))
         out.append((f"§3.3 {arm} worst lift", worst, min(L)))
+
+    # §3.4 pole-selection rules and the leaked axis sweep
+    fs = _load("frame_sensitivity.json")
+    for rule, trust, med, worst in [("farthest_neighbourhoods", "0.6593", "1.42", "1.03"),
+                                    ("largest_two_parts", "0.6639", "1.57", "1.17"),
+                                    ("kmeans2", "0.6858", "1.46", "1.01"),
+                                    ("pc1_extremes", "0.6966", "1.46", "1.01")]:
+        r = fs["rules"][rule]
+        out.append((f"§3.4 {rule} trust", trust, r["trustworthiness"]))
+        out.append((f"§3.4 {rule} median lift", med, r["median_lift"]))
+        out.append((f"§3.4 {rule} worst lift", worst, r["worst_lift"]))
+    axis_trust = [f["trustworthiness"] for f in fs["frames"].values()]
+    axis_lift = [f["median_lift"] for f in fs["frames"].values()]
+    for label, published, measured in [
+        ("§3.4 axis-sweep trust median", "0.6950", statistics.median(axis_trust)),
+        ("§3.4 axis-sweep trust min", "0.6664", min(axis_trust)),
+        ("§3.4 axis-sweep trust max", "0.7029", max(axis_trust)),
+        ("§3.4 axis-sweep lift median", "1.6830", statistics.median(axis_lift)),
+        ("§3.4 axis-sweep lift min", "1.4273", min(axis_lift)),
+        ("§3.4 axis-sweep lift max", "1.7258", max(axis_lift)),
+    ]:
+        out.append((label, published, measured))
+
+    # §3.5 re-anchoring. Recalls only: the frame and per-stimulus columns are
+    # timings on a passively cooled host and would make this check flaky.
+    ra = _load("reanchor.json")
+    for arm, mean, median, lo, hi in [("pca_global", "0.056", "0.033", "0.000", "0.267"),
+                                      ("polar_published", "0.019", "0.000", "0.000", "0.133"),
+                                      ("pca_local", "0.023", "0.000", "0.000", "0.533"),
+                                      ("polar_reanchored", "0.543", "0.567", "0.133", "0.867"),
+                                      ("radial_plain", "0.981", "1.000", "0.933", "1.000")]:
+        a = ra[arm]
+        out.append((f"§3.5 {arm} mean", mean, a["mean_recall"]))
+        out.append((f"§3.5 {arm} median", median, a["median_recall"]))
+        out.append((f"§3.5 {arm} min", lo, a["min_recall"]))
+        out.append((f"§3.5 {arm} max", hi, a["max_recall"]))
 
     # Appendix B extra claims: the cost of refusing the scalar form
     con = _load("conditioning.json")

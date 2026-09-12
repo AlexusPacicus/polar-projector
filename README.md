@@ -88,10 +88,10 @@ pip install -e ".[test,repro]"
 | `tools/verify_paper_tables.py` | §B and §C independent re-derivation, PASS/MISMATCH per cell |
 | `bench/latency.py` | §3.1 cost vs. O(d) primitives, §A dimension sweep |
 | `bench/conditioning.py` | §B conditioning sweep and form latency |
-| `bench/drift.py` | §3.2 positional stability (baseline arms need the `[bench]` extra) |
+| `bench/drift.py` | §3.2 positional stability, 7 arms (baseline arms need the `[bench]` extra) |
 | `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
-| `bench/frame_sensitivity.py` | E6 frame sensitivity and leak-free pole-selection rules (not yet folded into the manuscript) |
-| `bench/reanchor.py` | E7 local fidelity under re-anchoring (not yet folded into the manuscript) |
+| `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob (baseline arms need the `[bench]` extra) |
+| `bench/reanchor.py` | §3.5 local fidelity under re-anchoring |
 | `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
