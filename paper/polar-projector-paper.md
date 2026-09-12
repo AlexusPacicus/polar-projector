@@ -1,4 +1,4 @@
-# The Polar Projector: A Deterministic Local O(d) Subspace Operator for Stable Spatial Embedding Navigation
+# The Polar Projector: A Deterministic O(d) Operator for Interaction State, Decoupled from Persistent Storage
 
 **Author:**
 **Affiliation:**
@@ -16,9 +16,9 @@
 >
 > Status: DRAFT. Sections 1–3 and §4.2 are grounded (verified against
 > `polar_projector/projector.py`, reproduced by `tools/verify_paper_tables.py` which CI runs on
-> every push, and — for §3.4 and §4.2 — by `bench/drift.py` and `bench/batched.py` against the
-> frozen corpus in `bench/data/`). The rest of §4, and §5–6, are scaffolding only — see the TODO
-> notes — and must not be treated as final until reviewed.
+> every push, and — for §3.4, §3.5 and §4.2 — by `bench/drift.py`, `bench/recall.py` and
+> `bench/batched.py` against the frozen corpus in `bench/data/`). The rest of §4, and §5–6, are
+> scaffolding only — see the TODO notes — and must not be treated as final until reviewed.
 
 ---
 
@@ -32,13 +32,17 @@ static corpus visualization, they are ill-suited for hot-path control, where loc
 continuity and deterministic repeatability are required.
 
 To address this, we present the **Polar Projector**: a local subspace operator that acts as a
-deterministic \( O(d) \) projection layer for managing interaction state in volatile memory. The
-operator evaluates an incoming vector (\( v_n \)) against an active local anchor, operating
-completely isolated from persistent disk storage and independently of global corpus size
-(\( N \)). We show that the projection is governed by an orthogonal decomposition identity — the
-squared norm of the projected residual splits exactly into the aligned and residual components
-along a local contrast axis — and that collinearity singularities in the tangent plane are
-mitigated by a deterministic fallback direction in the anchor's orthogonal complement.
+deterministic \( O(d) \) projection layer for managing interaction state in volatile memory — a
+guarantee scoped to its single-stimulus entry points, `project()` and `evaluate()`; §4.2 measures
+how much of it a batched throughput mode trades away. The operator evaluates an incoming vector
+(\( v_n \)) against an active local anchor, operating completely isolated from persistent disk
+storage and independently of global corpus size (\( N \)). It is a per-interaction primitive, not a
+substitute for a global layout: it never constructs the corpus-wide coordinate system UMAP or t-SNE
+do, and §3.4 measures what that costs in neighborhood fidelity. We show that the projection is
+governed by an orthogonal decomposition identity — the squared norm of the projected residual
+splits exactly into the aligned and residual components along a local contrast axis — and that
+collinearity singularities in the tangent plane are mitigated by a deterministic fallback direction
+in the anchor's orthogonal complement.
 
 The benchmark suite measured projection latency at \( \approx 11.6\,\mu\text{s} \) with the
 stateless entry point and \( \approx 4.6\,\mu\text{s} \) once the local frame is prepared once per
@@ -472,6 +476,66 @@ It is included because §1 names them as what practitioners reach for, and a cla
 them should be measured rather than asserted. The mismatch is a limitation of the comparison, and
 the trustworthiness column is where it shows.
 
+### 3.5 Task-Level Neighborhood Preservation: Same-Part Retrieval
+
+§3.4's trustworthiness column leaves an open question stated directly in §6: whether that
+instrument is even the right one for a per-interaction signal. This section gives a second,
+task-shaped instrument on the same corpus and the same growth schedule, and lets a reader judge the
+fidelity gap against something more concrete than a manifold-preservation score: if a reader asked
+"what else is like this point," what fraction of the answer would come from the same part of the
+*Ethics* the point itself belongs to?
+
+*Method.* At each of the same eight growth steps as §3.4, and for every arm's 2D output at that
+step — \((\lambda, d_{esc})\) for the operator, an arbitrary 2D layout for the baselines —
+recall@15 measures, for every point, what fraction of its 15 nearest neighbours in that 2D space
+share its `part` label (P1_GOD .. P5_POWER; `bench/data/PROVENANCE.json`). The frozen corpus is read
+in part order, so the prefix at size 500 is far more lopsided across parts than the full
+2,221-chunk corpus, and a uniformly-random neighbour already matches by chance far more often early
+(chance ≈ 0.70) than late (chance ≈ 0.22). What is reported is *lift* — recall@15 divided by that
+step's own chance level — the same kind of correction §3.4 already applies when it normalizes
+displacement by RMS radius rather than comparing raw coordinates. `bench/recall.py`; deterministic
+under the same fixed seed as §3.4, reusing its embeddings rather than recomputing UMAP/t-SNE/polar
+coordinates a third way.
+
+| Arm | Median lift | Final-step lift | Worst-step lift |
+|---|---:|---:|---:|
+| Polar Projector, fixed anchor | 1.57× | 1.59× | **1.17×** |
+| Polar Projector, moving anchor | 1.39× | 1.34× | 1.17× |
+| UMAP, fit once + `transform()` | 1.57× | 1.57× | 1.12× |
+| UMAP, refit per step | 2.05× | 2.41× | 1.12× |
+| t-SNE, refit per step | **2.12×** | **2.47×** | 1.10× |
+
+1× = no better than a uniformly random neighbour at that step's part composition. Worst-step is the
+first step (size=500) for every arm, without exception — a property of the corpus at that size, not
+of any arm; see below.
+
+*What holds.* Against this instrument the fixed-anchor operator is statistically indistinguishable
+from fit-once UMAP: 1.57× median lift for both, 1.59× against 1.57× at the final step. That is a
+closer race than §3.4's trustworthiness column shows (0.66 against 0.77) — the two arms that never
+fully re-account for new data land in the same place on a task a reader can interpret directly, not
+only on a manifold-preservation score neither of them was optimizing for.
+
+*What does not.* The refit baselines pull ahead as the corpus grows rather than staying level: both
+t-SNE and UMAP-refit cross 2× lift by the middle of the growth schedule and reach 2.41–2.47× by the
+final step, while the operator and fit-once UMAP plateau around 1.3–1.6×. That is the same story
+§3.4 already tells about trustworthiness (0.90–0.92 for the refit arms against 0.66–0.77 for the
+others) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
+one, and it buys it at exactly the cost §3.4 measures: relocating previously-placed points by
+roughly the full width of the layout at every step.
+
+*The worst-step column does not discriminate, and that is disclosed rather than hidden.* Every
+arm's lowest lift is its first step, where the 500-chunk prefix is almost entirely one or two parts
+and chance is already 0.70 — there is little headroom above chance for any method to demonstrate
+anything. A table reporting only worst-case lift would flatten a real difference between arms into
+a number that is mostly measuring the corpus at that size, not the arm; median and final-step lift
+are reported alongside it for that reason.
+
+*Scope.* This instrument answers a narrower question than trustworthiness — same-part agreement
+among 15 neighbours, not preservation of the full 384-dimensional neighborhood structure — and
+`part` is a coarse five-way proxy for semantic relevance, not a ground truth of what a reader would
+actually judge relevant. §6 revisits what agreement between the two instruments does and does not
+settle about the fidelity gap.
+
 ## 4. Extensions
 
 > TODO — draft, not reviewed. Candidate directions, scoped strictly to the Polar Projector itself
@@ -651,7 +715,11 @@ does an incoming vector relate to one active local state) inherits spatial drift
 underlying data can render at different apparent positions across runs or incremental updates, so
 spatial proximity stops reliably encoding semantic proximity. The Polar Projector does not inherit
 this, by construction (Props 1–3, and the canonical `argmin` tie-break of Proposition 2's fallback
-in particular), independent of anything else about the system that adopts it. §3.4 turns that
+in particular), independent of anything else about the system that adopts it. This construction
+argument covers the scalar entry points — `project()`, `prepare()` and `evaluate()` — where every
+proposition above holds without qualification; §4.2 ships a separate batched entry point for
+throughput and measures the bounded amount of per-row determinism it trades away, so the claim in
+this paragraph is stated for the path it actually holds for. §3.4 turns the scalar-path
 construction argument into a measurement: across seven incremental growth steps the operator is
 exactly still while seed-pinned refits of both baselines relocate points by about the width of the
 layout each time. This matters beyond raw correctness: HCI research on hypertext navigation shows
@@ -706,12 +774,17 @@ mode from two directions.
   favours us. Boechler (2001) establishes that instability degrades navigation; it does not
   distinguish these two shapes of instability.
 - **The fidelity gap, and whether it is reducible.** §3.4 measures the operator at 0.66
-  trustworthiness against 0.90–0.92 for the global baselines. Part of that is a category
-  difference — the operator does not attempt a global layout — but the number is not therefore
-  dismissible, since \( (\lambda, d_{esc}) \) is in fact consumed as a planar position. Open: what
-  is the achievable ceiling for a local, deterministic, \( O(d) \) operator on this metric, whether
-  the multi-axis extension of §4.1 raises it by giving the frame more than one degree of freedom,
-  and whether a trustworthiness figure is even the right instrument for a per-interaction signal.
+  trustworthiness against 0.90–0.92 for the global baselines. §3.5 answers this bullet's previous
+  question of whether trustworthiness is even the right instrument by building a second,
+  task-shaped one (same-part recall@15) — and finds the same shape of result on it: the
+  fixed-anchor operator ties fit-once UMAP (1.57× lift, both) and both trail the refit baselines
+  (2.05–2.12×). Two instruments agreeing is weaker evidence than it first looks, since both measure
+  neighbourhood coherence on the same one corpus — it rules out an instrument-specific artifact, not
+  a corpus-specific one. Genuinely still open: what is the achievable ceiling for a local,
+  deterministic, \( O(d) \) operator on either instrument, whether the multi-axis extension of §4.1
+  raises it by giving the frame more than one degree of freedom, and whether `part` (or a
+  `part`-like semantic proxy) generalizes as a relevance signal beyond one five-part corpus this
+  small.
 - **Tightness of the \( \epsilon_{collinear} \) vs. \( \delta \) bound in Proposition 2.** The
   guarantee \( \|v_{dipole}\|_2 \geq \min(\epsilon_{collinear}, 2\delta) \) is a worst-case bound;
   whether it is ever loose enough in practice to matter — whether real collinear configurations

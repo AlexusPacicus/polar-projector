@@ -89,6 +89,7 @@ pip install -e ".[test,repro]"
 | `bench/latency.py` | §3.1.1 cost vs. O(d) primitives, §3.1.2 dimension sweep |
 | `bench/conditioning.py` | §3.2 conditioning sweep and form latency |
 | `bench/drift.py` | §3.4 positional stability (baseline arms need the `[bench]` extra) |
+| `bench/recall.py` | §3.5 same-part recall@k (baseline arms need the `[bench]` extra) |
 | `bench/batched.py` | §4.2 batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
@@ -106,7 +107,7 @@ timing protocol they share.
 pytest
 ```
 
-499 tests across property, unit, frame-equivalence and block-benchmark suites; the operator is at
+628 tests across property, unit, frame-equivalence and block-benchmark suites; the operator is at
 100% line coverage. `tests/test_polar_frame.py` asserts the `prepare()`/`evaluate()` split is
 behavior-preserving by exact equality against `project()`.
 
