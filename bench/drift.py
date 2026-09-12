@@ -15,12 +15,22 @@ Arms
 3. tsne_refit      sklearn TSNE has no transform(); refitting is the only option.
 4. polar_fixed     PolarProjector with the anchor held fixed.
 5. polar_moving    PolarProjector with the anchor following the newest batch.
+6. random_fixed    one 2xd Gaussian matrix, drawn once and never refit.
+7. pca_fit_once    top-2 PCs of the initial window, then projection only.
 
 Arm 5 is not optional. The operator's output is anchor-relative, so reporting
 only arm 4 would claim a stability the operator does not have. The defensible
 claim is narrower and stronger: drift is a deterministic function of one
 explicit, caller-controlled variable, not of hidden stochastic state or of
 corpus size.
+
+Arms 6 and 7 are not optional either, for the opposite reason. Exact positional
+stability is not evidence of anything on its own: *any* fixed linear map has it,
+in O(d), deterministically, at every step. Without them this script would report
+the operator's 7/7 still steps as a result when a three-line baseline matches it,
+and the whole comparison would rest silently on the fidelity column. These two
+arms put the trivial baselines' fidelity next to the operator's so a reader can
+see what the local frame actually buys. Both are numpy-only, like arms 4 and 5.
 
 Method notes
 ------------
@@ -257,12 +267,45 @@ def arm_polar_moving(
     return out
 
 
+def arm_random_fixed(vectors: np.ndarray, sizes: list[int]) -> list[np.ndarray]:
+    """One Gaussian 2xd matrix, drawn once and applied unchanged at every step.
+
+    The cheapest thing that is exactly stable. Coordinates are a pure function
+    of the vector, so adding data cannot move a placed point -- the property
+    §3.2 measures on the operator, obtained here for free.
+    """
+    rng = np.random.default_rng(SEED)
+    d = vectors.shape[1]
+    projection = rng.standard_normal((d, 2)) / np.sqrt(d)
+    return [vectors[:size] @ projection for size in sizes]
+
+
+def arm_pca_fit_once(vectors: np.ndarray, sizes: list[int]) -> list[np.ndarray]:
+    """Top-2 principal components of the initial window, then projection only.
+
+    A fixed linear map like arm 6, but one chosen to capture variance rather
+    than at random -- the strongest trivially-stable baseline, and the fairest
+    comparison for what a local frame has to beat.
+
+    numpy's SVD rather than sklearn's PCA, so this arm keeps the numpy-only
+    guarantee the polar arms have. Components are frozen at the initial window:
+    refitting them per step is what the umap_refit arm already represents.
+    """
+    window = vectors[: sizes[0]]
+    centre = window.mean(axis=0)
+    _, _, vt = np.linalg.svd(window - centre, full_matrices=False)
+    components = vt[:2].T
+    return [(vectors[:size] - centre) @ components for size in sizes]
+
+
 ARMS = {
     "umap_fit_once": arm_umap_fit_once,
     "umap_refit": arm_umap_refit,
     "tsne_refit": arm_tsne_refit,
     "polar_fixed": arm_polar_fixed,
     "polar_moving": arm_polar_moving,
+    "random_fixed": arm_random_fixed,
+    "pca_fit_once": arm_pca_fit_once,
 }
 
 

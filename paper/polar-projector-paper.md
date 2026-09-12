@@ -56,8 +56,11 @@ an inequality bounding the decomposition once \( \lambda \) clamps at the dipole
 `evaluate()`; §D measures what a batched throughput mode trades away.
 
 Against a corpus of 2,221 embedded chunks of Spinoza's *Ethics* grown incrementally in reading
-order, the fixed-anchor operator is the **only arm still at every growth step** — aligned p95
-displacement at or below \( 5 \times 10^{-15} \), float64 resolution, on all 7 transitions. Under
+order, the fixed-anchor operator is still at every growth step — aligned p95 displacement at or
+below \( 5 \times 10^{-15} \), float64 resolution, on all 7 transitions. **That property is not
+evidence on its own**: any fixed linear map has it, and §3.2 measures two such baselines — a fixed
+random projection and a once-fitted PCA — precisely so a reader does not read stability as the
+result. What separates the arms is fidelity, not stillness. Under
 refitting, t-SNE relocates previously-placed points by 1.03–1.24 times the layout width at every
 step and UMAP by 0.31–1.25 (median 1.16). UMAP fitted once and extended by `transform()` is bimodal
 rather than stable: exactly still on 5 of 7 steps, then relocating by 1.07. Per-stimulus latency is
@@ -125,10 +128,13 @@ guarantees proven in §2.
   null-space fallback (Propositions 1 and 2) and an orthogonal decomposition identity for the
   residual — exact whenever \( \lambda \) is unsaturated, an inequality once it clamps
   (Proposition 3).
-- **A measurement of positional stability under incremental growth.** Over a corpus of 2,221
-  chunks grown in reading order, the fixed-anchor frame is the only arm still at every step
-  (aligned p95 \( \leq 5 \times 10^{-15} \), 7/7), against seed-pinned refits that move at every
-  step and a fit-once UMAP configuration that is bimodal rather than stable (§3.2).
+- **A measurement separating positional stability from the fidelity it costs.** Over a corpus of
+  2,221 chunks grown in reading order, the fixed-anchor frame is still at every step (aligned p95
+  \( \leq 5 \times 10^{-15} \), 7/7), against seed-pinned refits that move at every step and a
+  fit-once UMAP configuration that is bimodal rather than stable. Two trivially-stable baselines —
+  a fixed random projection and a once-fitted PCA — are measured alongside it, because exact
+  stability is a property of *any* fixed linear map and reporting it as an achievement without them
+  would be claiming credit for not reoptimizing (§3.2).
 - **A quantification of the stability–fidelity trade-off.** Two instruments bound what local
   determinism costs: trustworthiness 0.66 against 0.90–0.92, and same-part recall@15 lift 1.57×
   against 2.05–2.12×, in exchange for exact reproducibility, no hidden optimizer state, and a
