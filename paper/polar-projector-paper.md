@@ -14,10 +14,17 @@
 > in `docs/LEDGER.md` seq 40-43. The extraction exists so this manuscript can be reproduced with
 > numpy alone, without the substrate's fastapi/torch dependency stack.
 >
-> Status: DRAFT. Sections 1–3 and the appendices are grounded (verified against
-> `polar_projector/projector.py`, reproduced by `tools/verify_paper_tables.py` which CI runs on
-> every push, and — for §3.2, §3.3 and §D — by `bench/drift.py`, `bench/recall.py` and
-> `bench/batched.py` against the frozen corpus in `bench/data/`). §4 and §5 are drafted but not
+> Status: DRAFT. Sections 1–3 and the appendices are grounded, and
+> `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
+> The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
+> compared cell by cell. Every other published figure is checked for **consistency with its
+> committed artifact** in `bench/results/` (112 figures at present, produced by `bench/latency.py`,
+> `bench/drift.py`, `bench/recall.py`, `bench/conditioning.py`, `bench/batched.py` and
+> `tools/decompose_polar_latency.py` against the hash-committed corpus in `bench/data/`). The second
+> check is the weaker of the two: it catches a manuscript drifting away from its own measurements,
+> not an error inside a benchmark. Two figures are covered by neither and are labelled in place —
+> the \( O(N^2) \) column of §3 and the SQLite deployment numbers, both carried over from the
+> substrate. §4 and §5 are drafted but not
 > reviewed and must not be treated as final. The speculative extensions carried by earlier drafts
 > — multi-axis tangent frames and the tripolar model, adaptive δ calibration, and active-codebook
 > eviction — have been removed rather than relegated: none is implemented in
@@ -77,11 +84,27 @@ constraints that a static layout never has to meet:
 
 Reusing global dimensionality reduction for this violates both. Stochastic re-optimization alters
 existing coordinates on incremental update, and §3.2 measures what survives pinning the random
-seed: under refitting, t-SNE relocates previously-placed points by 1.03–1.24 times the width of the
-layout at every growth step and UMAP by 0.31–1.25. Refitting is also not cheap — the same seven
-growth steps cost 16.2–25.6 s across the baselines against 0.072 s for the operator — and global
-graph-layout algorithms scale quadratically in \( N \), saturating the interaction thread as the
-corpus grows.
+seed: under refitting, t-SNE (van der Maaten & Hinton, 2008) relocates previously-placed points by
+1.03–1.24 times the width of the layout at every growth step and UMAP (McInnes et al., 2018) by
+0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 16.2–25.6 s across the
+baselines against 0.072 s for the operator — and global graph-layout algorithms scale quadratically
+in \( N \), saturating the interaction thread as the corpus grows.
+
+This instability is not news to the visualization community, and the approaches it has taken are
+the reason this paper argues for a different primitive rather than a better layout. Dynamic t-SNE
+adds a temporal-coherence penalty across a sequence of datasets, trading projection reliability for
+stability (Rauber et al., 2016); guided stable dynamic projections make that trade controllable
+(Vernier et al., 2021); and incremental techniques evolve a projection without revisiting the data,
+buying speed and stability at the cost of global distance preservation (Neves et al., 2020).
+Out-of-sample extension takes the complementary route of fitting once and mapping new points
+through a learned or interpolated function (Bengio et al., 2003; Sainburg et al., 2021) — §3.2
+measures exactly that configuration as one of its arms. Every one of these softens drift by
+constraining or amortizing a global optimization. None of them removes the optimization, so none
+delivers the *exact* repeatability a spatial interface can rely on per interaction; surveys of the
+field treat stability as one quality axis traded against others rather than a guarantee (Espadoto
+et al., 2021). Spatial hypertext identified the underlying interface requirement long before
+embeddings were the substrate: users encode meaning in where they put things, so the system must
+not move them (Marshall & Shipman, 1995).
 
 The Polar Projector meets both constraints by refusing the problem the baselines solve. It is a
 per-interaction primitive, not a global layout: a local, deterministic \( O(d) \) operator that
@@ -181,7 +204,13 @@ tangent-frame construction (Duff et al., 2017). That work optimizes a branchless
 construction for GPU evaluation at every shading point; the \( \arg\min \) + Gram-Schmidt
 construction here instead targets a single CPU-resident fallback triggered only on the collinear
 branch of Proposition 2, where per-call branch cost is irrelevant and analytical simplicity is the
-only requirement.
+only requirement. The broader principle — resolving geometric degeneracies by a consistent
+deterministic rule fixed in advance, rather than by an ad-hoc branch per special case — is the one
+*Simulation of Simplicity* establishes (Edelsbrunner & Mücke, 1990). The mechanism here is not
+theirs: SoS resolves degeneracies by symbolic infinitesimal perturbation of the inputs, whereas
+Proposition 2 substitutes a canonical fallback direction and leaves the inputs untouched. What is
+shared is the discipline of making the degenerate case a defined branch with a reproducible answer
+instead of an error.
 
 The fallback vector also admits a closed scalar form, since \( e_k \) is one-hot:
 \( \langle e_k, \hat{c}_1 \rangle = \hat{c}_1[k] \), and because \( \|\hat{c}_1\|_2 = 1 \),
@@ -337,8 +366,11 @@ Benchmarked over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
 Projection latency stays flat as \( N \) grows — 1.3% across a 25× corpus and a 25× working set,
 consistent with Proposition 1's independence from corpus size — while the \( O(N^2) \) force
 baseline it replaces grows quadratically. The polar column is `bench/latency.py --n-sweep`, 3
-repetitions per row; the \( O(N^2) \) column is the substrate measurement it was originally
-compared against and is reproduced unchanged.
+repetitions per row, and is checked against its committed artifact on every push. The
+\( O(N^2) \) column is **not**: it is a substrate measurement this operator was originally compared
+against, carried over unchanged, and no code in this repository reproduces it. It is included for
+scale and should be read as context rather than as a result of this paper — as should the
+deployment figures in the next paragraph.
 
 *Deployment context (not a claim of this paper — see §1 scope note):* within the Traianus
 substrate, the persistence layer consuming this operator's output measured 25,000 embeddings
@@ -359,15 +391,20 @@ and the most work a planar local coordinate could require places it in its compl
 | Random projection, \( (2 \times d) \) matrix-vector | 1.03 | 1.08 | 0.23× |
 | Multi-anchor cosine, \( K = 3 \) | 1.14 | 1.21 | 0.25× |
 | **`evaluate()` — per stimulus, prepared frame** | **4.57** | 4.79 | **1.00×** |
-| `prepare()` — invariant frame, once per context | 6.90 | 7.18 | 1.51× |
+| `prepare()` — invariant frame, once per context | 6.87 | 7.21 | 1.50× |
 | `project()` — full stateless call | 11.75 | 12.50 | 2.57× |
 | Sliding-window PCA, \( W = 32 \) | 292.55 | 316.67 | 64.02× |
 
 Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
 after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
-is 2.4–2.8% on the polar arms and under 3% elsewhere. The stateless decomposition reproduces from an
-independent script on a different frame (`tools/decompose_polar_latency.py`): 11.64 µs against the
-11.75 measured here, with `prepare()` accounting for 59.3% of it.
+is 2.4–2.8% on the polar arms and under 3% elsewhere. The `prepare()` row and the stateless
+decomposition come from an independent script on a different frame
+(`tools/decompose_polar_latency.py`, artifact `bench/results/decompose.json`): 11.51 µs stateless
+against the 11.75 measured here, with `prepare()` accounting for 59.7% of it. That script reports
+the median of 3 repetitions rather than a single pass, because this host is passively cooled and one
+pass in four was observed inflated by 20% (`evaluate` at 5.53 µs against a 4.55 µs median) — the
+median across repetitions holds the run-to-run spread on that figure to 0.5%, and the per-repetition
+means are recorded in the artifact so the correction is auditable rather than asserted.
 
 Two things follow, in opposite directions. Hoisting the frame out of the loop leaves **2.57× less
 work per interaction** whenever the active context outlives a single stimulus — which, for an
@@ -391,14 +428,16 @@ documented in §A; no table of *values* anywhere in this paper is affected by it
 §1 claims that stochastic global projections inherit spatial drift under incremental updates and
 that a local deterministic operator does not. That claim was an assertion resting on a citation;
 this section measures it, against a corpus with real semantic structure rather than synthetic
-blobs: 2,221 sentence-chunks of Spinoza's *Ethics* embedded at \( d = 384 \) and
-L2-normalized. The corpus grows in reading order from 500 chunks in batches of 250, and at each of
+blobs: 2,221 sentence-chunks of Spinoza's *Ethics* embedded at \( d = 384 \) with
+`all-MiniLM-L6-v2` (Reimers & Gurevych, 2019) at a pinned revision and L2-normalized; the
+embeddings, labels and their SHA-256 digests are committed in `bench/data/`. The corpus grows in reading order from 500 chunks in batches of 250, and at each of
 the 7 transitions we measure how far the points **already present and unchanged** moved.
 
 *Method.* Layouts produced by UMAP and t-SNE are defined only up to a similarity transform, so raw
 displacement largely measures global reorientation — which an interface could absorb by
 re-anchoring its camera, and which the baselines should not be charged for. Displacement is
-therefore reported after full Procrustes alignment (translation, rotation, scale), and normalized
+therefore reported after full Procrustes alignment (translation, rotation, scale; Gower, 1975), and
+normalized
 by each embedding's own RMS radius, since the coordinate spaces are not commensurable (UMAP's units
 are arbitrary; the operator's are \( (\lambda, d_{esc}) \) with \( \lambda \in [-1,1] \)). A value
 of 1.0 means points moved as far as the layout is wide. Both baselines run with a fixed
@@ -416,8 +455,8 @@ apparent movement is global reorientation that the charitable reading forgives.
 | t-SNE, refit per step | 1.1408 | 1.2439 | 0/7 | **0.9197** |
 
 Aligned p95 displacement per growth step; "still" counts steps under \( 10^{-9} \).
-Trustworthiness (\( k = 15 \)) of the final layout against the source 384D space measures
-neighborhood preservation. Apple M1, 8 GB, macOS 15.6, Python 3.11.6, NumPy 2.4.1;
+Trustworthiness (\( k = 15 \); Venna & Kaski, 2001) of the final layout against the source 384D
+space measures neighborhood preservation. Apple M1, 8 GB, macOS 15.6, Python 3.11.6, NumPy 2.4.1;
 `bench/drift.py`, deterministic under a fixed seed and reproduced bit-for-bit across runs.
 
 *What holds.* Under refitting — the path required to keep a global layout faithful as a corpus
@@ -432,8 +471,8 @@ zero at the resolution the arithmetic affords, not an exact algebraic zero.
 *What does not.* Three results cut against the simple reading, and are stated here rather than
 left for a reader to find.
 
-First, UMAP fitted once and extended by `transform()` is **not** the unstable arm §1 implies — it
-is bimodal. It is exactly still for 5 of 7 steps and then relocates by 1.07. Averaging across
+First, UMAP fitted once and extended by `transform()` — the out-of-sample configuration §1 names
+(Bengio et al., 2003) — is **not** the unstable arm a reader might expect; it is bimodal. It is exactly still for 5 of 7 steps and then relocates by 1.07. Averaging across
 steps yields 0.21, a figure that describes neither of the two things that actually happen; the
 aggregation here is median-and-worst for that reason. Whether intermittent relocation is better or
 worse than steady drift is not settled by this measurement: a spatial mental model that is
@@ -675,31 +714,60 @@ mode from two directions.
 
 ## References
 
-> Status: found via the Browser tool (per the option below) and user-verified prior to inclusion.
-> Each entry is cited at least once above; none is a claim of direct novelty over this work — see
-> §4 for how each relates to (and differs from) the Polar Projector.
+> Status: each entry is cited at least once above, and each was verified against its publisher or
+> preprint record rather than reconstructed from memory. None is a claim of prior art over this
+> work — §4 states how the closest ones relate to and differ from the Polar Projector.
 
 1. Bandyopadhyay, S., Xu, J., Pawar, N., & Touretzky, D. (2022). Interactive Visualizations of Word
    Embeddings for K-12 Students. *Proceedings of the AAAI Conference on Artificial Intelligence*,
    36(11), 12713–12720.
-2. Boechler, P. M. (2001). How Spatial Is Hyperspace? Interacting with Hypertext Documents:
-   Cognitive Processes and Concepts. *CyberPsychology & Behavior*, 4(1).
-3. Bolukbasi, T., Chang, K.-W., Zou, J., Saligrama, V., & Kalai, A. T. (2016). Man is to Computer
+2. Bengio, Y., Paiement, J.-F., Vincent, P., Delalleau, O., Le Roux, N., & Ouimet, M. (2003).
+   Out-of-Sample Extensions for LLE, Isomap, MDS, Eigenmaps, and Spectral Clustering. *Advances in
+   Neural Information Processing Systems 16 (NIPS 2003)*.
+3. Boechler, P. M. (2001). How Spatial Is Hyperspace? Interacting with Hypertext Documents:
+   Cognitive Processes and Concepts. *CyberPsychology & Behavior*, 4(1), 23–46.
+4. Bolukbasi, T., Chang, K.-W., Zou, J., Saligrama, V., & Kalai, A. T. (2016). Man is to Computer
    Programmer as Woman is to Homemaker? Debiasing Word Embeddings. *Advances in Neural Information
    Processing Systems 29 (NeurIPS 2016)*. arXiv:1607.06520.
-4. Charikar, M. S. (2002). Similarity Estimation Techniques from Rounding Algorithms. *Proceedings
-   of the 34th Annual ACM Symposium on Theory of Computing (STOC 2002)*.
-5. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
-   Building an Orthonormal Basis, Revisited. *Journal of Computer Graphics Techniques*, 6(1).
-6. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
-   (2018). Visual Exploration of Semantic Relationships in Neural Word Embeddings. *IEEE
-   Transactions on Visualization and Computer Graphics*, 24(1), 553–562.
-   DOI:10.1109/TVCG.2017.2745141.
-7. `chronos-vector` (manucouto1). Temporal vector database; "Anchor Projection" tutorial and
-   `project_to_anchors()` API. https://github.com/manucouto1/chronos-vector — software, cited in
-   §4 for terminology disambiguation only, not as academic prior art.
-
----
+5. Charikar, M. S. (2002). Similarity Estimation Techniques from Rounding Algorithms. *Proceedings
+   of the 34th Annual ACM Symposium on Theory of Computing (STOC 2002)*, 380–388.
+6. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
+   Building an Orthonormal Basis, Revisited. *Journal of Computer Graphics Techniques*, 6(1), 1–8.
+7. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
+   Degenerate Cases in Geometric Algorithms. *ACM Transactions on Graphics*, 9(1), 66–104.
+   DOI:10.1145/77635.77639.
+8. Espadoto, M., Martins, R. M., Hirata, N. S. T., Kerren, A., & Telea, A. C. (2021). Toward a
+   Quantitative Survey of Dimension Reduction Techniques. *IEEE Transactions on Visualization and
+   Computer Graphics*, 27(3), 2153–2173.
+9. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
+   DOI:10.1007/BF02291478.
+10. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
+    (2018). Visual Exploration of Semantic Relationships in Neural Word Embeddings. *IEEE
+    Transactions on Visualization and Computer Graphics*, 24(1), 553–562.
+    DOI:10.1109/TVCG.2017.2745141.
+11. Marshall, C. C., & Shipman, F. M. (1995). Spatial Hypertext: Designing for Change.
+    *Communications of the ACM*, 38(8), 88–97. DOI:10.1145/208344.208350.
+12. McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and
+    Projection for Dimension Reduction. arXiv:1802.03426.
+13. Neves, T. T. A. T., Martins, R. M., Coimbra, D. B., Kucher, K., Kerren, A., & Paulovich, F. V.
+    (2020). Xtreaming: An Incremental Multidimensional Projection Technique and Its Application to
+    Streaming Data. arXiv:2003.09017.
+14. Rauber, P. E., Falcão, A. X., & Telea, A. C. (2016). Visualizing Time-Dependent Data Using
+    Dynamic t-SNE. *EuroVis 2016 — Short Papers*. DOI:10.2312/eurovisshort.20161164.
+15. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese
+    BERT-Networks. *Proceedings of EMNLP-IJCNLP 2019*, 3982–3992.
+16. Sainburg, T., McInnes, L., & Gentner, T. Q. (2021). Parametric UMAP Embeddings for
+    Representation and Semisupervised Learning. *Neural Computation*, 33(11), 2881–2907.
+17. van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. *Journal of Machine
+    Learning Research*, 9, 2579–2605.
+18. Venna, J., & Kaski, S. (2001). Neighborhood Preservation in Nonlinear Projection Methods: An
+    Experimental Study. *Artificial Neural Networks — ICANN 2001*, 485–491.
+    DOI:10.1007/3-540-44668-0_68.
+19. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
+    *Computer Graphics Forum*, 40(3), 87–98. DOI:10.1111/cgf.14291.
+20. `chronos-vector` (manucouto1). Temporal vector database; "Anchor Projection" tutorial and
+    `project_to_anchors()` API. https://github.com/manucouto1/chronos-vector — software, cited in
+    §4 for terminology disambiguation only, not as academic prior art.
 
 ## Appendix
 

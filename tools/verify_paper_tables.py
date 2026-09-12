@@ -33,7 +33,10 @@ Read-only, offline (numpy only — no substrate dependency).
 """
 
 
+import json
 import math
+import statistics
+from pathlib import Path
 
 import numpy as np
 
@@ -150,6 +153,145 @@ def _status(measured: float, published: float) -> str:
     return "PASS" if abs(measured - published) / published <= RTOL else "MISMATCH"
 
 
+
+# ---------------------------------------------------------------------------
+# Artifact consistency: does the manuscript report the committed benchmark
+# artifacts correctly?
+#
+# This is a WEAKER check than the two above and is labelled as such in the
+# output. §B and §C are *recomputed* from the operator on every run. The tables
+# below cannot be: §3.2/§3.3 need umap-learn, scikit-learn and minutes of
+# compute, so what is checked is that the paper's numbers match the JSON in
+# bench/results/. That catches a manuscript drifting away from its own
+# measurements — the failure mode that put a 189 us figure in a draft while the
+# artifact said 11.75 — but it does not re-derive the artifacts themselves.
+#
+# Each published value is stored as the STRING the paper prints, and the
+# measured value is rounded to that same precision before comparing, so a
+# transcription error fails and a rounding difference does not.
+# ---------------------------------------------------------------------------
+
+RESULTS = Path(__file__).resolve().parent.parent / "bench" / "results"
+
+
+def _load(name: str) -> dict:
+    with (RESULTS / name).open() as fh:
+        return json.load(fh)["results"]
+
+
+def _agree(measured: float, published: str) -> bool:
+    nd = len(published.split(".")[1]) if "." in published else 0
+    return round(float(measured), nd) == float(published)
+
+
+def _p95s(arm: dict) -> list[float]:
+    return [s["aligned_p95"] for s in arm["steps"]]
+
+
+def _artifact_checks() -> list[tuple[str, str, float]]:
+    """(label, published-as-printed, measured-from-artifact)."""
+    lat = _load("latency.json")
+    dec = _load("decompose.json")
+    dri = _load("drift.json")
+    rec = _load("recall.json")
+    out: list[tuple[str, str, float]] = []
+
+    # §3 corpus sweep — the flatness claim
+    for n, mean, p95 in [("1000", "11.46", "11.92"), ("2221", "11.61", "11.79"),
+                         ("4000", "11.61", "12.21"), ("25000", "11.58", "12.00")]:
+        out.append((f"§3  sweep N={n} mean", mean, lat["corpus_size_sweep"][n]["mean"]))
+        out.append((f"§3  sweep N={n} p95", p95, lat["corpus_size_sweep"][n]["p95"]))
+
+    # §3.1 cost bracketing
+    for arm, mean, p95 in [("random_projection", "1.03", "1.08"),
+                           ("multi_anchor_cosine", "1.14", "1.21"),
+                           ("polar_evaluate", "4.57", "4.79"),
+                           ("polar_project", "11.75", "12.50"),
+                           ("sliding_window_pca", "292.55", "316.67")]:
+        a = lat["spinoza"]["arms"][arm]
+        out.append((f"§3.1 {arm} mean", mean, a["mean"]))
+        out.append((f"§3.1 {arm} p95", p95, a["p95"]))
+    out.append(("§3.1 prepare() mean", "6.87", dec["prepare_only"]["mean"]))
+    out.append(("§3.1 prepare() p95", "7.21", dec["prepare_only"]["p95"]))
+    out.append(("§3.1 stateless (decompose)", "11.51", dec["project_stateless"]["mean"]))
+    out.append(("§3.1 frame share %", "59.7", dec["frame_share_pct"]))
+
+    # §3.2 positional stability
+    for arm, med, worst, still, trust in [
+        ("polar_fixed", "0.0000", "0.0000", 7, "0.6639"),
+        ("polar_moving", "0.2984", "0.6138", 0, "0.6208"),
+        ("umap_fit_once", "0.0000", "1.0725", 5, "0.7681"),
+        ("umap_refit", "1.1607", "1.2527", 0, "0.9049"),
+        ("tsne_refit", "1.1408", "1.2439", 0, "0.9197"),
+    ]:
+        p = _p95s(dri[arm])
+        out.append((f"§3.2 {arm} median step", med, statistics.median(p)))
+        out.append((f"§3.2 {arm} worst step", worst, max(p)))
+        out.append((f"§3.2 {arm} still steps", str(still), sum(1 for x in p if x < 1e-9)))
+        out.append((f"§3.2 {arm} trustworthiness", trust, dri[arm]["final_trustworthiness"]))
+
+    # §3.3 same-part retrieval
+    for arm, med, final, worst in [("polar_fixed", "1.57", "1.59", "1.17"),
+                                   ("polar_moving", "1.39", "1.34", "1.17"),
+                                   ("umap_fit_once", "1.57", "1.57", "1.12"),
+                                   ("umap_refit", "2.05", "2.41", "1.12"),
+                                   ("tsne_refit", "2.12", "2.47", "1.10")]:
+        L = [s["lift"] for s in rec[arm]["steps"]]
+        out.append((f"§3.3 {arm} median lift", med, statistics.median(L)))
+        out.append((f"§3.3 {arm} final lift", final, L[-1]))
+        out.append((f"§3.3 {arm} worst lift", worst, min(L)))
+
+    # Appendix B extra claims: the cost of refusing the scalar form
+    con = _load("conditioning.json")
+    out.append(("§B  vector-form mean", "4.56", con["latency"]["vector_form"]["mean"]))
+    out.append(("§B  scalar-form mean", "3.10", con["latency"]["scalar_form"]["mean"]))
+    out.append(("§B  scalar speedup", "1.47", con["scalar_speedup"]))
+
+    # Appendix D batched throughput
+    bat = _load("batched.json")
+    for b, loop, batch, speed, vps in [("1", "5.380", "13.874", "0.39", "72075"),
+                                       ("4", "5.464", "3.649", "1.50", "274064"),
+                                       ("16", "4.689", "1.568", "2.99", "637692"),
+                                       ("64", "4.904", "1.102", "4.45", "907198"),
+                                       ("256", "4.610", "0.893", "5.16", "1119291"),
+                                       ("1024", "4.468", "1.283", "3.48", "779626"),
+                                       ("4096", "4.481", "1.624", "2.76", "615720")]:
+        s = bat["throughput"][b]
+        out.append((f"§D  B={b} scalar loop", loop, s["scalar_loop_us_per_vec"]))
+        out.append((f"§D  B={b} evaluate_batch", batch, s["evaluate_batch_us_per_vec"]))
+        out.append((f"§D  B={b} speedup", speed, s["speedup"]))
+        out.append((f"§D  B={b} vectors/s", vps, s["vectors_per_second"]))
+    # the sqrt is free: every measured saving rounds to <= 2%
+    for b in ("64", "1024", "4096"):
+        out.append((f"§D  sqrt saving B={b} <2%", "0.0",
+                    round(bat["sqrt_cost"][b]["saving"], 1)))
+
+    # Appendix A dimension sweep
+    for d, ev, floor, ratio in [("16", "4.18", "0.72", "5.78"), ("64", "4.12", "0.74", "5.58"),
+                                ("256", "4.54", "0.90", "5.07"), ("384", "4.58", "1.08", "4.25"),
+                                ("1024", "5.64", "1.64", "3.43"), ("4096", "11.00", "4.62", "2.38"),
+                                ("8192", "25.18", "8.63", "2.92")]:
+        s = lat["dimension_sweep"][d]
+        out.append((f"§A  d={d} evaluate", ev, s["polar_evaluate"]))
+        out.append((f"§A  d={d} floor", floor, s["random_projection"]))
+        out.append((f"§A  d={d} ratio", ratio, s["ratio"]))
+    return out
+
+
+def _verify_artifacts() -> int:
+    print("\nartifact consistency — manuscript vs committed bench/results/*.json")
+    print("(compares reported figures against the stored artifacts; does NOT re-derive them)\n")
+    checks = _artifact_checks()
+    failures = 0
+    for label, published, measured in checks:
+        ok = _agree(measured, published)
+        failures += int(not ok)
+        if not ok:
+            print(f"  MISMATCH  {label:34} paper={published:>10}  artifact={measured!r}")
+    print(f"  {len(checks) - failures}/{len(checks)} figures agree with their artifact")
+    return failures
+
+
 def main() -> int:
     print("Polar Projector — published table verification\n")
     cond_failures = _verify_conditioning()
@@ -176,11 +318,14 @@ def main() -> int:
     print("\nScaling law check: sigma2_esc(0.5)/sigma2_esc(0.1) "
           f"= {_measure(0.5)[1]:.6e}/{_measure(0.1)[1]:.6e} "
           "(paper: 6.954e-6 constant for delta >= 0.100)")
-    total = failures + cond_failures
+    art_failures = _verify_artifacts()
+
+    total = failures + cond_failures + art_failures
     if total == 0:
-        print("Verdict: ALL PASS")
+        print("\nVerdict: ALL PASS")
     else:
-        print(f"Verdict: {cond_failures} §B row(s) and {failures} §C row(s) mismatched")
+        print(f"\nVerdict: {cond_failures} §B row(s), {failures} §C row(s) and "
+              f"{art_failures} artifact figure(s) mismatched")
     return 0 if total == 0 else 1
 
 

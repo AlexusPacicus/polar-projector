@@ -1,0 +1,49 @@
+{
+  "experiment": "decompose",
+  "config": {
+    "d": 384,
+    "n_vectors": 25000,
+    "repetitions": 3,
+    "statistic": "median over repetitions",
+    "dtype": "float64"
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "project_stateless": {
+      "mean": 11.50623835856095,
+      "p95": 11.8750031106174
+    },
+    "prepare_only": {
+      "mean": 6.8705565156415105,
+      "p95": 7.208029273897409
+    },
+    "evaluate_only": {
+      "mean": 4.5500386925414205,
+      "p95": 4.749977961182594
+    },
+    "evaluate_scalar_desc": {
+      "mean": 3.1181075237691402,
+      "p95": 3.2919924706220627
+    },
+    "frame_share_pct": 59.711578202529,
+    "split_speedup": 2.5288220905510914,
+    "evaluate_mean_per_rep": [
+      4.55037034349516,
+      4.526192415505648,
+      4.5500386925414205
+    ],
+    "evaluate_spread_pct": 0.5313785139705729
+  }
+}

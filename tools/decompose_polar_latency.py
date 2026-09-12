@@ -22,14 +22,17 @@ Read-only, offline, deterministic (fixed seeds). numpy only — no substrate dep
 
 import math
 import time
+from pathlib import Path
 
 import numpy as np
 
+from bench._harness import write_result
 from polar_projector import PolarProjector
 from polar_projector.fixtures import random_unit_vector
 
 D = 384
 N_VECTORS = 25_000
+REPS = 3
 SEED_ANCHOR = 1
 SEED_POLE_A = 2
 SEED_POLE_B = 3
@@ -50,16 +53,10 @@ def _stats(lat: np.ndarray) -> tuple[float, float]:
     return float(lat.mean()) * 1e6, float(s[int(0.95 * len(s))]) * 1e6
 
 
-def main() -> int:
-    c_1 = random_unit_vector(D, SEED_ANCHOR)
-    c_A = random_unit_vector(D, SEED_POLE_A)
-    c_B = random_unit_vector(D, SEED_POLE_B)
-    vectors = np.asarray([random_unit_vector(D, SEED_BASE + i) for i in range(N_VECTORS)])
-
-    p = PolarProjector()
-
-    print(f"PolarProjector latency decomposition (d={D}, N={N_VECTORS}, float64, fixed seeds)\n")
-
+def _measure_once(p, vectors, c_1, c_A, c_B) -> dict:
+    """One full pass over the four stages. Returned separately per repetition so the
+    caller can take a median: this host is passively cooled, and a single pass can be
+    inflated ~20% by thermal throttling (observed on `evaluate`, 4.60 -> 5.53 us)."""
     # A. Full stateless call — the published methodology.
     lat = np.empty(N_VECTORS)
     bulk0 = time.perf_counter()
@@ -105,6 +102,41 @@ def main() -> int:
     bulk_sca = (time.perf_counter() - bulk0) / N_VECTORS
     mean_sca, p95_sca = _stats(lat_sca)
 
+    return {
+        "mean_full": mean_full, "p95_full": p95_full, "bulk_full": bulk_full,
+        "mean_frame": mean_frame, "p95_frame": p95_frame,
+        "mean_vec": mean_vec, "p95_vec": p95_vec, "bulk_vec": bulk_vec,
+        "mean_sca": mean_sca, "p95_sca": p95_sca, "bulk_sca": bulk_sca,
+        "d_vec": d_vec, "d_sca": d_sca, "neg_sq": neg_sq, "frame": frame,
+    }
+
+
+def main() -> int:
+    c_1 = random_unit_vector(D, SEED_ANCHOR)
+    c_A = random_unit_vector(D, SEED_POLE_A)
+    c_B = random_unit_vector(D, SEED_POLE_B)
+    vectors = np.asarray([random_unit_vector(D, SEED_BASE + i) for i in range(N_VECTORS)])
+
+    p = PolarProjector()
+
+    print(f"PolarProjector latency decomposition (d={D}, N={N_VECTORS}, float64, fixed seeds)\n")
+
+    reps = [_measure_once(p, vectors, c_1, c_A, c_B) for _ in range(REPS)]
+    last = reps[-1]
+
+    def med(key: str) -> float:
+        return float(np.median([r[key] for r in reps]))
+
+    mean_full, p95_full, bulk_full = med("mean_full"), med("p95_full"), med("bulk_full")
+    mean_frame, p95_frame = med("mean_frame"), med("p95_frame")
+    mean_vec, p95_vec, bulk_vec = med("mean_vec"), med("p95_vec"), med("bulk_vec")
+    mean_sca, p95_sca, bulk_sca = med("mean_sca"), med("p95_sca"), med("bulk_sca")
+    d_vec, d_sca, neg_sq, frame = last["d_vec"], last["d_sca"], last["neg_sq"], last["frame"]
+
+    vec_runs = [r["mean_vec"] for r in reps]
+    spread_pct = 100.0 * (max(vec_runs) - min(vec_runs)) / mean_vec
+
+
     print(f"{'stage':<42}{'mean us':>10}{'p95 us':>10}{'bulk us':>10}")
     print("-" * 72)
     print(f"{'A. project() [stateless, as published]':<42}{mean_full:>10.2f}{p95_full:>10.2f}{bulk_full*1e6:>10.2f}")
@@ -112,6 +144,8 @@ def main() -> int:
     print(f"{'C. evaluate() only [shipped API]':<42}{mean_vec:>10.2f}{p95_vec:>10.2f}{bulk_vec*1e6:>10.2f}")
     print(f"{'D. evaluate() w/ scalar-form d_esc':<42}{mean_sca:>10.2f}{p95_sca:>10.2f}{bulk_sca*1e6:>10.2f}")
     print("-" * 72)
+    print(f"per-rep `evaluate` means:      {[round(x, 2) for x in vec_runs]} "
+          f"(spread {spread_pct:.1f}% of median)")
     print(f"frame share of full call:      {100.0*mean_frame/mean_full:.1f}%")
     print(f"hot path after prepare() split: {100.0*mean_vec/mean_full:.1f}% of published cost "
           f"({mean_full/mean_vec:.2f}x faster)")
@@ -128,6 +162,27 @@ def main() -> int:
     print("   stays close to ||r|| — this regime never stresses the scalar form.)")
 
     _adversarial_conditioning(p, frame)
+
+    # Commit the decomposition as an artifact so paper/§3.1's prepare() row traces to a
+    # committed result like every other published figure, rather than only to this script's
+    # stdout. verify_paper_tables.py checks the paper against it.
+    write_result(
+        Path("bench/results/decompose.json"),
+        experiment="decompose",
+        config={"d": D, "n_vectors": N_VECTORS, "repetitions": REPS,
+                "statistic": "median over repetitions", "dtype": "float64"},
+        results={
+            "project_stateless": {"mean": mean_full, "p95": p95_full},
+            "prepare_only": {"mean": mean_frame, "p95": p95_frame},
+            "evaluate_only": {"mean": mean_vec, "p95": p95_vec},
+            "evaluate_scalar_desc": {"mean": mean_sca, "p95": p95_sca},
+            "frame_share_pct": 100.0 * mean_frame / mean_full,
+            "split_speedup": mean_full / mean_vec,
+            "evaluate_mean_per_rep": vec_runs,
+            "evaluate_spread_pct": spread_pct,
+        },
+    )
+    print("\nwrote bench/results/decompose.json")
     return 0
 
 
