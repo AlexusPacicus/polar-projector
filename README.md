@@ -58,7 +58,7 @@ lambdas, d_escs = projector.evaluate_batch(V, frame)
 larger batches once its three `(B, d)` temporaries stop fitting in cache — at `B = 1` it is 2.6×
 slower than `evaluate()`. It is not bitwise identical to a loop over `evaluate()`: BLAS reorders
 the reduction at `B ≥ 2`, so a row's result is not a pure function of that row. Deviation is
-bounded at 0.19 ε in λ and 2.02 ε‖r‖ in `d_esc`. See §4.2.
+bounded at 0.19 ε in λ and 2.02 ε‖r‖ in `d_esc`. See §D.
 
 Anchor normalization, dipole-pole projection and dipole construction depend only on
 \( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
@@ -83,18 +83,18 @@ pip install -e ".[test,repro]"
 
 | Script | Manuscript section |
 |---|---|
-| `tools/decompose_polar_latency.py` | §3.1 frame vs. per-stimulus cost, §3.2 `d_esc` conditioning |
-| `tools/generate_polar_delta_table.py` | §3.3 δ-sweep table (N = 10,000) |
-| `tools/verify_paper_tables.py` | §3.2 and §3.3 independent re-derivation, PASS/MISMATCH per cell |
-| `bench/latency.py` | §3.1.1 cost vs. O(d) primitives, §3.1.2 dimension sweep |
-| `bench/conditioning.py` | §3.2 conditioning sweep and form latency |
-| `bench/drift.py` | §3.4 positional stability (baseline arms need the `[bench]` extra) |
-| `bench/recall.py` | §3.5 same-part recall@k (baseline arms need the `[bench]` extra) |
-| `bench/batched.py` | §4.2 batched throughput, agreement and row-order sensitivity |
+| `tools/decompose_polar_latency.py` | §3.1 frame vs. per-stimulus cost, §B `d_esc` conditioning |
+| `tools/generate_polar_delta_table.py` | §C δ-sweep table (N = 10,000) |
+| `tools/verify_paper_tables.py` | §B and §C independent re-derivation, PASS/MISMATCH per cell |
+| `bench/latency.py` | §3.1 cost vs. O(d) primitives, §A dimension sweep |
+| `bench/conditioning.py` | §B conditioning sweep and form latency |
+| `bench/drift.py` | §3.2 positional stability (baseline arms need the `[bench]` extra) |
+| `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
+| `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
 `polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed
-distribution without cloning this repository. CI runs the §3.2 and §3.3 verifications on every
+distribution without cloning this repository. CI runs the §B and §C verifications on every
 push, so a change that silently moves a published number fails the build.
 
 Scripts under `bench/` write their results as JSON to `bench/results/`, in a common

@@ -2,9 +2,9 @@
 
 Two tables are guarded, and the build fails if either moves:
 
-  section 3.2  conditioning of the orthogonal residual -- relative error of the
+  appendix B   conditioning of the orthogonal residual -- relative error of the
                vector and scalar forms against an analytically known residual.
-  section 3.3  the delta-sweep.
+  appendix C   the delta-sweep.
 
 The two need different tolerances, for a reason worth stating. The delta-sweep
 reports sample variances, whose sampling error is known in closed form, so a
@@ -18,7 +18,7 @@ change of regime: someone swapping the vector form for the scalar one moves
 these numbers by four orders of magnitude or more. A half-decade band catches
 that with room to spare, and is honest about what it can and cannot detect.
 
-Reproduces the §3.3 collinearity scenario on a controlled corpus of 10,000
+Reproduces the §C collinearity scenario on a controlled corpus of 10,000
 stimulus vectors in d=384 with a fixed seed (matching
 tools/generate_polar_delta_table.py, which produced the published
 table), sweeping the constructor scale factor delta in
@@ -54,7 +54,7 @@ RTOL = 0.03  # ~2.8% 2-sigma sampling bound on the variances at N=10,000
 # survive a different BLAS computing the same cancellation.
 LOG_TOL = 0.5
 
-# Published values from §3.2 of paper/polar-projector-paper.md:
+# Published values from §B of paper/polar-projector-paper.md:
 # d_esc/||r|| -> (vector-form rel. error, scalar-form rel. error)
 PUBLISHED_CONDITIONING = {
     1e-3: (1.2e-14, 1.1e-10),
@@ -63,7 +63,7 @@ PUBLISHED_CONDITIONING = {
     1e-8: (6.7e-10, 1.0e0),
 }
 
-# Published values from §3.3 of paper/polar-projector-paper.md.
+# Published values from §C of paper/polar-projector-paper.md.
 PUBLISHED = {
     0.001: (9.782e-1, 3.535e-6, 276747.31),
     0.010: (7.994e-1, 3.886e-6, 205690.72),
@@ -92,7 +92,7 @@ def _measure(delta: float):
 
 
 def _scalar_form_d_esc(projector: PolarProjector, v_n, frame) -> float:
-    """Proposition 3's scalar rearrangement — the arm section 3.2 rejects.
+    """Proposition 3's scalar rearrangement — the arm appendix B rejects.
 
     Deliberately not in the library (see projector.py, where d_esc is
     computed). Reproduced here so the guard measures the same two arms the
@@ -127,7 +127,7 @@ def _log_status(measured: float, published: float) -> str:
 
 def _verify_conditioning() -> int:
     """Section 3.2. Returns the number of mismatched rows."""
-    print(f"§3.2 conditioning of the orthogonal residual ({D}D, exact residual by construction)")
+    print(f"§B conditioning of the orthogonal residual ({D}D, exact residual by construction)")
     print(f"tolerance: ±{LOG_TOL} decades per cell\n")
     print(f"{'d_esc/||r||':<14}{'vector(meas)':<16}{'vector(pub)':<15}{'S':<10}"
           f"{'scalar(meas)':<16}{'scalar(pub)':<15}{'S':<10}")
@@ -154,7 +154,7 @@ def main() -> int:
     print("Polar Projector — published table verification\n")
     cond_failures = _verify_conditioning()
 
-    print(f"\n§3.3 delta-sweep ({D}D, {N_VECTORS} vectors, seed=42)")
+    print(f"\n§C delta-sweep ({D}D, {N_VECTORS} vectors, seed=42)")
     print(f"tolerance: {RTOL:.0%} relative per cell\n")
     print(f"{'delta':<7}{'sig2_lam(meas)':<16}{'sig2_lam(pub)':<15}{'S':<9}"
           f"{'sig2_esc(meas)':<15}{'sig2_esc(pub)':<14}{'S':<9}"
@@ -180,7 +180,7 @@ def main() -> int:
     if total == 0:
         print("Verdict: ALL PASS")
     else:
-        print(f"Verdict: {cond_failures} §3.2 row(s) and {failures} §3.3 row(s) mismatched")
+        print(f"Verdict: {cond_failures} §B row(s) and {failures} §C row(s) mismatched")
     return 0 if total == 0 else 1
 
 
