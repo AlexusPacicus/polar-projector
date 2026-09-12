@@ -4,10 +4,12 @@
 **Affiliation:** Independent researcher
 **Date:** September 2026
 
-> Working mirror of the manuscript authored in Corca (https://corca.app/doc/er5CXGbjDUaGnbFE45Hse).
-> Corca has no external read/write access from this repo and keeps no git-style history reachable
-> from here, so this file is the version-controlled source of truth between sync passes — edit here,
-> paste into Corca, or vice versa, and keep both in sync by hand.
+> **Editorial note — strip this block before submission.** It is repository scaffolding, not part
+> of the manuscript.
+>
+> This file is canonical for the manuscript. An earlier draft was mirrored by hand into a Corca
+> document (https://corca.app/doc/er5CXGbjDUaGnbFE45Hse); that copy has since diverged substantially
+> and is superseded, not synchronized. Edits belong here, where CI checks the figures.
 >
 > Provenance: this operator and its test suite were extracted, with git history, from the
 > Traianus substrate (https://github.com/AlexusPacicus/Traianus), where the design record lives
@@ -60,7 +62,7 @@ refitting, t-SNE relocates previously-placed points by 1.03–1.24 times the lay
 step and UMAP by 0.31–1.25 (median 1.16). UMAP fitted once and extended by `transform()` is bimodal
 rather than stable: exactly still on 5 of 7 steps, then relocating by 1.07. Per-stimulus latency is
 4.57 µs with a prepared frame and 11.75 µs stateless, flat to 1.3% across corpora from 1,000 to
-25,000 vectors.
+25,000 vectors for the stateless path, and 0.4% for the prepared path across an 11× working set.
 
 That stability is not free, and we report the price rather than the headline. On the same corpus the
 operator preserves high-dimensional neighborhoods measurably worse than the refit baselines
@@ -87,8 +89,10 @@ existing coordinates on incremental update, and §3.2 measures what survives pin
 seed: under refitting, t-SNE (van der Maaten & Hinton, 2008) relocates previously-placed points by
 1.03–1.24 times the width of the layout at every growth step and UMAP (McInnes et al., 2018) by
 0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 16.2–25.6 s across the
-baselines against 0.072 s for the operator — and global graph-layout algorithms scale quadratically
-in \( N \), saturating the interaction thread as the corpus grows.
+baselines against 0.072 s for the operator, a factor of 226–356×. We make no asymptotic claim about
+the baselines here: Barnes-Hut t-SNE is \( O(N \log N) \) and UMAP's graph construction is
+sub-quadratic in practice, so the argument against them on this axis is the measured seconds-scale
+cost of a refit inside an interaction loop, not a complexity class.
 
 This instability is not news to the visualization community, and the approaches it has taken are
 the reason this paper argues for a different primitive rather than a better layout. Dynamic t-SNE
@@ -142,9 +146,11 @@ on a trade-off, not a dominating result.
 Traianus, a local-first personal knowledge system the author is building, where it serves as the
 navigation primitive the two constraints describe. Traianus as a whole is at proof-of-concept stage,
 and this paper deliberately does not depend on it — the operator is packaged standalone with numpy
-as its only dependency, the corpus is frozen and hash-committed, and every figure below reproduces
-from `bench/` on a reader's own machine. What is claimed here is a property of the operator, not a
-demonstration that the surrounding system works.
+as its only dependency, the corpus is frozen and hash-committed, and every figure below is either
+recomputed or checked against a committed artifact on every push. Reproducing the *operator's* own
+figures needs numpy alone; reproducing the baseline arms of §3.2 and §3.3 additionally needs
+`umap-learn` and `scikit-learn`, which the package deliberately does not require. What is claimed
+here is a property of the operator, not a demonstration that the surrounding system works.
 
 A third bottleneck — synchronous I/O blocking the interaction loop — is addressed at the systems
 level within the Traianus substrate, where this operator's output feeds a signal-filtering stage
@@ -185,6 +191,18 @@ in \( O(d) \) time and space without materializing the dense \( d \times d \) ma
 \( I - \hat{c}_1\hat{c}_1^T \). Codebook selection over \( K \leq 256 \) (a bounded constant, not
 asymptotic in \( d \) or \( N \)) adds \( O(K \cdot d) \); the full evaluation is \( O(d) \),
 independent of corpus size \( N \).
+
+*The null-anchor branch, and what it costs.* When \( \|c_1\|_2 \leq \epsilon_{norm} \) the guard
+above sets \( \hat{c}_1 = 0 \), and the implementation proceeds rather than raising. In that branch
+\( P_\perp \) is the identity, not a rank-\( (d-1) \) projector, so the signature stated here does
+not hold and no anchor component is removed from either pole. Propositions 2 and 3 survive
+unchanged — the fallback yields \( \sigma = 1 \) and \( u_\perp = e_k \), still a unit vector, and
+the decomposition remains a valid least-squares split of \( r \) onto \( v_{dipole} \) in the full
+space — so the operator returns well-defined, non-degenerate values. What is lost is the
+*interpretation*: \( \lambda \) and \( d_{esc} \) are then measured against an unanchored dipole,
+and the local-frame reading the rest of this paper relies on does not apply. A caller that cannot
+guarantee a non-null anchor should treat this branch as a distinct mode, not as a graceful
+degradation of the same one.
 
 *Proposition 2 (Guaranteed Dipole Non-Degeneracy).* Assume \( \delta > 0 \),
 \( \epsilon_{collinear} > 0 \) and \( d \geq 2 \). Let \( c_A^\perp = P_\perp c_A \),
@@ -336,10 +354,15 @@ expect that difference and not read it as a defect in either.
 \( X_n \in [X_{c_1} - S_x,\, X_{c_1} + S_x] \) is bounded while \( Y_n \) is not. Stimuli with
 \( |\lambda^*| > 1 \) collapse onto the two vertical lines \( X_{c_1} \pm S_x \) and become
 horizontally indistinguishable from one another — precisely the configuration where Proposition 3's
-decomposition weakens from equality to a bound. The dipole scale \( \delta \) sets the synthetic
-dipole's diameter and therefore how often this occurs; §C measures how sensitive \( \lambda \) is to
-\( \delta \), and §5 records what is not yet measured: the *frequency* of saturation at each
-\( \delta \), which is the quantity a layout designer would actually ask for.
+decomposition weakens from equality to a bound. How often this happens is governed by
+\( \|v_{dipole}\|_2 \) relative to the extent of the residuals being projected onto it, and that
+norm has two regimes: in the ordinary case it is \( \|P_\perp(c_A - c_B)\|_2 \), fixed by how far
+apart the two chosen poles are once the anchor is removed, and \( \delta \) has no part in it; only
+in Proposition 2's collinear fallback does the norm become \( 2\delta \). §C's sweep is measured
+inside that fallback regime, so it characterizes \( \delta \)'s effect on \( \lambda \) where
+\( \delta \) is what sets the scale — not the pole separation that sets it the rest of the time.
+Neither the frequency of saturation on a real corpus nor its dependence on pole selection is
+measured in this paper; §5 records both.
 
 Finally, because \( d_{esc} \) is unbounded above while a viewport is not, \( S_y \) requires a
 clipping or compression policy that this paper does not specify. The operator's contract ends at the
@@ -364,8 +387,11 @@ Benchmarked over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
 | 25,000 | 11.58 | 12.00 | 767.2 s (least-squares fit \( 1.228 \times 10^{-6} N^2 \), extrapolated) |
 
 Projection latency stays flat as \( N \) grows — 1.3% across a 25× corpus and a 25× working set,
-consistent with Proposition 1's independence from corpus size — while the \( O(N^2) \) force
-baseline it replaces grows quadratically. The polar column is `bench/latency.py --n-sweep`, 3
+consistent with Proposition 1's independence from corpus size — while the naive force-directed
+layout it replaces in the substrate grows quadratically. That baseline is an all-pairs force
+simulation, not one of the dimensionality-reduction arms of §3.2: §1 declines to make an asymptotic
+claim about t-SNE or UMAP precisely because their published implementations are sub-quadratic, and
+nothing in this paragraph revises that. The polar column is `bench/latency.py --n-sweep`, 3
 repetitions per row, and is checked against its committed artifact on every push. The
 \( O(N^2) \) column is **not**: it is a substrate measurement this operator was originally compared
 against, carried over unchanged, and no code in this repository reproduces it. It is included for
@@ -391,15 +417,19 @@ and the most work a planar local coordinate could require places it in its compl
 | Random projection, \( (2 \times d) \) matrix-vector | 1.03 | 1.08 | 0.23× |
 | Multi-anchor cosine, \( K = 3 \) | 1.14 | 1.21 | 0.25× |
 | **`evaluate()` — per stimulus, prepared frame** | **4.57** | 4.79 | **1.00×** |
-| `prepare()` — invariant frame, once per context | 6.87 | 7.21 | 1.50× |
+| `prepare()` — invariant frame, once per context † | 6.87 | 7.21 | 1.50× |
 | `project()` — full stateless call | 11.75 | 12.50 | 2.57× |
 | Sliding-window PCA, \( W = 32 \) | 292.55 | 316.67 | 64.02× |
 
 Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
 after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
-is 2.4–2.8% on the polar arms and under 3% elsewhere. The `prepare()` row and the stateless
-decomposition come from an independent script on a different frame
-(`tools/decompose_polar_latency.py`, artifact `bench/results/decompose.json`): 11.51 µs stateless
+is 2.4–2.8% on the polar arms and under 3% elsewhere; `bench/_harness.py` reports the median across
+repetitions and the peak-to-peak spread alongside it, and rotates arm order so that no arm is
+permanently measured on the coolest machine.
+
+† The `prepare()` row and the stateless decomposition come from an independent script on a
+different frame (`tools/decompose_polar_latency.py`, artifact `bench/results/decompose.json`):
+11.51 µs stateless
 against the 11.75 measured here, with `prepare()` accounting for 59.7% of it. That script reports
 the median of 3 repetitions rather than a single pass, because this host is passively cooled and one
 pass in four was observed inflated by 20% (`evaluate` at 5.53 µs against a 4.55 µs median) — the
@@ -414,6 +444,13 @@ three-anchor cosine, and that gap is the price of what it additionally computes 
 contrast axis, and a residual orthogonal to it. What it buys against the other end of the table is
 larger: a locally adaptive frame by sliding-window SVD costs **64.0×** the prepared evaluation,
 which is the comparison that matters for a hot path.
+
+*The prepared path is flat in the working set, not just in \( N \).* The table above is the frozen
+Spinoza corpus at 6.8 MB, largely cache-resident on this host. Repeating the whole experiment on the
+synthetic corpus at \( N = 25{,}000 \) — 76.8 MB, which is not — moves `evaluate()` from 4.57 to
+4.59 µs: **0.4% for 11× the working set.** The per-call cost is not memory-bound at these sizes, so
+the \( N \)-sweep above and the figures here are comparable, and the flatness claim covers the
+prepared path and not only the stateless one.
 
 *What these figures do not establish is that the gap is arithmetic.* At \( d = 384 \) roughly 90% of
 the per-call cost is fixed NumPy dispatch overhead independent of dimension, and only about 0.4 µs of
@@ -544,7 +581,7 @@ only on a manifold-preservation score neither of them was optimizing for.
 *What does not.* The refit baselines pull ahead as the corpus grows rather than staying level: both
 t-SNE and UMAP-refit cross 2× lift by the middle of the growth schedule and reach 2.41–2.47× by the
 final step, while the operator and fit-once UMAP plateau around 1.3–1.6×. That is the same story
-§3.2 already tells about trustworthiness (0.90–0.92 for the refit arms against 0.66–0.77 for the
+§3.2 already tells about trustworthiness (0.90–0.92 for the refit arms against 0.62–0.77 for the
 others) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
 one, and it buys it at exactly the cost §3.2 measures: relocating previously-placed points at
 every step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25.
@@ -569,7 +606,8 @@ settle about the fidelity gap.
 *Scope guard.* This section argues determinism as a property of the **operator itself** — canonical
 `argmin` tie-breaking, fixed-threshold clipping, no iterative optimization or random seed anywhere
 in `project()` (Props 1–3) — not as a claim about the rest of whatever system consumes it. Whatever
-else Traianus/Ulpia does architecturally is out of scope here and belongs to later, separate papers.
+else the Traianus substrate does architecturally is out of scope here and belongs to later,
+separate papers.
 
 The projector \( P_\perp \) itself is not new: it is the standard rank-1 orthogonal complement, and
 its associative form \( P_\perp v = v - \langle v, \hat{c}_1\rangle\hat{c}_1 \) is the same identity
@@ -650,10 +688,13 @@ boundary worth stating alongside it, not hiding: a centroid is, by the defining 
 arithmetic mean, the point that minimizes total squared distance to the group it summarizes — in
 that precise sense it *is* the most "known" point of a unimodal neighborhood. But the same
 construction can mislead for a bimodal one, where the mean falls in the gap between two clusters
-rather than inside either — the least representative point of both. That is not a hypothetical
-concern; it is the exact configuration Proposition 2's collinearity fallback exists to handle, so
-the known/unknown reading and the paper's own non-degeneracy guarantee describe the same failure
-mode from two directions.
+rather than inside either — the least representative point of both. Proposition 2 does not rescue
+this case and should not be read as doing so: its fallback triggers when the two *poles* collapse
+together after projection (\( c_A^\perp \approx c_B^\perp \)), which is a degeneracy of the
+contrast axis, whereas an unrepresentative anchor is a degeneracy of the frame's origin and leaves
+every norm in Propositions 1–3 perfectly well-conditioned. The operator stays correct and the
+reading stops being meaningful, which is the more dangerous of the two failures; nothing in this
+paper detects it, and §5 records it as open.
 
 ## 5. Open Questions
 
@@ -683,13 +724,23 @@ mode from two directions.
   whether it is ever loose enough in practice to matter — whether real collinear configurations
   approach it — hasn't been measured. The δ-sweep in §C varies \( \delta \) but doesn't
   specifically probe the tightness of this particular inequality.
-- **Saturation frequency as a function of \( \delta \).** §2.1 shows that a saturated
+- **Saturation frequency, and what actually governs it.** §2.1 shows that a saturated
   \( \lambda \) is not merely a clipped scalar but a visible collapse onto one of two vertical lines
   in the rendered layout, which makes the *rate* at which stimuli saturate a layout-quality
-  parameter rather than only a numerical one. §C measures the variance of \( \lambda \) across
-  \( \delta \) but never counts how many stimuli clamp at each setting; that count, on a real
-  corpus rather than the controlled collinearity scenario, is the number a designer choosing
-  \( \delta \) would need and it is not in this paper.
+  parameter rather than only a numerical one. Nothing here measures that rate. §C sweeps
+  \( \delta \), but \( \delta \) sets \( \|v_{dipole}\|_2 \) only inside Proposition 2's collinear
+  fallback; in the ordinary case the scale is \( \|P_\perp(c_A - c_B)\|_2 \), i.e. how the caller
+  picks its two poles — a parameter this paper never varies, since every benchmark here uses one
+  fixed pole pair. Open: the clamp rate on a real corpus as a function of pole separation, and
+  whether a useful selection rule falls out of it.
+- **Detecting an unrepresentative anchor.** §4 notes that a centroid summarizing a bimodal
+  neighborhood can fall in the gap between its two modes, making it the least representative point
+  of both. Proposition 2 does not cover this — it handles a collapsed contrast axis, not a badly
+  placed origin — and every norm in Propositions 1–3 stays well-conditioned throughout, so the
+  operator returns confident values whose interpretation has quietly stopped holding. That is the
+  more dangerous of the two degeneracies and the one with no guard: what a cheap per-frame test for
+  it would look like, and whether \( d_{esc} \)'s own distribution across a context already carries
+  the signal, is unexamined.
 - **Behavior under adversarial or fast-drifting anchors.** Every proposition here treats
   \( (c_1, c_A, c_B) \) as fixed for the duration of one `prepare()`/`evaluate()` cycle. What
   happens to \( \lambda \) and \( d_{esc} \) continuity if \( c_1 \) itself changes between calls

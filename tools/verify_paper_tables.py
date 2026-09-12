@@ -215,6 +215,9 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§3.1 prepare() p95", "7.21", dec["prepare_only"]["p95"]))
     out.append(("§3.1 stateless (decompose)", "11.51", dec["project_stateless"]["mean"]))
     out.append(("§3.1 frame share %", "59.7", dec["frame_share_pct"]))
+    # §3.1's working-set claim: evaluate() across an 11x larger corpus
+    out.append(("§3.1 evaluate @N=25k", "4.59",
+                lat["synthetic"]["arms"]["polar_evaluate"]["mean"]))
 
     # §3.2 positional stability
     for arm, med, worst, still, trust in [
