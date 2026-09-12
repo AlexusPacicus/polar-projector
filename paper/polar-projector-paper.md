@@ -38,6 +38,11 @@
 > task-level agreement — the frame these sections publish is the one that maximizes the latter and
 > sits at the pessimistic end of the former. The figures currently printed are correct and
 > CI-checked; they are incomplete, and the sections that interpret them will change.
+> `bench/reanchor.py` bears on that rewrite too: it finds re-anchoring worth 28x on local
+> neighbourhood recovery and costing 42.8 us, and finds a two-line radial coordinate beating the
+> operator on the same instrument while meeting every constraint §1 states. No claim currently in
+> this manuscript contradicts that, because none of it is about local recovery — which is itself
+> the point the rewrite has to absorb.
 
 ---
 

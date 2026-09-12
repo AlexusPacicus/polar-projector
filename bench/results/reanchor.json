@@ -1,0 +1,117 @@
+{
+  "experiment": "E7",
+  "config": {
+    "seed": 42,
+    "queries": [
+      140,
+      150,
+      187,
+      193,
+      203,
+      205,
+      280,
+      365,
+      400,
+      439,
+      500,
+      611,
+      785,
+      813,
+      884,
+      942,
+      954,
+      975,
+      986,
+      988,
+      991,
+      1096,
+      1122,
+      1148,
+      1199,
+      1222,
+      1396,
+      1414,
+      1423,
+      1504,
+      1519,
+      1550,
+      1568,
+      1606,
+      1663,
+      1677,
+      1681,
+      1716,
+      1719,
+      1728,
+      1809,
+      1828,
+      1839,
+      1869,
+      1895,
+      1958,
+      1981,
+      2034,
+      2129,
+      2152
+    ],
+    "k_recall": 15,
+    "local_m": 100,
+    "codebook_k": 16,
+    "chance": 0.006756756756756757
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "pca_global": {
+      "mean_recall": 0.05600000000000001,
+      "median_recall": 0.03333333333333333,
+      "min_recall": 0.0,
+      "max_recall": 0.26666666666666666,
+      "frame_us": 69177.99997609109,
+      "per_stimulus_us": 1.3378334988374263
+    },
+    "polar_published": {
+      "mean_recall": 0.018666666666666668,
+      "median_recall": 0.0,
+      "min_recall": 0.0,
+      "max_recall": 0.13333333333333333,
+      "frame_us": 10690.499970223755,
+      "per_stimulus_us": 4.509083490120247
+    },
+    "polar_reanchored": {
+      "mean_recall": 0.5426666666666667,
+      "median_recall": 0.5666666666666667,
+      "min_recall": 0.13333333333333333,
+      "max_recall": 0.8666666666666667,
+      "frame_us": 42.750005377456546,
+      "per_stimulus_us": 4.526250006165355
+    },
+    "pca_local": {
+      "mean_recall": 0.022666666666666665,
+      "median_recall": 0.0,
+      "min_recall": 0.0,
+      "max_recall": 0.5333333333333333,
+      "frame_us": 5155.874998308718,
+      "per_stimulus_us": 1.2332084879744798
+    },
+    "radial_plain": {
+      "mean_recall": 0.9813333333333334,
+      "median_recall": 1.0,
+      "min_recall": 0.9333333333333333,
+      "max_recall": 1.0,
+      "frame_us": 0.0,
+      "per_stimulus_us": 1.9791249942500146
+    }
+  }
+}
