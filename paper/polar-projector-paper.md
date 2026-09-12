@@ -206,8 +206,14 @@ implementation simplicity for that one branch, not a change to the paper's headl
 \[ \|r\|_2^2 = \|\lambda v_{dipole}\|_2^2 + d_{esc}^2 + 2\lambda(\lambda^* - \lambda)\|v_{dipole}\|_2^2 \]
 
 When \( |\lambda^*| \leq 1 \), \( \lambda = \lambda^* \) and the cross-term vanishes: exact
-Pythagorean equality. When \( |\lambda^*| > 1 \) (saturation), the cross-term is strictly positive:
-the clip leaves the components no longer summing to \( \|r\|_2^2 \). ∎
+Pythagorean equality. When \( |\lambda^*| > 1 \) (saturation), \( \lambda = \operatorname{sgn}(\lambda^*) \),
+so \( \lambda \) and \( (\lambda^* - \lambda) \) carry the same sign and the cross-term is strictly
+positive. The equality therefore weakens to a one-sided bound rather than breaking:
+
+\[ \|r\|_2^2 \;\geq\; \|\lambda v_{dipole}\|_2^2 + d_{esc}^2 \]
+
+with equality exactly when \( |\lambda^*| \leq 1 \). The clipped components never over-account for
+the residual's energy; they under-account for it by the cross-term. ∎
 
 *Corollary (Energy Form).* The decomposition above is native to squared (energy) units. Writing
 \( E_\lambda = \lambda^2 \|v_{dipole}\|_2^2 \) (aligned energy — computable from \( \lambda \) and
@@ -222,6 +228,94 @@ computed by squaring the numerically stable vector-form residual of §B
 expansion is exactly the *scalar form* §B measured losing all precision below
 \( d_{esc}/\|r\|_2 \approx 10^{-6} \), which is precisely the near-collinear regime where an energy
 reading would most need to be trustworthy.
+
+
+*Algorithm 1* states the two halves separately, because the split is what the implementation and
+§3.1's measurement both turn on: steps 1–12 depend only on the frame \( (c_1, c_A, c_B) \) and run
+once per active context, while steps 13–17 are the only work a new stimulus costs.
+
+```
+────────────────────────────────────────────────────────────────────────────
+ Algorithm 1   Polar Projector — frame preparation and per-stimulus evaluation
+────────────────────────────────────────────────────────────────────────────
+ PREPARE(c₁, c_A, c_B)                            ▷ once per active context
+     require  d ≥ 2,  δ > 0,  ε_norm > 0,  ε_collinear > 0
+  1  if ‖c₁‖₂ > ε_norm  then  ĉ₁ ← c₁/‖c₁‖₂   else  ĉ₁ ← 0
+  2  c_A⊥ ← c_A − ⟨c_A, ĉ₁⟩·ĉ₁                                      ▷ O(d)
+  3  c_B⊥ ← c_B − ⟨c_B, ĉ₁⟩·ĉ₁                                      ▷ O(d)
+  4  d_raw ← c_A⊥ − c_B⊥
+  5  if ‖d_raw‖₂ ≥ ε_collinear then
+  6      v_dipole ← d_raw
+  7  else                                    ▷ collinear fallback, Prop. 2
+  8      k ← argmin_i |ĉ₁[i]|                ▷ canonical; ties break by index
+  9      σ ← √(1 − ĉ₁[k]²)                   ▷ closed form, Remark above
+ 10      u⊥ ← (−ĉ₁[k]/σ)·ĉ₁ ;   u⊥[k] ← σ    ▷ no e_k, no dot, no norm pass
+ 11      v_dipole ← 2δ·u⊥
+ 12  return frame ← (c₁, ĉ₁, v_dipole, ‖v_dipole‖₂²)
+
+ EVALUATE(vₙ, frame)                              ▷ per stimulus, hot path
+ 13  r ← (vₙ − c₁) − ⟨vₙ − c₁, ĉ₁⟩·ĉ₁                                ▷ O(d)
+ 14  λ* ← ⟨r, v_dipole⟩ / ‖v_dipole‖₂²          ▷ norm cached in the frame
+ 15  λ  ← min(max(λ*, −1), 1)                   ▷ scalar clamp, not np.clip
+ 16  d_esc ← ‖r − λ·v_dipole‖₂                  ▷ vector form, never scalar
+ 17  return (λ, d_esc)
+────────────────────────────────────────────────────────────────────────────
+```
+
+Nothing in either half iterates to convergence, draws a random number, or reads persistent storage,
+which is what makes Propositions 1–3 hold per call rather than in expectation. Two steps encode
+findings reported later rather than obvious choices: step 15 clamps with `min`/`max` instead of
+`np.clip` (§A: bit-for-bit identical, 1.37× faster), and step 16 computes the residual in vector
+space rather than via the algebraically equivalent scalar rearrangement (§B: the scalar form loses
+all precision in the near-collinear regime, undetectably).
+
+### 2.1 Screen Mapping: From \( (\lambda, d_{esc}) \) to a Planar Position
+
+The propositions above define a pair of scalars. What makes them a *navigation* primitive rather
+than a summary statistic is that the interface consumes them directly as a position, with no
+intermediate layout step. Given the active anchor's on-screen position \( (X_{c_1}, Y_{c_1}) \) and
+two viewport scale constants \( S_x, S_y \):
+
+\[ X_n = X_{c_1} + \lambda \cdot S_x, \qquad Y_n = Y_{c_1} + d_{esc} \cdot S_y \]
+
+\( \lambda \) drives the horizontal axis — which of the two poles the stimulus leans toward — and
+\( d_{esc} \) the vertical — how far it escapes the local subspace. Four properties of this mapping
+bear on the rest of the paper, and two of them are limitations.
+
+*The map is affine, so §3.2's stability is screen stability.* With the anchor and the scales held
+fixed, \( (X_n, Y_n) \) is an affine image of \( (\lambda, d_{esc}) \). No optimizer, no
+normalization pass, and no dependence on any other point sits between the operator's output and the
+pixel, so positional stability of the pair transfers to the rendered position exactly rather than
+approximately. This is what lets §3.2 measure drift on the operator's own output and have it mean
+drift on screen — and it is also why a trustworthiness figure is a fair instrument to apply here at
+all: \( (\lambda, d_{esc}) \) is not an intermediate representation, it *is* the planar position.
+
+*Changing the anchor moves everything, by construction.* \( (X_{c_1}, Y_{c_1}) \) is the origin of
+the frame, so selecting a new anchor re-places every point rendered against it. This is not drift in
+the sense §3.2 measures — it is a deliberate change of reference, the spatial equivalent of
+following a link — but it is why the fixed-anchor configuration is the one this paper centers, and
+it gives the moving-anchor arm's measured 0.13–0.61 per-step displacement (§3.2) an interface
+meaning rather than only a benchmark one.
+
+*The vertical axis is one-sided.* \( d_{esc} \geq 0 \) by construction, so \( Y_n \geq Y_{c_1} \)
+always: the layout occupies a half-plane above the anchor's row rather than surrounding it. Points
+fan upward from the anchor instead of distributing around it the way a global embedding distributes
+around its centroid. A reader comparing this layout's appearance against a UMAP scatter should
+expect that difference and not read it as a defect in either.
+
+*Saturation is visible on screen.* \( \lambda \) is clamped to \( [-1, 1] \), so
+\( X_n \in [X_{c_1} - S_x,\, X_{c_1} + S_x] \) is bounded while \( Y_n \) is not. Stimuli with
+\( |\lambda^*| > 1 \) collapse onto the two vertical lines \( X_{c_1} \pm S_x \) and become
+horizontally indistinguishable from one another — precisely the configuration where Proposition 3's
+decomposition weakens from equality to a bound. The dipole scale \( \delta \) sets the synthetic
+dipole's diameter and therefore how often this occurs; §C measures how sensitive \( \lambda \) is to
+\( \delta \), and §5 records what is not yet measured: the *frequency* of saturation at each
+\( \delta \), which is the quantity a layout designer would actually ask for.
+
+Finally, because \( d_{esc} \) is unbounded above while a viewport is not, \( S_y \) requires a
+clipping or compression policy that this paper does not specify. The operator's contract ends at the
+pair; how an interface fits an unbounded residual into finite pixels is a design decision outside
+its guarantees.
 
 ## 3. Numerical Behavior
 
@@ -550,6 +644,13 @@ mode from two directions.
   whether it is ever loose enough in practice to matter — whether real collinear configurations
   approach it — hasn't been measured. The δ-sweep in §C varies \( \delta \) but doesn't
   specifically probe the tightness of this particular inequality.
+- **Saturation frequency as a function of \( \delta \).** §2.1 shows that a saturated
+  \( \lambda \) is not merely a clipped scalar but a visible collapse onto one of two vertical lines
+  in the rendered layout, which makes the *rate* at which stimuli saturate a layout-quality
+  parameter rather than only a numerical one. §C measures the variance of \( \lambda \) across
+  \( \delta \) but never counts how many stimuli clamp at each setting; that count, on a real
+  corpus rather than the controlled collinearity scenario, is the number a designer choosing
+  \( \delta \) would need and it is not in this paper.
 - **Behavior under adversarial or fast-drifting anchors.** Every proposition here treats
   \( (c_1, c_A, c_B) \) as fixed for the duration of one `prepare()`/`evaluate()` cycle. What
   happens to \( \lambda \) and \( d_{esc} \) continuity if \( c_1 \) itself changes between calls
