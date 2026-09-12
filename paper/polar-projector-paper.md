@@ -1,8 +1,8 @@
-# The Polar Projector: A Deterministic O(d) Operator for Interaction State, Decoupled from Persistent Storage
+# The Polar Projector: A Deterministic O(d) Subspace Operator for Positionally Stable Spatial Navigation
 
-**Author:**
-**Affiliation:**
-**Date:**
+**Author:** Alexis Zapico
+**Affiliation:** Independent researcher
+**Date:** September 2026
 
 > Working mirror of the manuscript authored in Corca (https://corca.app/doc/er5CXGbjDUaGnbFE45Hse).
 > Corca has no external read/write access from this repo and keeps no git-style history reachable
@@ -27,65 +27,101 @@
 
 ## Abstract
 
-Embedding-based information architectures suffer from scalability problems caused by coupling
-persistent corpus storage with hot-path interaction state. Existing systems rely either on
-quadratic-cost spatial simulations (\( O(N^2) \)) or on non-linear stochastic projections (t-SNE,
-UMAP) that introduce spatial drift under incremental updates. While global projections excel at
-static corpus visualization, they are ill-suited for hot-path control, where local spatial
-continuity and deterministic repeatability are required.
+A spatial interface over a personal knowledge corpus imposes two constraints that are easy to state
+and hard to satisfy together. **Adding one note must not move the others**, because the user's memory
+of where things are is the interface. And **each interaction must complete inside a frame budget**,
+because the layout is recomputed while the user is moving through it. Global dimensionality
+reduction satisfies neither: refitting UMAP or t-SNE as a corpus grows relocates previously-placed
+points even with the random seed pinned, and the refit itself costs seconds.
 
-To address this, we present the **Polar Projector**: a local subspace operator that acts as a
-deterministic \( O(d) \) projection layer for managing interaction state in volatile memory — a
-guarantee scoped to its single-stimulus entry points, `project()` and `evaluate()`; §D measures
-how much of it a batched throughput mode trades away. The operator evaluates an incoming vector
-(\( v_n \)) against an active local anchor, operating completely isolated from persistent disk
-storage and independently of global corpus size (\( N \)). It is a per-interaction primitive, not a
-substitute for a global layout: it never constructs the corpus-wide coordinate system UMAP or t-SNE
-do, and §3.2 measures what that costs in neighborhood fidelity. We show that the projection is
-governed by an orthogonal decomposition identity — the squared norm of the projected residual
-splits exactly into the aligned and residual components along a local contrast axis — and that
-collinearity singularities in the tangent plane are mitigated by a deterministic fallback direction
-in the anchor's orthogonal complement.
+We present the **Polar Projector**, a stateless local subspace operator that derives a planar
+position for an incoming vector \( v_n \) from an active contextual frame — a static anchor
+\( c_1 \) plus a contrast dipole \( (c_A, c_B) \) — in \( O(d) \) arithmetic and \( O(d) \)
+memory per stimulus, independently of corpus size \( N \), and without reading persistent storage.
+The operator returns a projection coefficient \( \lambda \in [-1, 1] \) along the dipole axis and an
+orthogonal residual \( d_{esc} \geq 0 \). We prove non-degeneracy for collinear configurations via a
+deterministic fallback direction in the anchor's null space (Propositions 1 and 2), and establish an
+orthogonal decomposition identity for the residual — exact whenever \( \lambda \) is unsaturated, and
+an inequality bounding the decomposition once \( \lambda \) clamps at the dipole boundary
+(Proposition 3). These guarantees are scoped to the single-stimulus entry points `project()` and
+`evaluate()`; §D measures what a batched throughput mode trades away.
 
-The benchmark suite measured projection latency at \( \approx 11.6\,\mu\text{s} \) with the
-stateless entry point and \( \approx 4.6\,\mu\text{s} \) once the local frame is prepared once per
-active context — flat across corpus sizes from 1,000 to 25,000 vectors, consistent with the
-operator's proven independence from \( N \).
+Against a corpus of 2,221 embedded chunks of Spinoza's *Ethics* grown incrementally in reading
+order, the fixed-anchor operator is the **only arm still at every growth step** — aligned p95
+displacement at or below \( 5 \times 10^{-15} \), float64 resolution, on all 7 transitions. Under
+refitting, t-SNE relocates previously-placed points by 1.03–1.24 times the layout width at every
+step and UMAP by 0.31–1.25 (median 1.16). UMAP fitted once and extended by `transform()` is bimodal
+rather than stable: exactly still on 5 of 7 steps, then relocating by 1.07. Per-stimulus latency is
+4.57 µs with a prepared frame and 11.75 µs stateless, flat to 1.3% across corpora from 1,000 to
+25,000 vectors.
 
-Against a growing corpus of 2,221 embedded text chunks, the operator holds previously-placed points
-exactly fixed across every incremental step, while seed-pinned UMAP and t-SNE refits relocate them
-by roughly the full width of the layout at each step. That stability is not free: on the same
-corpus the operator preserves high-dimensional neighborhoods measurably worse than either baseline
-(trustworthiness 0.66 against 0.90–0.92). We report this as a trade — exact positional stability
-and a step roughly two orders of magnitude cheaper, paid for in fidelity — rather than as a
-dominating result.
+That stability is not free, and we report the price rather than the headline. On the same corpus the
+operator preserves high-dimensional neighborhoods measurably worse than the refit baselines
+(trustworthiness 0.66 against 0.90–0.92), and a second, task-shaped instrument agrees: same-part
+recall@15 lift of 1.57× against 2.05–2.12×. What the operator buys for that is exact positional
+reproducibility, no hidden optimizer state, and a growth step 226–356× cheaper. This is a different
+point on a trade-off, not a dominating result.
 
 ## 1. Introduction
 
-Representing information via continuous vector embeddings rigidly couples two independent
-operational dimensions:
+A spatial interface over a personal knowledge corpus — a canvas the user navigates to reach their
+own notes — is not a corpus visualization that happens to be interactive. It imposes two
+constraints that a static layout never has to meet:
 
-1. **Interaction state:** volatile, short-lived trajectory dynamics in hot memory.
-2. **Persistence state:** immutable, corpus-wide data structures stored on disk.
+1. **Adding one note must not move the others.** The user builds a persistent spatial mental model
+   of the interface, and instability in that layout measurably degrades navigation and orientation
+   (Boechler, 2001). If positions shift on every write, spatial proximity stops reliably encoding
+   semantic proximity and the model the user built is invalidated by their own act of writing.
+2. **Each interaction must complete inside a frame budget.** The position of an incoming vector is
+   computed while the user is moving, so its cost cannot scale with how much the user has written.
 
-Reusing global visualization techniques (such as t-SNE or UMAP) to manage local interaction state
-introduces two fundamental limitations. First, stochastic re-optimization alters existing
-coordinates upon incremental updates, producing spatial drift that disrupts the user's spatial
-mental model (Boechler, 2001); §3.2 measures this directly, and finds that under refitting both
-methods relocate previously-placed points by roughly the full width of the layout at every
-incremental step even with their random seed pinned. Second, global graph-layout algorithms scale
-quadratically (\( O(N^2) \)), saturating the execution thread as corpus size grows.
+Reusing global dimensionality reduction for this violates both. Stochastic re-optimization alters
+existing coordinates on incremental update, and §3.2 measures what survives pinning the random
+seed: under refitting, t-SNE relocates previously-placed points by 1.03–1.24 times the width of the
+layout at every growth step and UMAP by 0.31–1.25. Refitting is also not cheap — the same seven
+growth steps cost 16.2–25.6 s across the baselines against 0.072 s for the operator — and global
+graph-layout algorithms scale quadratically in \( N \), saturating the interaction thread as the
+corpus grows.
 
-That measurement does not run one way. §3.2 also finds that the operator pays for its stability in
-neighborhood fidelity, and that one configuration of UMAP — fitted once, extended by
-`transform()` — is stable across most incremental steps. The contribution argued here is a
-different point on that trade-off, not a dominating one.
+The Polar Projector meets both constraints by refusing the problem the baselines solve. It is a
+per-interaction primitive, not a global layout: a local, deterministic \( O(d) \) operator that
+evaluates one incoming vector against one active contextual frame — a static anchor plus a contrast
+dipole — deriving a projection coefficient \( \lambda \in [-1, 1] \) and an orthogonal residual
+\( d_{esc} \) without reading, modifying or re-evaluating the persistent corpus, with correctness
+guarantees proven in §2.
 
-The Polar Projector resolves these bottlenecks by formulating a distinct computational primitive: a
-local, deterministic \( O(d) \) hot loop that operates exclusively on the active contextual
-complement, deriving a projection coefficient (\( \lambda \in [-1.0, 1.0] \)) and an orthogonal
-residual (\( d_{esc} \)) without modifying or re-evaluating the global persistent corpus, with
-correctness guarantees proven in §2.
+**Contributions.**
+
+- **A local \( O(d) \) orthogonal subspace operator.** A stateless operator evaluating an incoming
+  vector against an active contextual frame in \( O(d) \) arithmetic and \( O(d) \) memory per
+  stimulus, with non-degeneracy proven for collinear configurations via a deterministic
+  null-space fallback (Propositions 1 and 2) and an orthogonal decomposition identity for the
+  residual — exact whenever \( \lambda \) is unsaturated, an inequality once it clamps
+  (Proposition 3).
+- **A measurement of positional stability under incremental growth.** Over a corpus of 2,221
+  chunks grown in reading order, the fixed-anchor frame is the only arm still at every step
+  (aligned p95 \( \leq 5 \times 10^{-15} \), 7/7), against seed-pinned refits that move at every
+  step and a fit-once UMAP configuration that is bimodal rather than stable (§3.2).
+- **A quantification of the stability–fidelity trade-off.** Two instruments bound what local
+  determinism costs: trustworthiness 0.66 against 0.90–0.92, and same-part recall@15 lift 1.57×
+  against 2.05–2.12×, in exchange for exact reproducibility, no hidden optimizer state, and a
+  growth step 226–356× cheaper (§3.2, §3.3).
+
+*What this paper does not claim.* The measurement does not run one way, and the counter-evidence is
+stated here rather than left for a reader to find. The operator preserves high-dimensional
+neighborhoods worse than either refit baseline, and one baseline configuration — UMAP fitted once
+and extended by `transform()` — is exactly still across most growth steps while also preserving
+neighborhoods better than the operator does. What distinguishes the operator on this corpus is that
+it is still on *every* step rather than most, at a fraction of the cost; that is a different point
+on a trade-off, not a dominating result.
+
+*System context.* The constraints above are not hypothetical: the operator was extracted from
+Traianus, a local-first personal knowledge system the author is building, where it serves as the
+navigation primitive the two constraints describe. Traianus as a whole is at proof-of-concept stage,
+and this paper deliberately does not depend on it — the operator is packaged standalone with numpy
+as its only dependency, the corpus is frozen and hash-committed, and every figure below reproduces
+from `bench/` on a reader's own machine. What is claimed here is a property of the operator, not a
+demonstration that the surrounding system works.
 
 A third bottleneck — synchronous I/O blocking the interaction loop — is addressed at the systems
 level within the Traianus substrate, where this operator's output feeds a signal-filtering stage
@@ -291,9 +327,13 @@ neighborhood preservation. Apple M1, 8 GB, macOS 15.6, Python 3.11.6, NumPy 2.4.
 `bench/drift.py`, deterministic under a fixed seed and reproduced bit-for-bit across runs.
 
 *What holds.* Under refitting — the path required to keep a global layout faithful as a corpus
-grows — both baselines relocate previously-placed points by roughly the full width of the layout,
-at every single step, with the seed pinned. This is not seed noise; it is what refitting does. The
-operator with a fixed anchor is exactly still at all 7 steps, to float64 rounding.
+grows — both baselines relocate previously-placed points at every single step, with the seed pinned.
+This is not seed noise; it is what refitting does. t-SNE moves them by 1.03–1.24 times the layout
+width on all 7 transitions; UMAP's per-step range is wider and reaches lower, 0.31–1.25 with a
+median of 1.16, so "roughly the full width, always" overstates UMAP specifically even though it
+never reaches stillness. The operator with a fixed anchor is still at all 7 steps to float64
+rounding — aligned p95 between \( 4.3 \times 10^{-16} \) and \( 5.0 \times 10^{-15} \), which is
+zero at the resolution the arithmetic affords, not an exact algebraic zero.
 
 *What does not.* Three results cut against the simple reading, and are stated here rather than
 left for a reader to find.
@@ -373,8 +413,8 @@ t-SNE and UMAP-refit cross 2× lift by the middle of the growth schedule and rea
 final step, while the operator and fit-once UMAP plateau around 1.3–1.6×. That is the same story
 §3.2 already tells about trustworthiness (0.90–0.92 for the refit arms against 0.66–0.77 for the
 others) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
-one, and it buys it at exactly the cost §3.2 measures: relocating previously-placed points by
-roughly the full width of the layout at every step.
+one, and it buys it at exactly the cost §3.2 measures: relocating previously-placed points at
+every step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25.
 
 *The worst-step column does not discriminate, and that is disclosed rather than hidden.* Every
 arm's lowest lift is its first step, where the 500-chunk prefix is almost entirely one or two parts
@@ -443,8 +483,8 @@ proposition above holds without qualification; §D ships a separate batched entr
 throughput and measures the bounded amount of per-row determinism it trades away, so the claim in
 this paragraph is stated for the path it actually holds for. §3.2 turns the scalar-path
 construction argument into a measurement: across seven incremental growth steps the operator is
-exactly still while seed-pinned refits of both baselines relocate points by about the width of the
-layout each time. This matters beyond raw correctness: HCI research on hypertext navigation shows
+still to float64 resolution while seed-pinned refits of both baselines relocate points at every
+step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25. This matters beyond raw correctness: HCI research on hypertext navigation shows
 users build a persistent spatial mental model of the interface they interact with, and that
 instability in that layout measurably degrades navigation and orientation (Boechler, 2001) — a
 stable, reproducible operator is valuable for the signal it produces (\( \lambda, d_{esc} \)),
