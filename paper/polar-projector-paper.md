@@ -31,6 +31,13 @@
 > — multi-axis tangent frames and the tripolar model, adaptive δ calibration, and active-codebook
 > eviction — have been removed rather than relegated: none is implemented in
 > `polar_projector/projector.py`, and none supported a contribution this paper claims.
+>
+> Pending rewrite: §3.2 and §3.3 report five of the seven arms `bench/drift.py` now measures. The
+> two fixed linear baselines are absent from both tables, and so is `bench/frame_sensitivity.py`,
+> which finds that the pole-selection rule is a knob trading manifold preservation against
+> task-level agreement — the frame these sections publish is the one that maximizes the latter and
+> sits at the pessimistic end of the former. The figures currently printed are correct and
+> CI-checked; they are incomplete, and the sections that interpret them will change.
 
 ---
 

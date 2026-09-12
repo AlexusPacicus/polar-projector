@@ -90,6 +90,7 @@ pip install -e ".[test,repro]"
 | `bench/conditioning.py` | §B conditioning sweep and form latency |
 | `bench/drift.py` | §3.2 positional stability (baseline arms need the `[bench]` extra) |
 | `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
+| `bench/frame_sensitivity.py` | E6 frame sensitivity and leak-free pole-selection rules (not yet folded into the manuscript) |
 | `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as
