@@ -99,6 +99,24 @@ constraints that a static layout never has to meet:
 2. **Each interaction must complete inside a frame budget.** The position of an incoming vector is
    computed while the user is moving, so its cost cannot scale with how much the user has written.
 
+*The premise, and its standing.* Both constraints are **assumptions this paper inherits, not
+results it establishes**, and the first one carries the weight. Boechler (2001) measures navigation
+and orientation in *hypertext documents* — a linked corpus browsed through a reading interface, not
+a continuous canvas over an embedding space — so applying it here is an extrapolation across
+interface families. It is a defensible one, and it is the standard motivation in this literature,
+but nothing below tests it. No user touched anything in this work: every instrument reported in §3
+is numerical, computed on a frozen corpus, and none of them can tell whether a person navigating
+actually suffers from layout instability or benefits from its absence.
+
+We state this plainly rather than in a limitations paragraph at the end, for two reasons. It is the
+premise the whole design rests on, so a reader who rejects it should know by the end of §1 rather
+than after §3. And the same gap reappears as this paper's leading open question: §6 asks what a
+bounded, interpretable contrast coordinate is worth to a person navigating, which is the
+behavioural experiment that would validate constraint 1 and adjudicate §3.5's bound at the same
+time. A reader should treat the constraints as a design brief we adopted and then measured against,
+not as findings — the findings are in §3, and several of them cut against the design the brief
+motivated.
+
 Reusing global dimensionality reduction for this violates both. Stochastic re-optimization alters
 existing coordinates on incremental update, and §3.2 measures what survives pinning the random
 seed: under refitting, t-SNE (van der Maaten & Hinton, 2008) relocates previously-placed points by
