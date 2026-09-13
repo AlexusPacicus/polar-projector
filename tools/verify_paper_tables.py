@@ -284,6 +284,21 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
         out.append((f"§3.5 {arm} min", lo, a["min_recall"]))
         out.append((f"§3.5 {arm} max", hi, a["max_recall"]))
 
+    # §3.5 ablation: where the re-anchored operator's recall goes
+    ab = _load("reanchor_ablation.json")
+    for view, mean, median in [("operator", "0.543", "0.567"), ("unclamped", "0.543", "0.567"),
+                               ("d_esc_only", "0.485", "0.467"),
+                               ("residual_norm_only", "1.000", "1.000"),
+                               ("isometric", "0.925", "1.000")]:
+        out.append((f"§3.5 ablation {view} mean", mean, ab[view]["mean_recall"]))
+        out.append((f"§3.5 ablation {view} median", median, ab[view]["median_recall"]))
+    for s, mean in [("0.1", "0.511"), ("0.25", "0.628"), ("0.5", "0.857"),
+                    ("1.0", "0.543"), ("2.0", "0.344")]:
+        out.append((f"§3.5 ablation x_scale={s}", mean, ab[f"x_scale_{s}"]["mean_recall"]))
+    for key, published in [("dipole_norm_median", "0.463"), ("dipole_norm_min", "0.313"),
+                           ("dipole_norm_max", "0.647")]:
+        out.append((f"§3.5 ablation {key}", published, ab["frame"][key]))
+
     # Appendix B extra claims: the cost of refusing the scalar form
     con = _load("conditioning.json")
     out.append(("§B  vector-form mean", "4.56", con["latency"]["vector_form"]["mean"]))

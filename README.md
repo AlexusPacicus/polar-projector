@@ -91,7 +91,7 @@ pip install -e ".[test,repro]"
 | `bench/drift.py` | §3.2 positional stability, 7 arms (baseline arms need the `[bench]` extra) |
 | `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
 | `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob (baseline arms need the `[bench]` extra) |
-| `bench/reanchor.py` | §3.5 local fidelity under re-anchoring |
+| `bench/reanchor.py` | §3.5 local fidelity under re-anchoring; `--ablation` for the units decomposition |
 | `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
 
 The deterministic constructions these scripts use ship inside the package as

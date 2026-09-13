@@ -127,16 +127,117 @@ def polar_view(
     return out
 
 
+X_SCALES = (0.1, 0.25, 0.5, 1.0, 2.0)
+
+
+def ablate(vectors: np.ndarray, queries: list[int], out: Path) -> int:
+    """Which part of the re-anchored operator costs local recall?
+
+    Exploratory, specified after the E7 table existed. The manuscript first
+    attributed the gap to radial_plain to d_esc discarding distance and to the
+    clamp on lambda; this removes one piece at a time, on the same queries and the
+    same codebook frames, to test that. Recalls only -- no timings -- so it writes
+    its own artifact and leaves reanchor.json's measured latencies untouched.
+
+    Views, all from the frame polar_reanchored uses:
+      operator                (lambda, d_esc)               the arm itself
+      unclamped               (lambda*, ||r - lambda* v||)  clamp removed
+      lambda_residual_norm    (lambda, ||r||)               dipole not regressed out
+      residual_norm_only      (0, ||r||)                    horizontal axis removed
+      d_esc_only              (0, d_esc)
+      x_scale_<s>             (s * lambda, d_esc)           the S_x / S_y ratio of §2.1
+      isometric               (||v_dipole|| * lambda, d_esc)
+                              lambda back in length units, so by Proposition 3 the
+                              view distance from q is ||r|| wherever lambda is
+                              unsaturated
+    """
+    projector = PolarProjector()
+    codebook = build_codebook(vectors, CODEBOOK_K)
+    n = vectors.shape[0]
+    names = ["operator", "unclamped", "lambda_residual_norm", "residual_norm_only", "d_esc_only"]
+    names += [f"x_scale_{s}" for s in X_SCALES] + ["isometric"]
+    scores: dict[str, list[float]] = {name: [] for name in names}
+    dipole_norms: list[float] = []
+    saturated: list[float] = []
+
+    for q in queries:
+        truth = true_neighbours(vectors, q, K_RECALL)
+        order = np.argsort(((codebook - vectors[q]) ** 2).sum(axis=1))
+        frame = projector.prepare(vectors[q], codebook[order[0]], codebook[order[1]])
+        view = polar_view(projector, vectors, vectors[q], codebook[order[0]], codebook[order[1]])
+        lam, d_esc = view[:, 0], view[:, 1]
+
+        r = vectors - frame.c_1
+        r -= (r @ frame.c1_hat)[:, None] * frame.c1_hat
+        lam_star = (r @ frame.v_dipole) / frame.v_dipole_norm_sq
+        r_norm = np.linalg.norm(r, axis=1)
+        zeros = np.zeros(n)
+
+        views = {
+            "operator": view,
+            "unclamped": np.c_[
+                lam_star, np.linalg.norm(r - lam_star[:, None] * frame.v_dipole, axis=1)
+            ],
+            "lambda_residual_norm": np.c_[lam, r_norm],
+            "residual_norm_only": np.c_[zeros, r_norm],
+            "d_esc_only": np.c_[zeros, d_esc],
+        }
+        views.update({f"x_scale_{s}": np.c_[s * lam, d_esc] for s in X_SCALES})
+        dipole_norm = float(np.sqrt(frame.v_dipole_norm_sq))
+        views["isometric"] = np.c_[dipole_norm * lam, d_esc]
+        dipole_norms.append(dipole_norm)
+        saturated.append(float(np.mean(np.abs(lam_star) > 1.0)))
+        for name, coords in views.items():
+            scores[name].append(local_recall(coords, q, truth, K_RECALL))
+
+    results: dict[str, dict[str, float]] = {
+        name: {"mean_recall": float(np.mean(v)), "median_recall": float(np.median(v))}
+        for name, v in scores.items()
+    }
+    results["frame"] = {
+        "dipole_norm_median": float(np.median(dipole_norms)),
+        "dipole_norm_min": float(np.min(dipole_norms)),
+        "dipole_norm_max": float(np.max(dipole_norms)),
+        "saturated_fraction_median": float(np.median(saturated)),
+    }
+    print(f"{'view':<24}{'mean':>8}{'median':>9}")
+    print("-" * 41)
+    for name in names:
+        r_ = results[name]
+        print(f"{name:<24}{r_['mean_recall']:>8.3f}{r_['median_recall']:>9.3f}")
+    print(f"\n||v_dipole|| median {results['frame']['dipole_norm_median']:.3f} "
+          f"[{results['frame']['dipole_norm_min']:.3f}, {results['frame']['dipole_norm_max']:.3f}]"
+          f" | saturated fraction median {results['frame']['saturated_fraction_median']:.3f}")
+
+    write_result(
+        out,
+        experiment="E7-ablation",
+        config={"seed": SEED, "queries": queries, "k_recall": K_RECALL,
+                "codebook_k": CODEBOOK_K, "x_scales": list(X_SCALES)},
+        results=results,
+    )
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queries", type=int, default=50)
-    parser.add_argument("--out", type=Path, default=RESULTS_DIR / "reanchor.json")
+    parser.add_argument("--out", type=Path, default=None)
+    parser.add_argument(
+        "--ablation", action="store_true",
+        help="decompose the re-anchored arm instead of running the five-arm table",
+    )
     args = parser.parse_args()
 
     vectors, parts = load_corpus()
     n = vectors.shape[0]
     rng = np.random.default_rng(SEED)
     queries = sorted(rng.choice(n, size=args.queries, replace=False).tolist())
+
+    if args.ablation:
+        print_header("E7 ablation", f"{n} chunks, d={vectors.shape[1]}")
+        return ablate(vectors, queries, args.out or RESULTS_DIR / "reanchor_ablation.json")
+    args.out = args.out or RESULTS_DIR / "reanchor.json"
 
     print_header("E7 re-anchoring", f"{n} chunks, d={vectors.shape[1]}")
     print(f"{len(queries)} queries | local recall@{K_RECALL} | chance {K_RECALL / (n - 1):.4f}\n")

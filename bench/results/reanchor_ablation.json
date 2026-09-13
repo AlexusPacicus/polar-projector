@@ -1,0 +1,132 @@
+{
+  "experiment": "E7-ablation",
+  "config": {
+    "seed": 42,
+    "queries": [
+      140,
+      150,
+      187,
+      193,
+      203,
+      205,
+      280,
+      365,
+      400,
+      439,
+      500,
+      611,
+      785,
+      813,
+      884,
+      942,
+      954,
+      975,
+      986,
+      988,
+      991,
+      1096,
+      1122,
+      1148,
+      1199,
+      1222,
+      1396,
+      1414,
+      1423,
+      1504,
+      1519,
+      1550,
+      1568,
+      1606,
+      1663,
+      1677,
+      1681,
+      1716,
+      1719,
+      1728,
+      1809,
+      1828,
+      1839,
+      1869,
+      1895,
+      1958,
+      1981,
+      2034,
+      2129,
+      2152
+    ],
+    "k_recall": 15,
+    "codebook_k": 16,
+    "x_scales": [
+      0.1,
+      0.25,
+      0.5,
+      1.0,
+      2.0
+    ]
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "operator": {
+      "mean_recall": 0.5426666666666667,
+      "median_recall": 0.5666666666666667
+    },
+    "unclamped": {
+      "mean_recall": 0.5426666666666667,
+      "median_recall": 0.5666666666666667
+    },
+    "lambda_residual_norm": {
+      "mean_recall": 0.5146666666666667,
+      "median_recall": 0.5333333333333333
+    },
+    "residual_norm_only": {
+      "mean_recall": 1.0,
+      "median_recall": 1.0
+    },
+    "d_esc_only": {
+      "mean_recall": 0.48533333333333334,
+      "median_recall": 0.4666666666666667
+    },
+    "x_scale_0.1": {
+      "mean_recall": 0.5106666666666667,
+      "median_recall": 0.5
+    },
+    "x_scale_0.25": {
+      "mean_recall": 0.628,
+      "median_recall": 0.6
+    },
+    "x_scale_0.5": {
+      "mean_recall": 0.8573333333333334,
+      "median_recall": 0.8666666666666667
+    },
+    "x_scale_1.0": {
+      "mean_recall": 0.5426666666666667,
+      "median_recall": 0.5666666666666667
+    },
+    "x_scale_2.0": {
+      "mean_recall": 0.3439999999999999,
+      "median_recall": 0.3333333333333333
+    },
+    "isometric": {
+      "mean_recall": 0.9253333333333335,
+      "median_recall": 1.0
+    },
+    "frame": {
+      "dipole_norm_median": 0.46295892988759213,
+      "dipole_norm_min": 0.31273987436660394,
+      "dipole_norm_max": 0.646691785863527,
+      "saturated_fraction_median": 0.00675371454299865
+    }
+  }
+}
