@@ -113,7 +113,7 @@ timing protocol they share.
 pytest
 ```
 
-628 tests across property, unit, frame-equivalence and block-benchmark suites; the operator is at
+708 tests across property, unit, frame-equivalence and block-benchmark suites; the operator is at
 100% line coverage. `tests/test_polar_frame.py` asserts the `prepare()`/`evaluate()` split is
 behavior-preserving by exact equality against `project()`.
 

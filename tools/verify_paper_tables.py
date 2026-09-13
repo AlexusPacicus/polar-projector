@@ -437,6 +437,8 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§2.1 poles window count of pole A's part", "409", po["window_part_counts"]["P1_GOD"]))
     out.append(("§2.1 poles window count of pole B's part", "91", po["window_part_counts"]["P2_MIND"]))
     out.append(("§2.1 poles two-part prediction exact to 1e-12", "1", int(po["max_prediction_residual"] < 1e-12)))
+    # exploratory: from the post hoc E7 ablation (bench/reanchor.py --ablation)
+    out.append(("§2.1 re-anchored saturation median %", "0.68", 100 * ab["frame"]["saturated_fraction_median"]))
 
     # §3 prose (phase 4): figures derived from the artifacts above and quoted in text
     sweep_means = [row["mean"] for row in lat["corpus_size_sweep"].values()]
@@ -525,10 +527,7 @@ PAPER = Path(__file__).resolve().parent.parent / "paper" / "polar-projector-pape
 
 # Checked figures registered for phase 4 and not yet written into the manuscript.
 # They are reported, not failed; phase 4 is done when this tuple is empty.
-AWAITING_TEXT = (
-    "§2.1 saturation",
-    "§2.1 poles",
-)
+AWAITING_TEXT: tuple[str, ...] = ()
 
 # Rows that check a derived condition rather than a number the paper prints.
 NOT_A_PRINTED_FIGURE = ("§D  sqrt saving", "§B  clamp refusal share")

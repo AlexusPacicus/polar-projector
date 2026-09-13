@@ -20,7 +20,7 @@
 > `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
 > The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
 > compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (302 figures at present, produced by `bench/latency.py`,
+> committed artifact** in `bench/results/` (303 figures at present, produced by `bench/latency.py`,
 > `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
 > `bench/conditioning.py`, `bench/batched.py` and `tools/decompose_polar_latency.py` against the
 > hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
@@ -375,61 +375,55 @@ all precision in the near-collinear regime, undetectably).
 
 ### 2.1 Screen Mapping: From \( (\lambda, d_{esc}) \) to a Planar Position
 
-The propositions above define a pair of scalars. What makes them a *navigation* primitive rather
-than a summary statistic is that the interface consumes them directly as a position, with no
-intermediate layout step. Given the active anchor's on-screen position \( (X_{c_1}, Y_{c_1}) \) and
-two viewport scale constants \( S_x, S_y \):
+The operator outputs a pair of scalar signals \( (\lambda, d_{esc}) \) per stimulus. To consume them
+directly in a spatial interface without a global solver, the pair maps to screen coordinates
+\( (X_n, Y_n) \) relative to the anchor's position \( (X_{c_1}, Y_{c_1}) \), using viewport scales
+\( S_x, S_y > 0 \):
 
 \[ X_n = X_{c_1} + \lambda \cdot S_x, \qquad Y_n = Y_{c_1} + d_{esc} \cdot S_y \]
 
-\( \lambda \) drives the horizontal axis — which of the two poles the stimulus leans toward — and
-\( d_{esc} \) the vertical — how far it escapes the local subspace. Four properties of this mapping
-bear on the rest of the paper, and two of them are limitations.
+With the frame and both scales held fixed, this mapping is affine, so positional stability transfers
+directly to screen space. That stability is not a proposition of §2: it follows from the
+construction — each position is a pure function of its own vector and the fixed frame — and §3.2
+measures it. Trustworthiness is invariant to translation and to uniform scaling, so evaluating it on
+\( (\lambda, d_{esc}) \) at a declared ratio \( S_x / S_y \) is the same as evaluating it on
+\( (X_n, Y_n) \), the layout this mapping produces.
 
-*The map is affine, so §3.2's stability is screen stability.* With the anchor and the scales held
-fixed, \( (X_n, Y_n) \) is an affine image of \( (\lambda, d_{esc}) \). No optimizer, no
-normalization pass, and no dependence on any other point sits between the operator's output and the
-pixel, so positional stability of the pair transfers to the rendered position exactly rather than
-approximately. This is what lets §3.2 measure drift on the operator's own output and have it mean
-drift on screen — and it is also why a trustworthiness figure is a fair instrument to apply here at
-all: \( (\lambda, d_{esc}) \) is not an intermediate representation, it *is* the planar position.
+The coefficient \( \lambda \) measures relative displacement along \( v_{dipole} \). Clamping enforces
+\( \lambda \in [-1, 1] \), where \( \pm 1 \) marks the boundary of the domain rather than the pole
+locations. In the published frame the initial 500-chunk window holds 409 chunks of P1_GOD and 91 of
+P2_MIND, so the anchor \( c_1 \) is a convex combination of the two poles, and the projected poles sit
+at \( \lambda = +0.182 \) (\( +91/500 \)) and \( \lambda = -0.818 \) (\( -409/500 \)).
 
-*Changing the anchor moves everything, by construction.* \( (X_{c_1}, Y_{c_1}) \) is the origin of
-the frame, so selecting a new anchor re-places every point rendered against it. This is not drift in
-the sense §3.2 measures — it is a deliberate change of reference, the spatial equivalent of
-following a link — but it is why the fixed-anchor configuration is the one this paper centers, and
-it gives the moving-anchor arm's measured 0.13–0.61 per-step displacement (§3.2) an interface
-meaning rather than only a benchmark one.
+We evaluate two viewport scaling ratios: unit scale (\( S_x = S_y \)), where \( \lambda \) remains an
+unscaled coefficient, and isometric scale (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)), which renders both
+axes in length units. Whenever \( \lambda \) is unsaturated (\( |\lambda^*| \leq 1 \)), the isometric
+scale preserves the scaled anchor-residual distance exactly, as a corollary of Proposition 3:
 
-*The vertical axis is one-sided.* \( d_{esc} \geq 0 \) by construction, so \( Y_n \geq Y_{c_1} \)
-always: the layout occupies a half-plane above the anchor's row rather than surrounding it. Points
-fan upward from the anchor instead of distributing around it the way a global embedding distributes
-around its centroid. A reader comparing this layout's appearance against a UMAP scatter should
-expect that difference and not read it as a defect in either.
+\[ (X_n - X_{c_1})^2 + (Y_n - Y_{c_1})^2 = S_y^2 \left( \lambda^2 \|v_{dipole}\|_2^2 + d_{esc}^2 \right) = S_y^2 \|r\|_2^2 \]
 
-*Saturation is visible on screen.* \( \lambda \) is clamped to \( [-1, 1] \), so
-\( X_n \in [X_{c_1} - S_x,\, X_{c_1} + S_x] \) is bounded while \( Y_n \) is not. Stimuli with
-\( |\lambda^*| > 1 \) collapse onto the two vertical lines \( X_{c_1} \pm S_x \) and become
-horizontally indistinguishable from one another — precisely the configuration where Proposition 3's
-decomposition weakens from equality to a bound. How often this happens is governed by
-\( \|v_{dipole}\|_2 \) relative to the extent of the residuals being projected onto it, and that
-norm has two regimes: in the ordinary case it is \( \|P_\perp(c_A - c_B)\|_2 \), fixed by how far
-apart the two chosen poles are once the anchor is removed, and \( \delta \) has no part in it; only
-in Proposition 2's collinear fallback does the norm become \( 2\delta \). §C's sweep is measured
-inside that fallback regime, so it characterizes \( \delta \)'s effect on \( \lambda \) where
-\( \delta \) is what sets the scale — not the pole separation that sets it the rest of the time.
-Neither the frequency of saturation on a real corpus nor its dependence on pole selection is
-measured in this paper; §6 records both.
+It preserves the distance to the anchor within its complement, \( \|r\|_2 \), which is at most
+\( \|v_n - c_1\|_2 \). Under the isometric scale, pairwise screen distances also contract — never more
+than \( S_y \|v_i - v_j\|_2 \) — for every pair of points, saturated ones included:
+\( (\lambda \|v_{dipole}\|_2, d_{esc}) \) forms a cylindrical coordinate system in the image of
+\( P_\perp \), collapsing the remaining \( d - 2 \) orthogonal dimensions (\( d - 1 \) in the
+null-anchor branch of Proposition 1) into the radial distance \( d_{esc} \geq 0 \), and clamping does
+not break the bound. At unit scale the horizontal axis is stretched by \( 1 / \|v_{dipole}\|_2 \), and
+screen distances can exceed both bounds. The fold forces points to fan upward into the upper
+half-plane \( Y_n \geq Y_{c_1} \).
 
-The ratio \( S_x / S_y \) is not a free constant either. \( \lambda \) is a coefficient and
-\( d_{esc} \) a length, so only \( S_x = \|v_{dipole}\|_2\, S_y \) renders Proposition 3's
-decomposition without distorting distance from the anchor; §3.5 measures what choosing otherwise
-costs.
-
-Finally, because \( d_{esc} \) is unbounded above while a viewport is not, \( S_y \) requires a
-clipping or compression policy that this paper does not specify. The operator's contract ends at the
-pair; how an interface fits an unbounded residual into finite pixels is a design decision outside
-its guarantees.
+When \( |\lambda^*| > 1 \), stimuli collapse onto the boundary lines \( X_{c_1} \pm S_x \), and under the
+isometric scale their screen distance to the anchor strictly underestimates \( S_y \|r\|_2 \).
+Throughout, \( d_{esc} \) is the distance from \( r \) to the segment \( [-v_{dipole}, +v_{dipole}] \):
+for an unsaturated stimulus the nearest point is interior and \( d_{esc} \) is its distance to the
+dipole axis; for a saturated one it is the distance to the nearer endpoint. Saturation affects 11.39%
+of the corpus in the static published frame and ranges from 7.7% to 18.8% per step under a moving
+anchor (§3.2); across the re-anchored frames of §3.5 its median is 0.68%, an exploratory figure
+measured after that section's table existed. Re-anchoring does not translate the viewport: the
+anchor's screen position stays at \( (X_{c_1}, Y_{c_1}) \), but moving \( c_1 \) in the embedding space
+changes \( \hat{c}_1 \), \( v_{dipole} \) and every stimulus's \( (\lambda, d_{esc}) \), so every point is
+re-placed. Finally, \( d_{esc} \) is unbounded above while a viewport is not, so \( S_y \) requires a
+clipping policy that this paper does not specify.
 
 ## 3. Numerical Behavior
 

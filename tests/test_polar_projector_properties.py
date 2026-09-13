@@ -265,3 +265,55 @@ class TestPolarProjectorProperties:
         _, lam_minus, _ = projector.project(v_minus, c_1, c_A, c_B, 1)
         assert lam_plus > 0.0, f"seed={seed}: λ along +dipole should be positive, got {lam_plus}"
         assert lam_minus < 0.0, f"seed={seed}: λ along -dipole should be negative, got {lam_minus}"
+
+    @staticmethod
+    def _mixed_saturation_stimuli(projector, d, seed, n):
+        """A frame and n stimuli spread along its dipole so that some saturate and some do not."""
+        rng = np.random.default_rng(seed)
+        frame = projector.prepare(*(rng.normal(size=d) for _ in range(3)))
+        dipole_norm = float(np.sqrt(frame.v_dipole_norm_sq))
+        v_hat = frame.v_dipole / dipole_norm
+        along = rng.uniform(-2.5, 2.5, size=n) * dipole_norm
+        stimuli = frame.c_1 + rng.normal(size=(n, d)) * 0.3 + np.outer(along, v_hat)
+        return frame, dipole_norm, stimuli
+
+    @P_DIMS_LIGHT
+    @P_SEED_20
+    def test_isometric_view_contracts_pairwise_distances(self, d, seed):
+        """Paper §2.1: with λ in multiples of ||v_dipole||, screen distance <= ||r_i - r_j||, saturated included."""
+        projector = PolarProjector()
+        frame, dipole_norm, stimuli = self._mixed_saturation_stimuli(projector, d, seed, 120)
+        view, residuals, saturated = [], [], []
+        for i, v in enumerate(stimuli):
+            _, lam, d_esc = projector.evaluate(v, frame, i)
+            view.append((lam * dipole_norm, d_esc))
+            residuals.append(projector._project_perp(v - frame.c_1, frame.c1_hat))
+            saturated.append(abs(lam) == 1.0)
+        assert any(saturated) and not all(saturated), "the sweep must mix saturated and unsaturated stimuli"
+        view_arr, residual_arr = np.array(view), np.array(residuals)
+        i, j = np.triu_indices(len(stimuli), k=1)
+        screen = np.linalg.norm(view_arr[i] - view_arr[j], axis=1)
+        true = np.linalg.norm(residual_arr[i] - residual_arr[j], axis=1)
+        assert np.all(screen <= true * (1.0 + 1e-12) + 1e-12), (
+            f"seed={seed} d={d}: max screen/true ratio {float(np.max(screen / true))}"
+        )
+
+    @P_DIMS_LIGHT
+    @P_SEED_20
+    def test_escape_distance_is_distance_to_dipole_segment(self, d, seed):
+        """Paper §2.1: d_esc = min over t in [-1, 1] of ||r - t·v_dipole||, saturated or not."""
+        projector = PolarProjector()
+        frame, dipole_norm, stimuli = self._mixed_saturation_stimuli(projector, d, seed, 12)
+        grid = np.linspace(-1.0, 1.0, 20_001)
+        step = float(grid[1] - grid[0])
+        for i, v in enumerate(stimuli):
+            _, _, d_esc = projector.evaluate(v, frame, i)
+            r = projector._project_perp(v - frame.c_1, frame.c1_hat)
+            rr, rv = float(np.dot(r, r)), float(np.dot(r, frame.v_dipole))
+            # Well-conditioned stimuli, so the expanded square is accurate enough for a grid search.
+            nearest = float(np.sqrt(max(np.min(rr - 2.0 * grid * rv + grid**2 * frame.v_dipole_norm_sq), 0.0)))
+            tolerance = 1e-9 * (1.0 + np.sqrt(rr))
+            assert d_esc <= nearest + tolerance, f"seed={seed} d={d}: d_esc {d_esc} above segment distance {nearest}"
+            assert nearest - d_esc <= step * dipole_norm + tolerance, (
+                f"seed={seed} d={d}: d_esc {d_esc} below segment distance {nearest}"
+            )

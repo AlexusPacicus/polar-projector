@@ -50,6 +50,7 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | A11 | Batched agreement is ≤ 0.19 ε in λ and ≤ 2.02 ε‖r‖ in d_esc; a permuted batch is not bitwise stable (≤ 0.12 ε in λ, ≤ 2.2e-16 in d_esc) | checked | yes (4b159d0) | batched.json | `§D  agreement`; `§D  row order` |
 | A12 | The square root costs 1.0–1.6%, so the energy form is not worth shipping | checked | yes (4b159d0) | batched.json | `§D  sqrt saving` |
 | A13 | δ-sweep of the collinear fallback (§C) | checked | n/a (recomputed) | tools/generate_polar_delta_table.py | `recompute:§C` |
+| A14 | Under the isometric scale the screen distance to the anchor is S_y‖r‖₂ when λ is unsaturated and strictly less when it saturates; pairwise screen distances never exceed ‖r_i − r_j‖₂ ≤ ‖v_i − v_j‖₂, saturated points included; and d_esc is always the distance from r to the segment [−v_dipole, +v_dipole] | checked | n/a (derivation) | tests/test_polar_projector_properties.py | `pytest` |
 
 ## Registered question
 
@@ -72,8 +73,9 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | C15 | A re-anchored frame costs 42.8 µs, against 5,156 µs for a local PCA (121×) and 69,178 µs for a global one (1,618×); per stimulus the operator costs 4.53 µs against 1.98 µs for the radial coordinate | checked | no (d12e03f) | reanchor.json | `§3.5 frame`; `§3.5 per-stimulus` |
 | C16 | UMAP fitted once and extended by transform() is intermittent: still at 5 of 7 steps and relocating by 0.39 and 1.07 at the other two, so its mean step (0.21) describes none of them | checked | yes (1c363bb) | drift.json | `§3.2 fit-once`; `§3.2 umap_fit_once` |
 | C17 | The refit baselines pull ahead on same-part lift as the corpus grows (2.41× and 2.47× at the final step) while the operator and fit-once UMAP stay within 1.40–1.62× after the first step; chance falls from 0.70 to 0.22 across the schedule | checked | no (52ab929) | recall.json | `§3.3 umap_refit`; `§3.3 tsne_refit`; `§3.3 umap_fit_once`; `§3.3 later-step`; `§3.3 chance` |
+| C18 | Across the re-anchored frames of §3.5 the median share of saturated stimuli is 0.68% | checked | post hoc (07255f7) | reanchor_ablation.json | `§2.1 re-anchored saturation` |
 
-## Post hoc, awaiting manuscript text
+## Post hoc
 
 | ID | Claim | Status | Pre-registered | Source | CI checks |
 |---|---|---|---|---|---|
