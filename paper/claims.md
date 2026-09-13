@@ -2,7 +2,32 @@
 
 Phase 2 of the manuscript plan. **Nothing enters the manuscript without a row here**, and a row
 whose status is `checked` must name at least one check that `tools/verify_paper_tables.py`
-actually runs — CI fails otherwise. The registered question this paper answers (phase 1):
+actually runs — CI fails otherwise. The registered question this paper answers (phase 1, revised
+2026-09-13):
+
+> In a spatial interface over a growing corpus, any fixed map decouples interaction from corpus
+> state: what is written does not move what has been placed, and cost does not depend on what is
+> stored. What a local frame adds is re-centring the view on the query without re-coupling it —
+> which a local refit does not achieve — and a simple radial coordinate exploits that better than
+> the operator.
+
+What would refute it, and where it stands:
+
+- **F1** — a method that re-centres by querying the corpus matches the re-anchored operator on local
+  recall. Measured, does not hold: 0.023 against 0.543 (C11, C12).
+- **F2** — a fixed map, without re-centring, matches it on local recall. Measured, does not hold:
+  0.056 (C12).
+- **Bound** — the radial coordinate beats the operator. Measured, holds: 0.981 against 0.543 at unit
+  scale, and against 0.925 in the exploratory isometric view (C13).
+
+Terms of the question. *Corpus state* is the content and size of the stored corpus, not persistence
+on disk, which is out of scope. Whether a method needs the corpus for each view is a fact of its
+construction, not a measurement, and the manuscript states it as such; it is not established for
+UMAP fitted once. The re-anchoring codebook is built once over the whole corpus, so a growing corpus
+re-couples at each rebuild (§4.3). No new experiment is part of this revision: every figure it rests
+on is already registered below.
+
+Superseded question (phase 1, approved earlier on 2026-09-13), kept for traceability:
 
 > For placing an incoming vector relative to an active context, exact positional stability does not
 > distinguish a local operator, because any fixed linear map has it. What a local frame provides that
