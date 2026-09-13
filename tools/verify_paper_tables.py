@@ -272,8 +272,8 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     ]:
         out.append((label, published, measured))
 
-    # §3.5 re-anchoring. Recalls only: the frame and per-stimulus columns are
-    # timings on a passively cooled host and would make this check flaky.
+    # §3.5 re-anchoring. Recalls here; the timing columns are checked further down,
+    # against the same committed artifact.
     ra = _load("reanchor.json")
     for arm, mean, median, lo, hi in [("pca_global", "0.056", "0.033", "0.000", "0.267"),
                                       ("polar_published", "0.019", "0.000", "0.000", "0.133"),
@@ -381,6 +381,7 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§3.2 E8 unit reproduces E1/E5/E6", "1", int(sc["unit_reproduces_published"]["all"])))
     out.append(("§3.2 isometric polar_fixed trustworthiness", "0.6666", fixed_iso["trustworthiness"]))
     out.append(("§3.2 isometric polar_fixed still steps", "7", fixed_iso["still_steps"]))
+    out.append(("§3.2 isometric polar_fixed worst step", "0.0000", fixed_iso["worst_step"]))
     out.append(("§3.2 isometric polar_moving trustworthiness", "0.6235", moving_iso["trustworthiness"]))
     out.append(("§3.2 isometric polar_moving worst step", "0.8144", moving_iso["worst_step"]))
     for arm, med, worst in [("polar_fixed", "1.59", "1.17"), ("polar_moving", "1.41", "1.17")]:
@@ -436,6 +437,74 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§2.1 poles window count of pole A's part", "409", po["window_part_counts"]["P1_GOD"]))
     out.append(("§2.1 poles window count of pole B's part", "91", po["window_part_counts"]["P2_MIND"]))
     out.append(("§2.1 poles two-part prediction exact to 1e-12", "1", int(po["max_prediction_residual"] < 1e-12)))
+
+    # §3 prose (phase 4): figures derived from the artifacts above and quoted in text
+    sweep_means = [row["mean"] for row in lat["corpus_size_sweep"].values()]
+    out.append(("§3  sweep flatness %", "1.4", 100 * (max(sweep_means) / min(sweep_means) - 1)))
+
+    arms = lat["spinoza"]["arms"]
+    ev = arms["polar_evaluate"]["mean"]
+    polar_spreads = [100 * arms[a]["spread"] for a in ("polar_evaluate", "polar_project")]
+    other_spreads = [100 * arms[a]["spread"]
+                     for a in ("random_projection", "multi_anchor_cosine", "sliding_window_pca")]
+    out.append(("§3.1 spread polar arms min %", "2.5", min(polar_spreads)))
+    out.append(("§3.1 spread polar arms max %", "2.8", max(polar_spreads)))
+    out.append(("§3.1 spread other arms min %", "0.5", min(other_spreads)))
+    out.append(("§3.1 spread other arms max %", "2.5", max(other_spreads)))
+    for arm, relative in [("random_projection", "0.23"), ("multi_anchor_cosine", "0.25"),
+                          ("polar_project", "2.57"), ("sliding_window_pca", "64.02")]:
+        out.append((f"§3.1 relative cost {arm}", relative, arms[arm]["mean"] / ev))
+    out.append(("§3.1 relative cost prepare", "1.50", dec["prepare_only"]["mean"] / ev))
+    out.append(("§3.1 floor ratio random projection", "4.4", ev / arms["random_projection"]["mean"]))
+    out.append(("§3.1 floor ratio multi-anchor cosine", "4.0", ev / arms["multi_anchor_cosine"]["mean"]))
+    out.append(("§3.1 sliding-window PCA ratio", "64.0", arms["sliding_window_pca"]["mean"] / ev))
+    out.append(("§3.1 decompose evaluate spread %", "0.5", dec["evaluate_spread_pct"]))
+    out.append(("§3.1 working set Spinoza MB", "6.8", lat["spinoza"]["working_set_mb"]))
+    out.append(("§3.1 working set synthetic MB", "76.8", lat["synthetic"]["working_set_mb"]))
+    out.append(("§3.1 working set ratio", "11", lat["synthetic"]["working_set_mb"] / lat["spinoza"]["working_set_mb"]))
+    out.append(("§3.1 evaluate shift across working sets %", "0.4",
+                100 * (lat["synthetic"]["arms"]["polar_evaluate"]["mean"] / ev - 1)))
+    sweep_d = lat["dimension_sweep"]
+    out.append(("§3.1 dispatch share at d=384 % (nearest ten)", "90",
+                round(100 * sweep_d["16"]["polar_evaluate"] / sweep_d["384"]["polar_evaluate"], -1)))
+    out.append(("§3.1 O(d) work at d=384 us", "0.4",
+                sweep_d["384"]["polar_evaluate"] - sweep_d["16"]["polar_evaluate"]))
+
+    refit_steps = dri["umap_refit"]["steps"]
+    out.append(("§3.2 alignment share of unaligned movement %", "80",
+                100 * (1 - statistics.median(s["aligned_p95"] for s in refit_steps)
+                       / statistics.median(s["raw_p95"] for s in refit_steps))))
+    fixed_p95 = _p95s(dri["polar_fixed"])
+    out.append(("§3.2 still range polar_fixed min (x1e-16)", "4.3", min(fixed_p95) / 1e-16))
+    out.append(("§3.2 still range polar_fixed max (x1e-15)", "5.0", max(fixed_p95) / 1e-15))
+    relocations = sorted(x for x in _p95s(dri["umap_fit_once"]) if x >= 1e-9)
+    out.append(("§3.2 fit-once relocation count", "2", len(relocations)))
+    out.append(("§3.2 fit-once relocation smaller", "0.39", relocations[0]))
+    out.append(("§3.2 fit-once relocation larger", "1.07", relocations[-1]))
+    out.append(("§3.2 fit-once mean step", "0.21", statistics.mean(_p95s(dri["umap_fit_once"]))))
+
+    with (RESULTS / "recall.json").open() as fh:
+        recall_config = json.load(fh)["config"]
+    out.append(("§3.3 chance first step", "0.70", recall_config["chance_level_per_step"][0]))
+    out.append(("§3.3 chance last step", "0.22", recall_config["chance_level_per_step"][-1]))
+    later_lifts = [s["lift"] for arm in ("polar_fixed", "umap_fit_once") for s in rec[arm]["steps"][1:]]
+    out.append(("§3.3 later-step lift min, operator and fit-once UMAP", "1.40", min(later_lifts)))
+    out.append(("§3.3 later-step lift max, operator and fit-once UMAP", "1.62", max(later_lifts)))
+
+    with (RESULTS / "reanchor.json").open() as fh:
+        reanchor_config = json.load(fh)["config"]
+    out.append(("§3.5 chance", "0.0068", reanchor_config["chance"]))
+    out.append(("§3.5 re-anchoring factor", "29",
+                ra["polar_reanchored"]["mean_recall"] / ra["polar_published"]["mean_recall"]))
+    out.append(("§3.5 frame cost ratio, local PCA", "121",
+                ra["pca_local"]["frame_us"] / ra["polar_reanchored"]["frame_us"]))
+    out.append(("§3.5 frame cost ratio, global PCA", "1618",
+                ra["pca_global"]["frame_us"] / ra["polar_reanchored"]["frame_us"]))
+    for arm, frame_us, stimulus_us in [("pca_global", "69178", "1.34"), ("polar_published", "10690", "4.51"),
+                                       ("pca_local", "5156", "1.23"), ("polar_reanchored", "42.8", "4.53"),
+                                       ("radial_plain", "0", "1.98")]:
+        out.append((f"§3.5 frame us {arm}", frame_us, ra[arm]["frame_us"]))
+        out.append((f"§3.5 per-stimulus us {arm}", stimulus_us, ra[arm]["per_stimulus_us"]))
     return out
 
 
@@ -457,11 +526,6 @@ PAPER = Path(__file__).resolve().parent.parent / "paper" / "polar-projector-pape
 # Checked figures registered for phase 4 and not yet written into the manuscript.
 # They are reported, not failed; phase 4 is done when this tuple is empty.
 AWAITING_TEXT = (
-    "§3.2 E8 unit reproduces",
-    "§3.2 isometric",
-    "§3.3 isometric",
-    "§3.4 isometric",
-    "§3.4 F3",
     "§2.1 saturation",
     "§2.1 poles",
 )

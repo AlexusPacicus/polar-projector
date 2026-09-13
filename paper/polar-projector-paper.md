@@ -20,16 +20,16 @@
 > `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
 > The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
 > compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (256 figures at present, produced by `bench/latency.py`,
+> committed artifact** in `bench/results/` (302 figures at present, produced by `bench/latency.py`,
 > `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
 > `bench/conditioning.py`, `bench/batched.py` and `tools/decompose_polar_latency.py` against the
 > hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
 > manuscript drifting away from its own measurements, not an error inside a benchmark.
 >
-> Four classes of figure are covered by neither check and are labelled in place: the
-> \( O(N^2) \) column of §3 and the SQLite deployment numbers, both carried over from the substrate
-> and reproduced by no code here; and the frame-construction and per-stimulus timing columns of
-> §3.5, which are measurements on a passively cooled host and would make a byte-exact check flaky.
+> No figure in §3 now escapes both checks: the \( O(N^2) \) column and the SQLite deployment numbers
+> carried over from the substrate were removed, and §3.5's timing columns are checked against their
+> committed artifact like every other timing. `paper/claims.md` registers each claim against its
+> checks, and the verifier fails if a checked figure is not printed here.
 >
 > §4 and §6 are drafted but not reviewed and must not be treated as final. The speculative
 > extensions carried by earlier drafts — multi-axis tangent frames and the tripolar model, adaptive
@@ -57,7 +57,7 @@ residual \( d_{esc} \geq 0 \). We prove non-degeneracy for collinear configurati
 deterministic fallback direction in the anchor's null space (Propositions 1 and 2), and establish an
 orthogonal decomposition identity for the residual — exact whenever \( \lambda \) is unsaturated, an
 inequality once \( \lambda \) clamps at the dipole boundary (Proposition 3). Per-stimulus latency is
-4.57 µs with a prepared frame and 11.75 µs stateless, flat to 1.3% across corpora from 1,000 to
+4.57 µs with a prepared frame and 11.75 µs stateless, flat to 1.4% across corpora from 1,000 to
 25,000 vectors and to 0.4% across an 11× working set.
 
 **This paper is a measured account of what that construction buys, and it is bounded throughout by
@@ -74,7 +74,7 @@ against task-level agreement, and the operator's distinctive behaviour lives at 
 where it holds 1.17× lift on the smallest corpus while every other stable arm falls to chance.
 
 The one lever that is specific to a local frame is a **movable origin**. Re-anchoring on the query
-is worth 28× in local neighbourhood recovery (0.019 to 0.543) for a single \( O(d) \) frame
+is worth 29× in local neighbourhood recovery (0.019 to 0.543) for a single \( O(d) \) frame
 construction of 42.8 µs, while refitting a linear map's directions on the query's own neighbourhood
 is *worse* than not refitting at all — a projection reorients but cannot recentre. Even there the
 operator is bounded: a two-line radial coordinate reaches 0.981 on the same instrument at 1.98 µs
@@ -178,7 +178,7 @@ them are in the paper because a result a two-line baseline matches is not a resu
   other end of the knob, where a part-based rule holds 1.17× lift on the 500-chunk corpus while
   every other stable arm falls to chance (§3.4).
 - **A movable origin is the lever; better directions are not.** Re-anchoring on the query is worth
-  28× in local neighbourhood recovery (0.019 to 0.543) for one \( O(d) \) frame construction at
+  29× in local neighbourhood recovery (0.019 to 0.543) for one \( O(d) \) frame construction at
   42.8 µs, against 5.2 ms for a locally refitted PCA and 69 ms for a global fit. That refitted PCA
   scores *below* the global one, which supplies the mechanism: a linear projection reorients but
   cannot recentre, and its two local components drop distant points on top of the query. The claim
@@ -439,32 +439,18 @@ thermal throttling; the run-to-run spreads reported below are what that variabil
 practice. Absolute microsecond figures are properties of this host, not of the operator — the
 claims that do not depend on the host are the *scaling* behaviour and the *ratios* between arms.
 
-Benchmarked over \( N = 25{,}000 \) vectors ( \( d = 384 \), float64):
+Stateless cost against corpus size, on synthetic unit vectors at \( d = 384 \), float64:
 
-| Corpus Size (N) | Polar Projector Mean (µs) | Polar Projector p95 (µs) | \( O(N^2) \) Force Simulation |
-|---|---|---|---|
-| 1,000 | 11.46 | 11.92 | 0.955 s |
-| 2,221 | 11.61 | 11.79 | 5.595 s |
-| 4,000 | 11.61 | 12.21 | 19.800 s |
-| 25,000 | 11.58 | 12.00 | 767.2 s (least-squares fit \( 1.228 \times 10^{-6} N^2 \), extrapolated) |
+| Corpus size (N) | Mean (µs) | p95 (µs) |
+|---|---|---|
+| 1,000 | 11.46 | 11.92 |
+| 2,221 | 11.61 | 11.79 |
+| 4,000 | 11.61 | 12.21 |
+| 25,000 | 11.58 | 12.00 |
 
-Projection latency stays flat as \( N \) grows — 1.3% across a 25× corpus and a 25× working set,
-consistent with Proposition 1's independence from corpus size — while the naive force-directed
-layout it replaces in the substrate grows quadratically. That baseline is an all-pairs force
-simulation, not one of the dimensionality-reduction arms of §3.2: §1 declines to make an asymptotic
-claim about t-SNE or UMAP precisely because their published implementations are sub-quadratic, and
-nothing in this paragraph revises that. The polar column is `bench/latency.py --n-sweep`, 3
-repetitions per row, and is checked against its committed artifact on every push. The
-\( O(N^2) \) column is **not**: it is a substrate measurement this operator was originally compared
-against, carried over unchanged, and no code in this repository reproduces it. It is included for
-scale and should be read as context rather than as a result of this paper — as should the
-deployment figures in the next paragraph.
-
-*Deployment context (not a claim of this paper — see §1 scope note):* within the Traianus
-substrate, the persistence layer consuming this operator's output measured 25,000 embeddings
-(76.8 MB) ingested in 1.38 s, async re-indexing in 66 ms, and 0 `SQLITE_BUSY` lock events across
-191 concurrent readers (4.33–5.19 ms read latency). These numbers characterize the substrate the
-benchmarks above were run in, not the operator itself.
+Latency stays flat as \( N \) grows — 1.4% across a 25× corpus and a 25× working set, consistent
+with Proposition 1's independence from corpus size. `bench/latency.py --n-sweep`, 3 repetitions per
+row.
 
 ### 3.1 Frame Preparation vs. Per-Stimulus Cost
 
@@ -485,7 +471,7 @@ and the most work a planar local coordinate could require places it in its compl
 
 Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
 after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
-is 2.4–2.8% on the polar arms and under 3% elsewhere; `bench/_harness.py` reports the median across
+is 2.5–2.8% on the polar arms and 0.5–2.5% elsewhere; `bench/_harness.py` reports the median across
 repetitions and the peak-to-peak spread alongside it, and rotates arm order so that no arm is
 permanently measured on the coolest machine.
 
@@ -493,10 +479,9 @@ permanently measured on the coolest machine.
 different frame (`tools/decompose_polar_latency.py`, artifact `bench/results/decompose.json`):
 11.51 µs stateless
 against the 11.75 measured here, with `prepare()` accounting for 59.7% of it. That script reports
-the median of 3 repetitions rather than a single pass, because this host is passively cooled and one
-pass in four was observed inflated by 20% (`evaluate` at 5.53 µs against a 4.55 µs median) — the
-median across repetitions holds the run-to-run spread on that figure to 0.5%, and the per-repetition
-means are recorded in the artifact so the correction is auditable rather than asserted.
+the median of 3 repetitions rather than a single pass, because on this passively cooled host single
+passes were observed inflated by thermal throttling; the per-repetition means are recorded in the
+artifact, and their spread on `evaluate()` is 0.5%.
 
 Two things follow, in opposite directions. Hoisting the frame out of the loop leaves **2.57× less
 work per interaction** whenever the active context outlives a single stimulus — which, for an
@@ -545,20 +530,24 @@ so what is reported is the drift that *survives* seeding. Alignment is not a cos
 for UMAP under refitting it reduces the median p95 from 5.81 to 1.16, so roughly 80% of the
 apparent movement is global reorientation that the charitable reading forgives.
 
-| Arm | Median step | Worst step | Still steps | Trustworthiness |
-|---|---|---|---|---|
-| Fixed random projection, \( 2 \times d \) | **0.0000** | 0.0000 | **7/7** | 0.5535 |
-| PCA, fit once on the initial window | **0.0000** | 0.0000 | **7/7** | 0.6811 |
-| Polar Projector, fixed anchor | **0.0000** | 0.0000 | **7/7** | 0.6639 |
-| Polar Projector, moving anchor | 0.2984 | 0.6138 | 0/7 | 0.6208 |
-| UMAP, fit once + `transform()` | 0.0000 | 1.0725 | 5/7 | 0.7681 |
-| UMAP, refit per step | 1.1607 | 1.2527 | 0/7 | 0.9049 |
-| t-SNE, refit per step | 1.1408 | 1.2439 | 0/7 | **0.9197** |
+| Arm | Median step | Worst step | Still steps | Trustworthiness | Worst step (isometric) | Trustworthiness (isometric) |
+|---|---|---|---|---|---|---|
+| Fixed random projection, \( 2 \times d \) | **0.0000** | 0.0000 | **7/7** | 0.5535 | — | — |
+| PCA, fit once on the initial window | **0.0000** | 0.0000 | **7/7** | 0.6811 | — | — |
+| Polar Projector, fixed anchor | **0.0000** | 0.0000 | **7/7** | 0.6639 | 0.0000 | 0.6666 |
+| Polar Projector, moving anchor | 0.2984 | 0.6138 | 0/7 | 0.6208 | 0.8144 | 0.6235 |
+| UMAP, fit once + `transform()` | 0.0000 | 1.0725 | 5/7 | 0.7681 | — | — |
+| UMAP, refit per step | 1.1607 | 1.2527 | 0/7 | 0.9049 | — | — |
+| t-SNE, refit per step | 1.1408 | 1.2439 | 0/7 | **0.9197** | — | — |
 
 Aligned p95 displacement per growth step; "still" counts steps under \( 10^{-9} \).
 Trustworthiness (\( k = 15 \); Venna & Kaski, 2001) of the final layout against the source 384D
 space measures neighborhood preservation. Apple M1, 8 GB, macOS 15.6, Python 3.11.6, NumPy 2.4.1;
 `bench/drift.py`, deterministic under a fixed seed and reproduced bit-for-bit across runs.
+Unmarked columns render the operator at \( S_x = S_y \) (§2.1). The isometric columns render its
+\( \lambda \) in multiples of its frame's \( \|v_{dipole}\|_2 \), so both of its axes are lengths, as
+the other arms' already are; they apply to the operator's rows only, since no other arm has a
+\( \lambda \) axis (`bench/scale.py`, whose unit scale reproduces the unmarked columns exactly).
 
 *What the stability column does not show.* Three arms are still at 7 of 7 steps, and two of them
 are a Gaussian matrix and an SVD. A fixed linear map's coordinates are a pure function of the
@@ -567,8 +556,8 @@ no guard needed. The operator's stillness is therefore not a finding, and the fi
 so that it cannot be read as one. What the two rows do establish is that the fidelity column is not
 vacuous: a random projection is the cheapest thing that is exactly stable and it lands at 0.5535,
 so the numbers above it are measuring something. A once-fitted PCA lands at 0.6811, above the
-operator's 0.6639 — the comparison §3.4 takes up, since it depends on how the operator's poles are
-chosen.
+operator's 0.6639 (0.6666 with \( \lambda \) in length units) — the comparison §3.4 takes up, since it
+depends on how the operator's poles are chosen.
 
 *What the displacement column does show.* Under refitting — the path required to keep a global
 layout faithful as a corpus grows — both global baselines relocate previously-placed points at
@@ -580,31 +569,32 @@ never reaches stillness. The operator with a fixed anchor is still at all 7 step
 rounding — aligned p95 between \( 4.3 \times 10^{-16} \) and \( 5.0 \times 10^{-15} \), which is
 zero at the resolution the arithmetic affords, not an exact algebraic zero.
 
-*What does not.* Three results cut against the simple reading, and are stated here rather than
-left for a reader to find.
+*What does not.* Three results cut against the simple reading.
 
 First, UMAP fitted once and extended by `transform()` — the out-of-sample configuration §1 names
-(Bengio et al., 2003) — is **not** the unstable arm a reader might expect; it is bimodal. It is exactly still for 5 of 7 steps and then relocates by 1.07. Averaging across
-steps yields 0.21, a figure that describes neither of the two things that actually happen; the
-aggregation here is median-and-worst for that reason. Whether intermittent relocation is better or
-worse than steady drift is not settled by this measurement: a spatial mental model that is
-confirmed five times and then violated may be harmed more than one that is never trusted. We flag
-this as a question (§6), not as a result in our favour.
+(Bengio et al., 2003) — is not steadily unstable; it is intermittent. It is exactly still for 5 of 7
+steps and relocates at the other two, by 0.39 and then 1.07. Averaging across steps yields 0.21, a
+figure that describes none of the steps that actually happen; the aggregation here is
+median-and-worst for that reason. Whether intermittent relocation is better or worse than steady
+drift is not settled by this measurement: a spatial mental model that is confirmed several times and
+then violated may be harmed more than one that is never trusted. §6 records it as open.
 
-Second, and most directly against us: **the operator is the least faithful arm in the table.** Its
-trustworthiness (0.66 fixed, 0.62 moving) sits well below the refit baselines (0.90–0.92) and
-below fit-once (0.77). Part of that gap is a category difference — the operator never constructs a
-global layout, and trustworthiness scores exactly the thing it does not attempt. But it is not
-purely a category error: \( (\lambda, d_{esc}) \) is consumed as a planar position by at least one
-system built on this operator, and under that use the metric is a fair question. The conclusion
-this section supports is therefore a trade, not a victory: **exact positional stability and a step
-roughly two orders of magnitude cheaper, paid for in neighborhood fidelity.**
+Second: **the operator is the least faithful arm in the table.** Its trustworthiness (0.6639 fixed,
+0.6208 moving; 0.6666 and 0.6235 with \( \lambda \) in length units) sits below the refit baselines
+(0.9049–0.9197) and below fit-once UMAP (0.7681). Part of that gap is a category difference — the
+operator never constructs a global layout, and trustworthiness scores exactly the thing it does not
+attempt. It is not purely a category error: §2.1 maps \( (\lambda, d_{esc}) \) to a planar position,
+and under that reading the metric is a fair question. What this section supports is a trade, not a
+win: **exact positional stability and a growth schedule more than two orders of magnitude cheaper,
+paid for in neighborhood fidelity** — and the first two rows of the table show that the stability
+half of that trade is available without the operator.
 
 Third, the moving-anchor arm drifts. It must: the operator's output is anchor-relative by
 construction, so \( \lambda \) and \( d_{esc} \) change when \( c_1 \) does, and a paper reporting
 only the fixed-anchor row would be claiming a stability the operator does not have. What the
-measurement shows is that this drift stays bounded (0.13–0.61 across steps) and never exhibits the
-relocation spikes of fit-once UMAP. The defensible claim is accordingly narrower than "no drift",
+measurement shows is that this drift stays bounded — 0.13–0.61 across steps at unit scale, worst
+step 0.8144 with \( \lambda \) in length units, which includes the per-step change of aspect ratio
+declared before that measurement — and never exhibits the relocation spikes of fit-once UMAP. The defensible claim is accordingly narrower than "no drift",
 and stronger: **drift is a deterministic function of one explicit, caller-controlled variable, not
 of hidden stochastic state and not of corpus size.**
 
@@ -635,44 +625,44 @@ displacement by RMS radius rather than comparing raw coordinates. `bench/recall.
 under the same fixed seed as §3.2, reusing its embeddings rather than recomputing UMAP/t-SNE/polar
 coordinates a third way.
 
-| Arm | Median lift | Final-step lift | Worst-step lift |
-|---|---:|---:|---:|
-| Fixed random projection, \( 2 \times d \) | 1.09× | 1.10× | 0.99× |
-| PCA, fit once on the initial window | 1.47× | 1.48× | 1.01× |
-| Polar Projector, fixed anchor | 1.57× | 1.59× | **1.17×** |
-| Polar Projector, moving anchor | 1.39× | 1.34× | 1.17× |
-| UMAP, fit once + `transform()` | 1.57× | 1.57× | 1.12× |
-| UMAP, refit per step | 2.05× | 2.41× | 1.12× |
-| t-SNE, refit per step | **2.12×** | **2.47×** | 1.10× |
+| Arm | Median lift | Final-step lift | Worst-step lift | Median lift (isometric) | Worst-step lift (isometric) |
+|---|---:|---:|---:|---:|---:|
+| Fixed random projection, \( 2 \times d \) | 1.09× | 1.10× | 0.99× | — | — |
+| PCA, fit once on the initial window | 1.47× | 1.48× | 1.01× | — | — |
+| Polar Projector, fixed anchor | 1.57× | 1.59× | **1.17×** | 1.59× | **1.17×** |
+| Polar Projector, moving anchor | 1.39× | 1.34× | 1.17× | 1.41× | 1.17× |
+| UMAP, fit once + `transform()` | 1.57× | 1.57× | 1.12× | — | — |
+| UMAP, refit per step | 2.05× | 2.41× | 1.12× | — | — |
+| t-SNE, refit per step | **2.12×** | **2.47×** | 1.10× | — | — |
 
 1× = no better than a uniformly random neighbour at that step's part composition. Worst-step is the
 first step (size=500) for every arm, without exception — a property of the corpus at that size, not
-of any arm; see below.
+of any arm; see below. Isometric columns as in §3.2.
 
 *The instrument discriminates.* A fixed random projection scores 1.09× median and 0.99× at its
 worst step — chance, to within measurement. Whatever the arms above it are doing, it is not an
 artifact of projecting 384 dimensions onto two. That is the check §3.2's stability column could not
 provide, and it is why this instrument carries more of the paper's weight than trustworthiness does.
 
-*What holds.* Against this instrument the fixed-anchor operator is statistically indistinguishable
-from fit-once UMAP: 1.57× median lift for both, 1.59× against 1.57× at the final step. It also
-leads the once-fitted PCA that beat it on trustworthiness — 1.57× against 1.47×, and 1.17× against
-1.01× at the smallest corpus, where the PCA finds no more signal than chance. The two instruments
-disagree about that pair, which §3.4 resolves into a property of pole selection rather than of
-either method. That is a
-closer race than §3.2's trustworthiness column shows (0.66 against 0.77) — the two arms that never
-fully re-account for new data land in the same place on a task a reader can interpret directly, not
-only on a manifold-preservation score neither of them was optimizing for.
+*What holds.* Against this instrument the fixed-anchor operator is level with fit-once UMAP to two
+decimals — 1.57× median lift for both, 1.59× against 1.57× at the final step; no significance test
+was run. It also leads the once-fitted PCA that beat it on trustworthiness — 1.57× against 1.47×
+(1.59× with \( \lambda \) in length units), and 1.17× against 1.01× at the smallest corpus, where the
+PCA finds no more signal than chance. The two instruments disagree about that pair, which §3.4
+resolves into a property of pole selection rather than of either method. It is also a closer race
+with fit-once UMAP than §3.2's trustworthiness column shows (0.6639 against 0.7681): the two arms
+that never fully re-account for new data land in the same place on a task a reader can interpret
+directly.
 
 *What does not.* The refit baselines pull ahead as the corpus grows rather than staying level: both
 t-SNE and UMAP-refit cross 2× lift by the middle of the growth schedule and reach 2.41–2.47× by the
-final step, while the operator and fit-once UMAP plateau around 1.3–1.6×. That is the same story
-§3.2 already tells about trustworthiness (0.90–0.92 for the refit arms against 0.62–0.77 for the
-others) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
+final step, while the operator and fit-once UMAP stay within 1.40–1.62× after the first step. That
+is the same story §3.2 already tells about trustworthiness (0.9049–0.9197 for the refit arms against
+0.6208–0.7681 for the operator and fit-once UMAP) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
 one, and it buys it at exactly the cost §3.2 measures: relocating previously-placed points at
 every step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25.
 
-*The worst-step column does not discriminate, and that is disclosed rather than hidden.* Every
+*The worst-step column does not discriminate.* Every
 arm's lowest lift is its first step, where the 500-chunk prefix is almost entirely one or two parts
 and chance is already 0.70 — there is little headroom above chance for any method to demonstrate
 anything. A table reporting only worst-case lift would flatten a real difference between arms into
@@ -701,19 +691,30 @@ throughout. Drift is not reported per rule: a fixed frame cannot drift, and ever
 still at every step to float64 resolution, which confirms the construction rather than
 discriminating between choices.
 
-| Selection rule (initial window only) | Trustworthiness | Median lift | Worst-step lift |
-|---|---:|---:|---:|
-| `farthest_neighbourhoods` | 0.6593 | 1.42× | 1.03× |
-| Two largest parts — **the rule §3.2 and §3.3 publish** | 0.6639 | **1.57×** | **1.17×** |
-| *PCA, fit once — the baseline to clear* | *0.6811* | *1.47×* | *1.01×* |
-| `kmeans2`, label-free | 0.6858 | 1.46× | 1.01× |
-| First-PC deciles | **0.6966** | 1.46× | 1.01× |
+| Selection rule (initial window only) | Trustworthiness | Median lift | Worst-step lift | Trustworthiness (isometric) | Median lift (isometric) | Worst-step lift (isometric) |
+|---|---:|---:|---:|---:|---:|---:|
+| `farthest_neighbourhoods` | 0.6593 | 1.42× | 1.03× | 0.6623 | 1.42× | 1.03× |
+| Two largest parts — **the rule §3.2 and §3.3 publish** | 0.6639 | **1.57×** | **1.17×** | 0.6666 | **1.59×** | **1.17×** |
+| *PCA, fit once — the baseline to clear* | *0.6811* | *1.47×* | *1.01×* | *0.6811* | *1.47×* | *1.01×* |
+| `kmeans2`, label-free | 0.6858 | 1.46× | 1.01× | 0.6863 | 1.46× | 1.01× |
+| First-PC deciles | **0.6966** | 1.46× | 1.01× | **0.6968** | 1.45× | 1.01× |
+
+Isometric columns as in §3.2; the PCA row has no \( \lambda \) axis and is repeated unchanged.
 
 Varying the axis over whole-corpus part centroids instead gives trustworthiness 0.6950 in
 \( [0.6664, 0.7029] \) and median lift 1.6830 in \( [1.4273, 1.7258] \) across the ten pairs.
 
+*The declared scale does not move this section.* Rendering \( \lambda \) in length units changes
+trustworthiness by at most 0.003 and median lift by at most 0.02 across the operator's arms and the
+four rules, and none of the orderings the rest of this section reads changes: the operator stays
+below the PCA on trustworthiness and above it on lift, the part-based rule keeps 1.17× at 500 chunks,
+and the rules keep their order on both metrics. That comparison was registered before it was run
+(`bench/scale.py`); the paragraphs below read the unit-scale columns, and their conclusions hold at
+both scales.
+
 *The figures we publish are the pessimistic end of one axis and the optimistic end of the other.*
-The published frame's 0.6639 sits below the minimum of the ten-pair trustworthiness range, and its
+At unit scale the published frame's 0.6639 sits below the minimum of the ten-pair trustworthiness
+range, and its
 1.57× above their median lift. Neither was chosen for that; the rule was fixed before either sweep
 existed. But it means a reader taking 0.6639 as "the operator's fidelity" is taking the worst axis
 we measured, and one taking 1.57× as "the operator's task performance" is taking close to the best.
@@ -755,7 +756,7 @@ this one, how many land next to it on screen*. `bench/reanchor.py`.
 | Arm | Mean | Median | Min | Max | Frame (µs) | Per stimulus (µs) |
 |---|---:|---:|---:|---:|---:|---:|
 | PCA fit on the whole corpus, one view | 0.056 | 0.033 | 0.000 | 0.267 | 69,178 | 1.34 |
-| Polar, the frame §3.2 publishes, one view | 0.019 | 0.000 | 0.000 | 0.133 | 10,691 | 4.51 |
+| Polar, the frame §3.2 publishes, one view | 0.019 | 0.000 | 0.000 | 0.133 | 10,690 | 4.51 |
 | PCA refit per query on its 100 neighbours | 0.023 | 0.000 | 0.000 | 0.533 | 5,156 | 1.23 |
 | **Polar, re-anchored on the query** | **0.543** | **0.567** | 0.133 | 0.867 | **42.8** | 4.53 |
 | Radial \( (\langle v-q, e\rangle, \|v-q\|) \) | **0.981** | **1.000** | 0.933 | 1.000 | 0 | **1.98** |
@@ -767,15 +768,15 @@ once over the corpus by k-means; per-query selection is the \( O(K \cdot d) \) c
 Proposition 1 already accounts for, so nothing here consults the corpus at query time.
 
 *The movable origin is the lever, and it is large.* The same operator goes from 0.019 to 0.543
-purely by moving the anchor to the query — a factor of 28 — for a frame construction three orders of
-magnitude cheaper than either PCA fit. This is the first measurement in this paper where a property
+purely by moving the anchor to the query — a factor of 29 — for a frame construction 121× cheaper
+than the local PCA fit and 1,618× cheaper than the global one. This is the first measurement in this paper where a property
 specific to a local frame produces a difference of that size.
 
 *Better directions are not the lever.* The refitted PCA scores 0.023, *below* the global fit's
 0.056, and the mechanism is visible in the construction: a linear projection reorients but cannot
 recentre. Its two locally-fitted components span two of 384 dimensions, so points arbitrarily far
 from \( q \) can share a projection with it and land on top of it. Refitting the directions on the
-query's own neighbourhood — and paying 120× the frame cost, plus a corpus query to materialize that
+query's own neighbourhood — and paying 121× the frame cost, plus a corpus query to materialize that
 neighbourhood — buys less than not refitting at all. Whatever value the local frame has here comes
 from where it measures *from*, not from which directions it measures *along*.
 
@@ -891,7 +892,7 @@ so a system that moves \( c_1 \) moves its output too (§3.2 measures that arm a
 step). What the operator removes is not change but *unattributable* change — drift becomes a
 deterministic function of a variable the caller sets, rather than of hidden optimizer state. And
 the stability is *paid for*, though not uniquely: §3.2 finds the operator preserves
-high-dimensional neighborhoods worse than the refit baselines (0.66 against 0.90–0.92), while a
+high-dimensional neighborhoods worse than the refit baselines (0.6639 against 0.9049–0.9197), while a
 once-fitted PCA obtains the same stillness at 0.68. A reader weighing this operator against UMAP
 should weigh that number too; determinism places the operator among the fixed maps, and nothing in
 this section argues it is the best of them.
@@ -934,8 +935,8 @@ stability, which motivated the work, is a property of any fixed linear map and t
 On manifold preservation a once-fitted PCA sits inside the operator's own range, and the pole
 selection rule that reaches the top of that range does so by aligning with variance, at which point
 the operator and the PCA are interchangeable on both instruments. Re-anchoring — the one lever
-genuinely specific to a local frame, and worth a factor of 28 at a frame cost three orders of
-magnitude below a local refit — still trails a two-line radial coordinate subject to the same
+genuinely specific to a local frame, and worth a factor of 29 at a frame cost 121× below
+that of a local refit — still trails a two-line radial coordinate subject to the same
 constraints: narrowly once \( \lambda \) is rendered in the same units as \( d_{esc} \) (0.925
 against 0.981), and by a wide margin when it is not.
 
