@@ -853,45 +853,36 @@ intact all four orderings of baselines and rules that F3 defined.
 
 ### 4.2 Relation to Prior Work
 
-> TODO — the author writes this subsection. Agreed content: the rank-1 complement and Gram-Schmidt;
-> embedding debiasing (Bolukbasi et al., 2016); centroid-difference axes (Liu et al., 2018;
-> Bandyopadhyay et al., 2022); semantic-axis methods — SemAxis (An et al., 2018) and semantic
-> projection (Grand et al., 2022), both verified against their publisher records and to be added to
-> the references when cited — and what the operator adds to them, removing the anchor's component
-> before forming the axis; LSH (Charikar, 2002) in one sentence. The paragraphs below are retained
-> from the previous draft as material.
+The Polar Projector combines known linear-algebra identities into a volatile primitive oriented to
+human-computer interaction:
 
-The projector \( P_\perp \) itself is not new: it is the standard rank-1 orthogonal complement, and
-its associative form \( P_\perp v = v - \langle v, \hat{c}_1\rangle\hat{c}_1 \) is the same identity
-underlying classical Gram-Schmidt orthogonalization — it is what lets Proposition 1 avoid
-materializing the dense \( d \times d \) matrix, not a new mathematical object. The honest question
-is not whether \( P_\perp \) is novel, but what this paper does with it that a reader already
-familiar with that identity would not expect.
-
-The closest structural precedent is debiasing word embeddings (Bolukbasi et al., 2016), which
-learns a bias subspace from paired difference vectors and projects it out of the remaining
-embeddings with the same rank-1 orthogonal complement used here. The distinction is *where and
-when* \( P_\perp \) is applied: Bolukbasi et al. use it as a static, global, one-time preprocessing
-pass over the whole corpus, permanently altering stored embeddings; the Polar Projector applies the
-identical primitive as a volatile, per-interaction \( O(d) \) operator against one active anchor,
-never touching persisted embeddings. This contrast pre-empts the most direct version of "this is
-just embedding debiasing."
-
-The dipole construction fares similarly under scrutiny. Projecting embeddings onto an axis defined
-by the difference of two centroids, \( c_A - c_B \), is an established visualization technique (Liu
-et al., 2018; Bandyopadhyay et al., 2022), so a pair-of-centroids dipole is not itself a
-contribution. What those methods do not do, and what this operator does by construction, is remove
-the anchor's own component from both poles *before* forming the axis: by linearity of \( P_\perp \),
-\( P_\perp c_A - P_\perp c_B = P_\perp(c_A - c_B) \), so the dipole is anchored to the local
-complement, not to the raw embedding space those visualization tools project onto directly.
-
-The structurally closest prior art to the *shape* of this computation, rather than to its purpose,
-is random-hyperplane locality-sensitive hashing (Charikar, 2002): both reduce to an inner product
-against a reference direction. The two solve different problems. LSH is stochastic by design and
-targets approximate similarity search over an entire corpus; the Polar Projector is deterministic,
-uses one semantically-chosen anchor rather than a random one, and answers a local directional
-question against an active state, not a retrieval question over the whole dataset. This is the most
-likely reviewer objection, so it is stated here directly rather than left implicit.
+- **Rank-1 orthogonal complement and Gram-Schmidt.** The projector
+  \( P_\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \) is the classical projection onto the
+  orthogonal complement of the anchor direction — the same identity as a single Gram-Schmidt step.
+  Its associative form avoids materializing the dense \( d \times d \) matrix, evaluating the
+  decomposition in \( O(d) \) memory and time.
+- **Embedding debiasing.** Removing a subspace with the orthogonal complement \( P_\perp \) is the same
+  projection used to debias word embeddings (Bolukbasi et al., 2016) when the removed bias subspace is
+  one-dimensional. The fundamental difference lies in when and where it is applied: Bolukbasi et al.
+  apply \( P_\perp \) as a global, static, one-time preprocessing step that permanently modifies the
+  stored embeddings. The Polar Projector applies it as a volatile \( O(d) \) operator per interaction
+  against an active anchor, without altering persisted representations.
+- **Centroid-difference axes and semantic axes.** Projecting embeddings onto the difference vector of
+  two groups, \( c_A - c_B \), is established practice in visualizing semantic relationships (Liu et
+  al., 2018; Bandyopadhyay et al., 2022) and in defining contrast axes (SemAxis, An et al., 2018;
+  semantic projection, Grand et al., 2022). What the Polar Projector adds by construction is removing
+  the anchor's component from both poles before building the axis. By linearity of \( P_\perp \),
+  \( P_\perp c_A - P_\perp c_B = P_\perp(c_A - c_B) \), which guarantees that the contrast dipole is
+  confined to the complement of the local anchor rather than to the raw embedding space. Those
+  methods also return a single scalar per item, a position along the axis; the operator returns the
+  residual \( d_{esc} \) as well, and with \( \lambda \) rendered at the isometric scale the pair
+  reconstructs \( \|r\|_2 \) for every unsaturated stimulus — the norm measured from the anchor that
+  §4.1 identifies as the lever for local navigation.
+- **Locality-sensitive hashing.** As in random-hyperplane LSH (Charikar, 2002), evaluating the
+  projection reduces to an inner product. However, LSH is stochastic by design and targets
+  approximate retrieval over a global corpus, whereas the Polar Projector is deterministic, uses
+  chosen rather than random references, and evaluates relative direction against a local active
+  state.
 
 ### 4.3 Limitations
 
@@ -987,52 +978,59 @@ than the work it does.
 > preprint record rather than reconstructed from memory. None is a claim of prior art over this
 > work — §4 states how the closest ones relate to and differ from the Polar Projector.
 
-1. Bandyopadhyay, S., Xu, J., Pawar, N., & Touretzky, D. (2022). Interactive Visualizations of Word
+1. An, J., Kwak, H., & Ahn, Y.-Y. (2018). SemAxis: A Lightweight Framework to Characterize
+   Domain-Specific Word Semantics Beyond Sentiment. *Proceedings of the 56th Annual Meeting of the
+   Association for Computational Linguistics (Volume 1: Long Papers)*, 2450–2461.
+   DOI:10.18653/v1/P18-1228.
+2. Bandyopadhyay, S., Xu, J., Pawar, N., & Touretzky, D. (2022). Interactive Visualizations of Word
    Embeddings for K-12 Students. *Proceedings of the AAAI Conference on Artificial Intelligence*,
    36(11), 12713–12720.
-2. Bengio, Y., Paiement, J.-F., Vincent, P., Delalleau, O., Le Roux, N., & Ouimet, M. (2003).
+3. Bengio, Y., Paiement, J.-F., Vincent, P., Delalleau, O., Le Roux, N., & Ouimet, M. (2003).
    Out-of-Sample Extensions for LLE, Isomap, MDS, Eigenmaps, and Spectral Clustering. *Advances in
    Neural Information Processing Systems 16 (NIPS 2003)*.
-3. Boechler, P. M. (2001). How Spatial Is Hyperspace? Interacting with Hypertext Documents:
+4. Boechler, P. M. (2001). How Spatial Is Hyperspace? Interacting with Hypertext Documents:
    Cognitive Processes and Concepts. *CyberPsychology & Behavior*, 4(1), 23–46.
-4. Bolukbasi, T., Chang, K.-W., Zou, J., Saligrama, V., & Kalai, A. T. (2016). Man is to Computer
+5. Bolukbasi, T., Chang, K.-W., Zou, J., Saligrama, V., & Kalai, A. T. (2016). Man is to Computer
    Programmer as Woman is to Homemaker? Debiasing Word Embeddings. *Advances in Neural Information
    Processing Systems 29 (NeurIPS 2016)*. arXiv:1607.06520.
-5. Charikar, M. S. (2002). Similarity Estimation Techniques from Rounding Algorithms. *Proceedings
+6. Charikar, M. S. (2002). Similarity Estimation Techniques from Rounding Algorithms. *Proceedings
    of the 34th Annual ACM Symposium on Theory of Computing (STOC 2002)*, 380–388.
-6. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
+7. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
    Building an Orthonormal Basis, Revisited. *Journal of Computer Graphics Techniques*, 6(1), 1–8.
-7. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
+8. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
    Degenerate Cases in Geometric Algorithms. *ACM Transactions on Graphics*, 9(1), 66–104.
    DOI:10.1145/77635.77639.
-8. Espadoto, M., Martins, R. M., Hirata, N. S. T., Kerren, A., & Telea, A. C. (2021). Toward a
+9. Espadoto, M., Martins, R. M., Hirata, N. S. T., Kerren, A., & Telea, A. C. (2021). Toward a
    Quantitative Survey of Dimension Reduction Techniques. *IEEE Transactions on Visualization and
    Computer Graphics*, 27(3), 2153–2173.
-9. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
-   DOI:10.1007/BF02291478.
-10. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
+10. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
+    DOI:10.1007/BF02291478.
+11. Grand, G., Blank, I. A., Pereira, F., & Fedorenko, E. (2022). Semantic projection recovers rich
+    human knowledge of multiple object features from word embeddings. *Nature Human Behaviour*, 6(7),
+    975–987. DOI:10.1038/s41562-022-01316-8.
+12. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
     (2018). Visual Exploration of Semantic Relationships in Neural Word Embeddings. *IEEE
     Transactions on Visualization and Computer Graphics*, 24(1), 553–562.
     DOI:10.1109/TVCG.2017.2745141.
-11. Marshall, C. C., & Shipman, F. M. (1995). Spatial Hypertext: Designing for Change.
+13. Marshall, C. C., & Shipman, F. M. (1995). Spatial Hypertext: Designing for Change.
     *Communications of the ACM*, 38(8), 88–97. DOI:10.1145/208344.208350.
-12. McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and
+14. McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and
     Projection for Dimension Reduction. arXiv:1802.03426.
-13. Neves, T. T. A. T., Martins, R. M., Coimbra, D. B., Kucher, K., Kerren, A., & Paulovich, F. V.
+15. Neves, T. T. A. T., Martins, R. M., Coimbra, D. B., Kucher, K., Kerren, A., & Paulovich, F. V.
     (2020). Xtreaming: An Incremental Multidimensional Projection Technique and Its Application to
     Streaming Data. arXiv:2003.09017.
-14. Rauber, P. E., Falcão, A. X., & Telea, A. C. (2016). Visualizing Time-Dependent Data Using
+16. Rauber, P. E., Falcão, A. X., & Telea, A. C. (2016). Visualizing Time-Dependent Data Using
     Dynamic t-SNE. *EuroVis 2016 — Short Papers*. DOI:10.2312/eurovisshort.20161164.
-15. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese
+17. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese
     BERT-Networks. *Proceedings of EMNLP-IJCNLP 2019*, 3982–3992.
-16. Sainburg, T., McInnes, L., & Gentner, T. Q. (2021). Parametric UMAP Embeddings for
+18. Sainburg, T., McInnes, L., & Gentner, T. Q. (2021). Parametric UMAP Embeddings for
     Representation and Semisupervised Learning. *Neural Computation*, 33(11), 2881–2907.
-17. van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. *Journal of Machine
+19. van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. *Journal of Machine
     Learning Research*, 9, 2579–2605.
-18. Venna, J., & Kaski, S. (2001). Neighborhood Preservation in Nonlinear Projection Methods: An
+20. Venna, J., & Kaski, S. (2001). Neighborhood Preservation in Nonlinear Projection Methods: An
     Experimental Study. *Artificial Neural Networks — ICANN 2001*, 485–491.
     DOI:10.1007/3-540-44668-0_68.
-19. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
+21. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
     *Computer Graphics Forum*, 40(3), 87–98. DOI:10.1111/cgf.14291.
 
 ## Appendix
