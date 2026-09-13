@@ -886,13 +886,42 @@ human-computer interaction:
 
 ### 4.3 Limitations
 
-> TODO — the author writes this subsection. Agreed content: one corpus, one encoder and one host;
-> `part` as a coarse proxy for relevance; E5, E6 and E7 were not pre-registered and the E7 ablation is
-> post hoc (`paper/claims.md` records each figure's status); no significance tests; the reading of
-> \( \lambda \) in the published frame depends on the composition of the initial window (§2.1); an
-> unrepresentative anchor — a centroid of a bimodal neighbourhood falling between its modes — leaves
-> every norm well-conditioned and is detected by nothing here (§6 refers to this); and no user took
-> part.
+The experimental body and the formal characterization of the operator have explicit boundaries that
+should be kept in mind when interpreting the results:
+
+- **Scope of corpus, encoder and platform.** All quantitative evaluation runs on a single corpus
+  (2,221 chunks of Spinoza's *Ethics*), a single embedding model (`all-MiniLM-L6-v2`) and a single
+  passively cooled host (Apple M1). Absolute timings reflect this specific platform; the ratios
+  between arms and the flatness in \( N \) should depend on it less, but neither was measured on
+  another host.
+- **Proxy for semantic relevance.** The division of the text into five parts (`part`) serves as a
+  coarse proxy for semantic coherence when computing same-part lift. It is not equivalent to a
+  fine-grained evaluation of topical relevance or to a human judgement of usefulness.
+- **Pre-registration status and post hoc analysis.** The protocols of E1–E4 and E8 were committed
+  before their results, with two exceptions inside them: E1's two fixed linear baselines were
+  committed together with their results, and E2's dimension sweep was specified after E2's results.
+  E5, E6 and E7, the clamp re-measurement and the pole positions of §2.1 were likewise committed
+  together with their results, and the scale ablation on re-anchoring is post hoc; `paper/claims.md`
+  records the status of every figure. The manuscript includes no formal hypothesis tests and no
+  bootstrap confidence intervals.
+- **Asymmetry of the published frame (P1).** In the static published frame (§3.2), the initial
+  500-chunk window contains 409 chunks of P1_GOD and 91 of P2_MIND. As a consequence, the anchor
+  \( c_1 \) is a convex combination of the two poles that places the projected poles at
+  \( \lambda = +0.182 \) and \( \lambda = -0.818 \), making clear that \( \lambda = \pm 1 \) is the bound
+  of the clamp and not the position of the poles.
+- **Fixed codebook for re-anchoring.** In the re-anchoring evaluation (§3.5), the contrast poles are
+  selected from a static codebook of \( K = 16 \) centroids precomputed globally by k-means. Although
+  the codebook scan costs \( O(K \cdot d) \) without consulting the corpus at query time, the view
+  depends on how representative those \( K \) fixed centroids are, and \( K \) was not varied.
+- **Anchor degeneracy in bimodal distributions.** If the active context spans a bimodal distribution,
+  a centroid anchor \( c_1 \) can fall in the gap between the two clusters and represent neither.
+  Proposition 2 resolves the collapse of the dipole but not a badly placed origin. Every norm in
+  Propositions 1–3 stays perfectly well-conditioned, so the operator returns confident values whose
+  interpretation has stopped holding, with no internal test that detects the failure.
+- **No behavioural tests with users.** The need for positional stability is adopted as a design
+  requirement extrapolated from the hypertext-navigation literature (Boechler, 2001). No human user
+  evaluated the system, so whether a bounded contrast coordinate \( \lambda \in [-1, 1] \) is more
+  useful as a control signal than a pure radial distance remains an open question (§6).
 
 ## 5. Conclusion
 
