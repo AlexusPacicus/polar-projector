@@ -815,13 +815,51 @@ of that would have to measure.
 
 ## 4. Discussion
 
-> TODO — draft, not reviewed.
+### 4.1 What the Results Answer
 
-*Scope guard.* This section argues determinism as a property of the **operator itself** — canonical
-`argmin` tie-breaking, fixed-threshold clipping, no iterative optimization or random seed anywhere
-in `project()` (Props 1–3) — not as a claim about the rest of whatever system consumes it. Whatever
-else the Traianus substrate does architecturally is out of scope here and belongs to later,
-separate papers.
+*Positional stability does not distinguish the operator.* A fixed linear map has zero drift
+trivially: a Gaussian projection drawn once and a PCA frozen after the initial window hold every
+placed point still at 0.0000, exactly as the operator does with a fixed frame (§3.2). The class that
+has this property is not "methods that avoid stochastic re-optimization" — UMAP fitted once and
+extended by `transform()` avoids it and still relocates points twice (§3.2) — but maps whose output
+is a pure function of the vector and of parameters that do not change. The operator belongs to that
+class only while its frame is fixed; when the anchor moves, its output moves with it,
+deterministically (§3.2). Stability is a precondition this design meets, not a property that sets it
+apart.
+
+*Re-centring the origin, not reorienting the axes, is the lever for local navigation.* Moving the
+anchor to the query (\( c_1 = q \)) raises local neighbourhood recovery 29×, from 0.019 to 0.543 at
+unit scale, for a frame construction of 42.8 µs (§3.5). Reorienting the view instead — refitting a
+linear projection on the query's own neighbourhood — fails to recover the local structure (0.023)
+and costs 121× more per frame. Re-centring alone would not rescue that projection: translation leaves
+every pairwise distance in a linear view unchanged, and a two-axis projection discards all but two of
+the 384 dimensions, so points far from the query in the discarded ones land on top of it. What
+re-anchoring adds is a coordinate that is a norm measured from the query — in the exploratory
+ablation of §3.5, \( \|r\|_2 \) alone recovers every neighbour of every query — and that coordinate
+measures distance from the query only once the origin sits there. What local exploration needs is an
+origin that moves with the query.
+
+*The radial baseline exploits the origin better, but the operator's gap was a unit mismatch that
+leaves the global instruments untouched.* The `radial_plain` baseline reaches 0.981 local recall because
+its vertical axis directly measures the exact Euclidean distance to the query. Most of the operator's
+initial gap came from expressing the dimensionless coefficient \( \lambda \) alongside the length
+\( d_{esc} \) at the same scale. Under the isometric rule (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)),
+Proposition 3 makes the screen distance to the query equal to \( \|r\|_2 \) for every unsaturated
+stimulus, raising recall to 0.925 (median 1.000) in the exploratory ablation of §3.5, and what
+remains between that figure and \( \|r\|_2 \) alone is confined to saturation at the boundaries.
+Likewise, while this scale corrects the local metric distance, on the global evaluations
+(§3.2–§3.4) it barely matters — at most 0.003 in trustworthiness and 0.02 in lift — and it leaves
+intact all four orderings of baselines and rules that F3 defined.
+
+### 4.2 Relation to Prior Work
+
+> TODO — the author writes this subsection. Agreed content: the rank-1 complement and Gram-Schmidt;
+> embedding debiasing (Bolukbasi et al., 2016); centroid-difference axes (Liu et al., 2018;
+> Bandyopadhyay et al., 2022); semantic-axis methods — SemAxis (An et al., 2018) and semantic
+> projection (Grand et al., 2022), both verified against their publisher records and to be added to
+> the references when cited — and what the operator adds to them, removing the anchor's component
+> before forming the axis; LSH (Charikar, 2002) in one sentence. The paragraphs below are retained
+> from the previous draft as material.
 
 The projector \( P_\perp \) itself is not new: it is the standard rank-1 orthogonal complement, and
 its associative form \( P_\perp v = v - \langle v, \hat{c}_1\rangle\hat{c}_1 \) is the same identity
@@ -847,50 +885,6 @@ the anchor's own component from both poles *before* forming the axis: by lineari
 \( P_\perp c_A - P_\perp c_B = P_\perp(c_A - c_B) \), so the dipole is anchored to the local
 complement, not to the raw embedding space those visualization tools project onto directly.
 
-One naming collision is worth flagging explicitly rather than leaving for a reader to discover
-independently: at least one existing system (`chronos-vector`,
-github.com/manucouto1/chronos-vector) uses the name "Anchor Projection" for
-`project_to_anchors(traj, anchors, metric='cosine')` — cosine distance from a trajectory to
-*multiple* anchors, producing a multi-anchor coordinate summary. This is a different mechanism from
-the single-anchor rank-1 decomposition used here; the shared vocabulary is coincidental, not
-structural.
-
-None of the above is where this paper's claim to a contribution rests, and neither is determinism,
-although it is the property a reader is most likely to credit this operator with — so it is worth
-stating precisely what it does and does not establish. Any system that reaches for a stochastic
-method — t-SNE, UMAP, randomly-initialized force layout — to answer this specific question (how
-does an incoming vector relate to one active local state) inherits spatial drift: identical
-underlying data can render at different apparent positions across runs or incremental updates, so
-spatial proximity stops reliably encoding semantic proximity. The Polar Projector does not inherit
-this, by construction (Props 1–3, and the canonical `argmin` tie-break of Proposition 2's fallback
-in particular), independent of anything else about the system that adopts it. This construction
-argument covers the scalar entry points — `project()`, `prepare()` and `evaluate()` — where every
-proposition above holds without qualification; §D ships a separate batched entry point for
-throughput and measures the bounded amount of per-row determinism it trades away, so the claim in
-this paragraph is stated for the path it actually holds for. §3.2 turns the scalar-path
-construction argument into a measurement: across seven incremental growth steps the operator is
-still to float64 resolution while seed-pinned refits of both baselines relocate points at every
-step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25. The construction argument is
-sound and the measurement confirms it; what neither establishes is any advantage, because §3.2's
-first two rows obtain the same stillness from a Gaussian matrix and an SVD. A determinism argument
-of this shape proves that the operator belongs to the class of fixed maps, not that it is preferable
-within it. This matters beyond raw correctness: HCI research on hypertext navigation shows
-users build a persistent spatial mental model of the interface they interact with, and that
-instability in that layout measurably degrades navigation and orientation (Boechler, 2001) — a
-stable, reproducible operator is valuable for the signal it produces (\( \lambda, d_{esc} \)),
-independent of any claim about how a downstream system renders or persists positions.
-
-Two qualifications belong here rather than in a footnote, because both weaken the paragraph above.
-The stability is *conditional on the anchor*: \( \lambda \) and \( d_{esc} \) are anchor-relative,
-so a system that moves \( c_1 \) moves its output too (§3.2 measures that arm at 0.13–0.61 per
-step). What the operator removes is not change but *unattributable* change — drift becomes a
-deterministic function of a variable the caller sets, rather than of hidden optimizer state. And
-the stability is *paid for*, though not uniquely: §3.2 finds the operator preserves
-high-dimensional neighborhoods worse than the refit baselines (0.6639 against 0.9049–0.9197), while a
-once-fitted PCA obtains the same stillness at 0.68. A reader weighing this operator against UMAP
-should weigh that number too; determinism places the operator among the fixed maps, and nothing in
-this section argues it is the best of them.
-
 The structurally closest prior art to the *shape* of this computation, rather than to its purpose,
 is random-hyperplane locality-sensitive hashing (Charikar, 2002): both reduce to an inner product
 against a reference direction. The two solve different problems. LSH is stochastic by design and
@@ -899,22 +893,15 @@ uses one semantically-chosen anchor rather than a random one, and answers a loca
 question against an active state, not a retrieval question over the whole dataset. This is the most
 likely reviewer objection, so it is stated here directly rather than left implicit.
 
-*A reading in terms of known and unknown.* Proposition 3's energy split (§2, Corollary) admits a
-plain epistemic gloss worth stating once, explicitly, rather than left implicit in the energy
-decomposition: \( E_\lambda \) is the portion of an incoming stimulus's energy that the
-active local frame already explains — it lies along an axis built from two previously-observed
-centroids — while \( E_{esc} \) is the portion that frame cannot account for. This reading has a
-boundary worth stating alongside it, not hiding: a centroid is, by the defining property of the
-arithmetic mean, the point that minimizes total squared distance to the group it summarizes — in
-that precise sense it *is* the most "known" point of a unimodal neighborhood. But the same
-construction can mislead for a bimodal one, where the mean falls in the gap between two clusters
-rather than inside either — the least representative point of both. Proposition 2 does not rescue
-this case and should not be read as doing so: its fallback triggers when the two *poles* collapse
-together after projection (\( c_A^\perp \approx c_B^\perp \)), which is a degeneracy of the
-contrast axis, whereas an unrepresentative anchor is a degeneracy of the frame's origin and leaves
-every norm in Propositions 1–3 perfectly well-conditioned. The operator stays correct and the
-reading stops being meaningful, which is the more dangerous of the two failures; nothing in this
-paper detects it, and §6 records it as open.
+### 4.3 Limitations
+
+> TODO — the author writes this subsection. Agreed content: one corpus, one encoder and one host;
+> `part` as a coarse proxy for relevance; E5, E6 and E7 were not pre-registered and the E7 ablation is
+> post hoc (`paper/claims.md` records each figure's status); no significance tests; the reading of
+> \( \lambda \) in the published frame depends on the composition of the initial window (§2.1); an
+> unrepresentative anchor — a centroid of a bimodal neighbourhood falling between its modes — leaves
+> every norm well-conditioned and is detected by nothing here (§6 refers to this); and no user took
+> part.
 
 ## 5. Conclusion
 
@@ -1047,9 +1034,6 @@ than the work it does.
     DOI:10.1007/3-540-44668-0_68.
 19. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
     *Computer Graphics Forum*, 40(3), 87–98. DOI:10.1111/cgf.14291.
-20. `chronos-vector` (manucouto1). Temporal vector database; "Anchor Projection" tutorial and
-    `project_to_anchors()` API. https://github.com/manucouto1/chronos-vector — software, cited in
-    §4 for terminology disambiguation only, not as academic prior art.
 
 ## Appendix
 
