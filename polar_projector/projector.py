@@ -317,10 +317,12 @@ class PolarProjector:
         Not bit-for-bit identical to a loop over evaluate(), and cannot be.
         The divergence begins at the matrix-vector product, not at the norm:
         BLAS uses a blocked reduction order for B ≥ 2 that a sequence of
-        single-row dot products does not. Agreement is bounded instead —
-        measured at |Δλ| ≤ 2·ε and |Δd_esc| ≤ 1.4·ε·||r||₂ across every
-        dimension, batch size and regime tested, including saturation and
-        near-collinearity.
+        single-row dot products does not. Agreement is bounded instead: the
+        test fixtures measure |Δλ| ≤ 2·ε and |Δd_esc| ≤ 1.4·ε·||r||₂, including
+        saturation and near-collinearity, and bench/batched.py on the frozen
+        corpus measures up to 0.19·ε and 2.02·ε·||r||₂ (manuscript §D). Neither
+        is a proven bound; tests/test_polar_batch.py asserts 8·ε, because the
+        constant depends on the BLAS.
 
         Two consequences follow, and neither is hidden by this implementation.
         Row i of the result is not a pure function of row i of the input: the
@@ -332,7 +334,7 @@ class PolarProjector:
 
         The residual is computed in vector space before the norm, exactly as
         evaluate() does. The algebraically equivalent expanded form is not used
-        here for the same reason it is not used there (see §3.2).
+        here for the same reason it is not used there (manuscript §B).
 
         Args:
             V: Batch of stimuli, shape (B, d). B = 0 is allowed.
