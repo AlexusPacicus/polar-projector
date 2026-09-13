@@ -1,0 +1,52 @@
+{
+  "experiment": "P1",
+  "config": {
+    "n_initial": 500,
+    "anchor": "initial-window mean",
+    "poles": "_harness.dipole_poles on the initial window"
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "window_part_counts": {
+      "P1_GOD": 409,
+      "P2_MIND": 91
+    },
+    "n_window_parts": 2,
+    "pole_parts": [
+      "P1_GOD",
+      "P2_MIND"
+    ],
+    "positions": {
+      "c_A": {
+        "lambda": 0.18200000000000002,
+        "d_esc": 3.313573251081134e-17
+      },
+      "c_B": {
+        "lambda": -0.8180000000000001,
+        "d_esc": 5.723998924649485e-17
+      },
+      "c_1": {
+        "lambda": 0.0,
+        "d_esc": 0.0
+      }
+    },
+    "dipole_norm": 0.2195380486790534,
+    "two_part_prediction": {
+      "c_A": 0.182,
+      "c_B": -0.818
+    },
+    "max_prediction_residual": 1.1102230246251565e-16
+  }
+}
