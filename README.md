@@ -93,10 +93,14 @@ pip install -e ".[test,repro]"
 | `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob (baseline arms need the `[bench]` extra) |
 | `bench/reanchor.py` | §3.5 local fidelity under re-anchoring; `--ablation` for the units decomposition |
 | `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
+| `bench/scale.py` | §3.2–§3.4 under a declared screen scale (E8), unit and isometric |
+| `bench/poles.py` | P1: where the named poles land on the λ axis in the published frame |
+| `bench/clamp.py` | §A and §B: the λ clamp substitution, re-measured and exported (A9) |
 
 The deterministic constructions these scripts use ship inside the package as
 `polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed
-distribution without cloning this repository. CI runs the §B and §C verifications on every
+distribution without cloning this repository. `paper/claims.md` registers every claim the manuscript makes against its script, artifact and
+verifier check; a claim marked checked that names no existing check fails the build. CI runs the §B and §C verifications on every
 push, so a change that silently moves a published number fails the build.
 
 Scripts under `bench/` write their results as JSON to `bench/results/`, in a common

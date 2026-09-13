@@ -35,7 +35,9 @@ Read-only, offline (numpy only — no substrate dependency).
 
 import json
 import math
+import re
 import statistics
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -333,7 +335,199 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
         out.append((f"§A  d={d} evaluate", ev, s["polar_evaluate"]))
         out.append((f"§A  d={d} floor", floor, s["random_projection"]))
         out.append((f"§A  d={d} ratio", ratio, s["ratio"]))
+
+    # §1 cost of the whole seven-step growth schedule per arm (drift.json "seconds"):
+    # the three global baselines against the fixed-anchor operator
+    baseline_seconds = [dri[a]["seconds"] for a in ("umap_fit_once", "umap_refit", "tsne_refit")]
+    operator_seconds = dri["polar_fixed"]["seconds"]
+    out.append(("§1  refit cost baselines min s", "15.7", min(baseline_seconds)))
+    out.append(("§1  refit cost baselines max s", "25.0", max(baseline_seconds)))
+    out.append(("§1  refit cost operator s", "0.051", operator_seconds))
+    out.append(("§1  refit cost ratio min", "307", min(baseline_seconds) / operator_seconds))
+    out.append(("§1  refit cost ratio max", "488", max(baseline_seconds) / operator_seconds))
+
+    # §3.2 per-step ranges quoted in prose: min and max of aligned p95 over steps
+    for arm, lo, hi in [("tsne_refit", "1.03", "1.24"), ("umap_refit", "0.31", "1.25"),
+                        ("polar_moving", "0.13", "0.61")]:
+        p = _p95s(dri[arm])
+        out.append((f"§3.2 range {arm} min step", lo, min(p)))
+        out.append((f"§3.2 range {arm} max step", hi, max(p)))
+    out.append(("§3.2 range umap_refit unaligned median", "5.81",
+                statistics.median(s["raw_p95"] for s in dri["umap_refit"]["steps"])))
+    out.append(("§3.2 range umap_refit aligned median", "1.16", statistics.median(_p95s(dri["umap_refit"]))))
+
+    # Appendix B: the two sweep points where the scalar form's failure is undetectable.
+    # Published as one significant figure, so the measured error is rounded to one too.
+    for exponent, mantissa, power in [(-11, "1.4", "3"), (-13, "1.4", "5")]:
+        s = next(row for row in con["sweep"] if round(math.log10(row["ratio"])) == exponent)
+        significand, _, error_exponent = f"{s['scalar_rel_err']:.1e}".partition("e")
+        out.append((f"§B  undetectable 1e{exponent} scalar error mantissa", mantissa, float(significand)))
+        out.append((f"§B  undetectable 1e{exponent} scalar error power", power, int(error_exponent)))
+        out.append((f"§B  undetectable 1e{exponent} radicand negative", "0", int(s["scalar_negative_under_sqrt"])))
+
+    # Appendix D: agreement with the scalar loop and row-order sensitivity, worst case over B
+    agreement = list(bat["agreement"].values())
+    out.append(("§D  agreement max dlambda/eps", "0.19", max(a["max_dlambda_over_eps"] for a in agreement)))
+    out.append(("§D  agreement max dd_esc/(eps r)", "2.02", max(a["max_desc_over_eps_r"] for a in agreement)))
+    row_order = list(bat["row_order"].values())
+    out.append(("§D  row order max dlambda/eps", "0.12", max(r["max_dlambda_over_eps"] for r in row_order)))
+    out.append(("§D  row order max dd_esc (x1e-16)", "2.2", max(r["max_ddesc_abs"] for r in row_order) / 1e-16))
+    out.append(("§D  row order bitwise-identical batch sizes", "0",
+                sum(int(r["bitwise_identical"]) for r in row_order)))
+
+    # E8 declared scale (bench/scale.py). Isometric renders lambda in multiples of ||v_dipole||.
+    sc = _load("scale.json")
+    fixed_iso, moving_iso = sc["polar_fixed"]["isometric"], sc["polar_moving"]["isometric"]
+    out.append(("§3.2 E8 unit reproduces E1/E5/E6", "1", int(sc["unit_reproduces_published"]["all"])))
+    out.append(("§3.2 isometric polar_fixed trustworthiness", "0.6666", fixed_iso["trustworthiness"]))
+    out.append(("§3.2 isometric polar_fixed still steps", "7", fixed_iso["still_steps"]))
+    out.append(("§3.2 isometric polar_moving trustworthiness", "0.6235", moving_iso["trustworthiness"]))
+    out.append(("§3.2 isometric polar_moving worst step", "0.8144", moving_iso["worst_step"]))
+    for arm, med, worst in [("polar_fixed", "1.59", "1.17"), ("polar_moving", "1.41", "1.17")]:
+        out.append((f"§3.3 isometric {arm} median lift", med, sc[arm]["isometric"]["median_lift"]))
+        out.append((f"§3.3 isometric {arm} worst lift", worst, sc[arm]["isometric"]["worst_lift"]))
+    for rule, trust, med, worst in [("largest_two_parts", "0.6666", "1.59", "1.17"),
+                                    ("kmeans2", "0.6863", "1.46", "1.01"),
+                                    ("pc1_extremes", "0.6968", "1.45", "1.01"),
+                                    ("farthest_neighbourhoods", "0.6623", "1.42", "1.03")]:
+        r = sc["rules"][rule]["isometric"]
+        out.append((f"§3.4 isometric {rule} trust", trust, r["trustworthiness"]))
+        out.append((f"§3.4 isometric {rule} median lift", med, r["median_lift"]))
+        out.append((f"§3.4 isometric {rule} worst lift", worst, r["worst_lift"]))
+    for key in sorted(sc["ordering_changed"]):
+        out.append((f"§3.4 F3 {key} changed", "0", int(sc["ordering_changed"][key])))
+    series = [sc["polar_fixed"], sc["polar_moving"], *sc["rules"].values()]
+    out.append(("§3.4 F3 max trustworthiness shift", "0.003",
+                max(abs(s["isometric"]["trustworthiness"] - s["unit"]["trustworthiness"]) for s in series)))
+    out.append(("§3.4 F3 max median-lift shift", "0.02",
+                max(abs(s["isometric"]["median_lift"] - s["unit"]["median_lift"]) for s in series)))
+    saturation = sc["polar_moving"]["saturated_fraction_per_step"]
+    out.append(("§2.1 saturation published frame %", "11.39", 100 * sc["polar_fixed"]["saturated_fraction"]))
+    out.append(("§2.1 saturation moving anchor min %", "7.7", 100 * min(saturation)))
+    out.append(("§2.1 saturation moving anchor max %", "18.8", 100 * max(saturation)))
+
+    # §A and §B: the lambda clamp substitution, re-measured side by side (bench/clamp.py, A9)
+    cl = _load("clamp.json")
+    clamp_mean = {name: s["mean"] for name, s in cl["latency"].items()}
+    clamp_derived, clamp_eq = cl["derived"], cl["equivalence"]
+    out.append(("§A  clamp np.clip us", "1.88", clamp_mean["clamp_np_clip"]))
+    out.append(("§A  clamp min/max us", "0.23", clamp_mean["clamp_min_max"]))
+    out.append(("§A  clamp share of old call %", "30", 100 * clamp_derived["np_clip_share_of_old_call"]))
+    out.append(("§A  clamp evaluate np.clip us", "6.34", clamp_mean["evaluate_np_clip"]))
+    out.append(("§A  clamp evaluate min/max us", "4.54", clamp_mean["evaluate_min_max"]))
+    out.append(("§A  clamp evaluate speedup", "1.40", clamp_derived["evaluate_speedup"]))
+    out.append(("§A  clamp all stimuli bitwise equal", "1",
+                int(clamp_eq["stimuli_bitwise_equal"] == clamp_eq["stimuli"])))
+    out.append(("§A  clamp all edge values bitwise equal", "1",
+                int(clamp_eq["edge_values_bitwise_equal"] == clamp_eq["edge_values"])))
+    out.append(("§B  clamp scalar margin before", "1.24", clamp_derived["scalar_margin_before"]))
+    out.append(("§B  clamp scalar margin after", "1.45", clamp_derived["scalar_margin_after"]))
+    out.append(("§B  clamp removed from vector form us", "1.8", clamp_derived["removed_us"]))
+    out.append(("§B  clamp removed from scalar form us", "2.0",
+                clamp_mean["scalar_form_np_clip"] - clamp_mean["scalar_form_min_max"]))
+    # "a fifth" and "a third" of the hot path, which the prose states in words
+    out.append(("§B  clamp refusal share before (a fifth)", "0.2", clamp_derived["refusal_share_before"]))
+    out.append(("§B  clamp refusal share after (a third)", "0.3", clamp_derived["refusal_share_after"]))
+
+    # §2.1 pole positions in the published frame (bench/poles.py, P1)
+    po = _load("poles.json")
+    out.append(("§2.1 poles lambda of pole A", "0.182", po["positions"]["c_A"]["lambda"]))
+    out.append(("§2.1 poles lambda of pole B, magnitude", "0.818", -po["positions"]["c_B"]["lambda"]))
+    out.append(("§2.1 poles window count of pole A's part", "409", po["window_part_counts"]["P1_GOD"]))
+    out.append(("§2.1 poles window count of pole B's part", "91", po["window_part_counts"]["P2_MIND"]))
+    out.append(("§2.1 poles two-part prediction exact to 1e-12", "1", int(po["max_prediction_residual"] < 1e-12)))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Manuscript presence: does the paper actually print each checked string?
+#
+# The artifact check above compares a string stored HERE against the artifact;
+# nothing tied that string to the manuscript, which is how a refit cost the
+# artifact did not contain passed CI. This closes the gap partially: every
+# published string must occur in the manuscript as a standalone number.
+#
+# It is a presence check, not a location check -- a string that also occurs
+# elsewhere passes -- and strings of a single character ("7", "0") cannot be
+# located meaningfully and are counted, not checked.
+# ---------------------------------------------------------------------------
+
+PAPER = Path(__file__).resolve().parent.parent / "paper" / "polar-projector-paper.md"
+
+# Checked figures registered for phase 4 and not yet written into the manuscript.
+# They are reported, not failed; phase 4 is done when this tuple is empty.
+AWAITING_TEXT = (
+    "§3.2 E8 unit reproduces",
+    "§3.2 isometric",
+    "§3.3 isometric",
+    "§3.4 isometric",
+    "§3.4 F3",
+    "§2.1 saturation",
+    "§2.1 poles",
+)
+
+# Rows that check a derived condition rather than a number the paper prints.
+NOT_A_PRINTED_FIGURE = ("§D  sqrt saving", "§B  clamp refusal share")
+
+
+def _verify_presence(checks: list[tuple[str, str, float]]) -> int:
+    print("\nmanuscript presence — each checked string must be printed in the paper")
+    text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", PAPER.read_text(encoding="utf-8"))
+    missing: list[tuple[str, str]] = []
+    awaiting: list[str] = []
+    unlocatable = 0
+    for label, published, _ in checks:
+        if label.startswith(NOT_A_PRINTED_FIGURE):
+            continue
+        if len(published) <= 1:
+            unlocatable += 1
+            continue
+        if re.search(rf"(?<![\d.]){re.escape(published)}(?!\d)", text):
+            continue
+        if label.startswith(AWAITING_TEXT):
+            awaiting.append(label)
+            continue
+        missing.append((label, published))
+    for label, published in missing:
+        print(f"  ABSENT    {label:44} {published!r} is not printed in the manuscript")
+    print(f"  {len(checks) - len(missing) - len(awaiting) - unlocatable} present, {len(missing)} absent, "
+          f"{len(awaiting)} awaiting phase 4 text, {unlocatable} single-character (not locatable)")
+    return len(missing)
+
+
+# ---------------------------------------------------------------------------
+# Claims registry (paper/claims.md): a claim marked `checked` must name checks
+# that this script actually runs. It cannot confirm the manuscript quotes the
+# same strings -- see the registry's own note on that limit.
+# ---------------------------------------------------------------------------
+
+CLAIMS = Path(__file__).resolve().parent.parent / "paper" / "claims.md"
+SPECIAL_CHECKS = {"pytest", "recompute:§B", "recompute:§C"}
+
+
+def _verify_registry(labels: list[str]) -> int:
+    print("\nclaims registry — paper/claims.md against the checks above")
+    failures = 0
+    statuses: Counter[str] = Counter()
+    for line in CLAIMS.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) != 6 or not re.fullmatch(r"[ACPR]\d+", cells[0]):
+            continue
+        claim_id, status, checks = cells[0], cells[2], cells[5]
+        statuses[status] += 1
+        if status != "checked":
+            continue
+        tokens = re.findall(r"`([^`]+)`", checks)
+        if not tokens:
+            failures += 1
+            print(f"  UNCHECKED {claim_id}: status is checked but no check is named")
+        for token in tokens:
+            if token not in SPECIAL_CHECKS and not any(label.startswith(token) for label in labels):
+                failures += 1
+                print(f"  MISSING   {claim_id}: no verifier check starts with {token!r}")
+    print("  " + ", ".join(f"{n} {s}" for s, n in sorted(statuses.items())))
+    print(f"  {'all checked claims resolve to existing checks' if failures == 0 else f'{failures} unresolved'}")
+    return failures
 
 
 def _verify_artifacts() -> int:
@@ -377,13 +571,17 @@ def main() -> int:
           f"= {_measure(0.5)[1]:.6e}/{_measure(0.1)[1]:.6e} "
           "(paper: 6.954e-6 constant for delta >= 0.100)")
     art_failures = _verify_artifacts()
+    checks = _artifact_checks()
+    presence_failures = _verify_presence(checks)
+    reg_failures = _verify_registry([label for label, _, _ in checks])
 
-    total = failures + cond_failures + art_failures
+    total = failures + cond_failures + art_failures + presence_failures + reg_failures
     if total == 0:
         print("\nVerdict: ALL PASS")
     else:
-        print(f"\nVerdict: {cond_failures} §B row(s), {failures} §C row(s) and "
-              f"{art_failures} artifact figure(s) mismatched")
+        print(f"\nVerdict: {cond_failures} §B row(s), {failures} §C row(s), "
+              f"{art_failures} artifact figure(s) mismatched, {presence_failures} absent from the manuscript, "
+              f"{reg_failures} registry reference(s) unresolved")
     return 0 if total == 0 else 1
 
 

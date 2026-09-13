@@ -20,7 +20,7 @@
 > `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
 > The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
 > compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (183 figures at present, produced by `bench/latency.py`,
+> committed artifact** in `bench/results/` (256 figures at present, produced by `bench/latency.py`,
 > `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
 > `bench/conditioning.py`, `bench/batched.py` and `tools/decompose_polar_latency.py` against the
 > hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
@@ -123,8 +123,8 @@ Reusing global dimensionality reduction for this violates both. Stochastic re-op
 existing coordinates on incremental update, and §3.2 measures what survives pinning the random
 seed: under refitting, t-SNE (van der Maaten & Hinton, 2008) relocates previously-placed points by
 1.03–1.24 times the width of the layout at every growth step and UMAP (McInnes et al., 2018) by
-0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 16.2–25.6 s across the
-baselines against 0.072 s for the operator, a factor of 226–356×. We make no asymptotic claim about
+0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 15.7–25.0 s across the
+baselines against 0.051 s for the operator, a factor of 307–488×. We make no asymptotic claim about
 the baselines here: Barnes-Hut t-SNE is \( O(N \log N) \) and UMAP's graph construction is
 sub-quadratic in practice, so the argument against them on this axis is the measured seconds-scale
 cost of a refit inside an interaction loop, not a complexity class.
