@@ -20,7 +20,7 @@
 > `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
 > The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
 > compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (165 figures at present, produced by `bench/latency.py`,
+> committed artifact** in `bench/results/` (183 figures at present, produced by `bench/latency.py`,
 > `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
 > `bench/conditioning.py`, `bench/batched.py` and `tools/decompose_polar_latency.py` against the
 > hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
@@ -78,8 +78,10 @@ is worth 28× in local neighbourhood recovery (0.019 to 0.543) for a single \( O
 construction of 42.8 µs, while refitting a linear map's directions on the query's own neighbourhood
 is *worse* than not refitting at all — a projection reorients but cannot recentre. Even there the
 operator is bounded: a two-line radial coordinate reaches 0.981 on the same instrument at 1.98 µs
-per stimulus, faster than the operator and subject to the same constraints, which indicts the
-instrument as much as the operator and is reported rather than omitted.
+per stimulus, faster than the operator and subject to the same constraints. Most of that gap is
+units rather than information — rendering \( \lambda \) in multiples of \( \|v_{dipole}\|_2 \)
+instead of at unit scale lifts the operator to 0.925 — so the screen mapping's scale ratio is a
+design rule, not a free constant.
 
 What remains, and what we claim, is narrower than a dominating result and more useful than one: a
 correct and numerically characterized primitive — including an algebraically equivalent form of
@@ -181,8 +183,10 @@ them are in the paper because a result a two-line baseline matches is not a resu
   scores *below* the global one, which supplies the mechanism: a linear projection reorients but
   cannot recentre, and its two local components drop distant points on top of the query. The claim
   is bounded in the same section: a radial coordinate \( (\langle v - q, e \rangle, \|v - q\|) \)
-  reaches 0.981 at 1.98 µs per stimulus while satisfying every constraint above, so local recovery
-  is not a claim this operator should make, and the instrument is part of why (§3.5).
+  reaches 0.981 at 1.98 µs per stimulus while satisfying every constraint above. Most of the
+  operator's shortfall is a units mismatch in its own screen mapping: with \( \lambda \) rendered in
+  multiples of \( \|v_{dipole}\|_2 \) it reaches 0.925, which leaves the two close on this
+  instrument and makes the scale ratio of §2.1 a design rule rather than a free constant (§3.5).
 
 *What this paper is not.* It is not a demonstration that this operator should be preferred to the
 alternatives measured here. On every instrument we could construct, some baseline simple enough to
@@ -416,6 +420,11 @@ inside that fallback regime, so it characterizes \( \delta \)'s effect on \( \la
 \( \delta \) is what sets the scale — not the pole separation that sets it the rest of the time.
 Neither the frequency of saturation on a real corpus nor its dependence on pole selection is
 measured in this paper; §6 records both.
+
+The ratio \( S_x / S_y \) is not a free constant either. \( \lambda \) is a coefficient and
+\( d_{esc} \) a length, so only \( S_x = \|v_{dipole}\|_2\, S_y \) renders Proposition 3's
+decomposition without distorting distance from the anchor; §3.5 measures what choosing otherwise
+costs.
 
 Finally, because \( d_{esc} \) is unbounded above while a viewport is not, \( S_y \) requires a
 clipping or compression policy that this paper does not specify. The operator's contract ends at the
@@ -770,22 +779,44 @@ query's own neighbourhood — and paying 120× the frame cost, plus a corpus que
 neighbourhood — buys less than not refitting at all. Whatever value the local frame has here comes
 from where it measures *from*, not from which directions it measures *along*.
 
-*And the operator is bounded on its own instrument.* A coordinate system whose vertical axis is
-simply \( \|v - q\| \) and whose horizontal axis is the projection onto an arbitrary fixed unit
-vector reaches 0.981 — median 1.000, minimum 0.933 — at 1.98 µs per stimulus, faster than the
-operator's 4.53. It satisfies every constraint §1 states: \( O(d) \) per stimulus, no frame to
-build, no corpus access, exactly stable for a fixed \( q \), fully deterministic. The operator
-reaches 0.543 because \( d_{esc} \) is the residual norm *after* the anchor direction and the dipole
-component are removed, and \( \lambda \) is clamped — it discards distance information the radial
-baseline keeps.
+*The radial baseline leads, but most of the gap is the screen mapping's units.* A coordinate system
+whose vertical axis is simply \( \|v - q\| \) and whose horizontal axis is the projection onto an
+arbitrary fixed unit vector reaches 0.981 — median 1.000, minimum 0.933 — at 1.98 µs per stimulus,
+faster than the operator's 4.53. It satisfies every constraint §1 states: \( O(d) \) per stimulus,
+no frame to build, no corpus access, exactly stable for a fixed \( q \), fully deterministic.
+Decomposing the operator's view on the same queries and frames locates its 0.543
+(`bench/reanchor.py --ablation`; exploratory, specified after the table above existed):
 
-*The instrument shares the blame, and that limits what any of these numbers settle.* Local recall@15
-asks whether the nearest points are nearest while one of the radial baseline's two axes *is* the
-true distance. It is close to tautological for any arm carrying a radial coordinate, which makes it
-a poor test of anything else. The defensible conclusions are the two above — re-anchoring matters,
-refitting directions does not — plus a third that is about instrument design: local neighbourhood
-recovery is not a claim this operator should make, and a fair instrument for a bounded, interpretable
-contrast coordinate is not one we have. §6 records what that would have to measure.
+| View of the re-anchored frame | Mean | Median |
+|---|---:|---:|
+| \( (\lambda, d_{esc}) \) — the operator at \( S_x = S_y \) | 0.543 | 0.567 |
+| \( (\lambda^*, \|r - \lambda^* v_{dipole}\|_2) \) — clamp removed | 0.543 | 0.567 |
+| \( (0, d_{esc}) \) | 0.485 | 0.467 |
+| \( (0, \|r\|_2) \) | 1.000 | 1.000 |
+| \( (\|v_{dipole}\|_2 \cdot \lambda,\ d_{esc}) \) — \( \lambda \) in length units | **0.925** | **1.000** |
+
+Removing the clamp changes nothing. \( d_{esc} \) read alone does lose the neighbourhood, but the
+residual it is split from loses none of it: \( \|r\|_2 \) by itself recovers every neighbour of every
+query, so the information is intact in the pair. What the view gets wrong is its **units**.
+\( \lambda \) is a coefficient in multiples of \( \|v_{dipole}\|_2 \) — median 0.463 across these
+frames, range 0.313–0.647 — while \( d_{esc} \) is a length, so rendering both at \( S_x = S_y \)
+stretches the horizontal axis roughly twofold against the vertical. The scale ratio alone moves the
+result across most of its range: \( (s\lambda, d_{esc}) \) scores 0.511, 0.628, 0.857, 0.543 and
+0.344 at \( s = 0.1, 0.25, 0.5, 1, 2 \). At \( s = \|v_{dipole}\|_2 \), Proposition 3 makes the
+view's distance from the query exactly \( \|r\|_2 \) wherever \( \lambda \) is unsaturated, and the
+operator reaches 0.925 with a median of 1.000. Because \( \|r\|_2 \) alone scores 1.000, what
+remains of the gap to the radial baseline can only come from saturated stimuli, where Proposition 3
+is an inequality and the view places them closer to the query than they are.
+
+*What that leaves the instrument able to settle.* Local recall@15 rewards any view whose distance
+from the query is monotone in true distance. At matched units both the radial baseline and the
+operator nearly are, so on this instrument they are close — 0.981 against 0.925 — rather than
+separated by the factor the unscaled row suggests. The defensible conclusions are the two above —
+re-anchoring matters, refitting directions does not — plus a design rule for §2.1: the scale ratio
+is not a free viewport constant, and \( S_x = \|v_{dipole}\|_2\, S_y \) is the ratio that preserves
+distance from the anchor. What the instrument cannot do is distinguish the two arms on what the
+construction was built for, a contrast coordinate between two chosen poles; §6 records what a test
+of that would have to measure.
 
 ## 4. Discussion
 
@@ -829,8 +860,9 @@ github.com/manucouto1/chronos-vector) uses the name "Anchor Projection" for
 the single-anchor rank-1 decomposition used here; the shared vocabulary is coincidental, not
 structural.
 
-None of the above is where this paper's claim to a contribution rests. That claim is determinism
-itself, as a property of the operator, not as a slogan. Any system that reaches for a stochastic
+None of the above is where this paper's claim to a contribution rests, and neither is determinism,
+although it is the property a reader is most likely to credit this operator with — so it is worth
+stating precisely what it does and does not establish. Any system that reaches for a stochastic
 method — t-SNE, UMAP, randomly-initialized force layout — to answer this specific question (how
 does an incoming vector relate to one active local state) inherits spatial drift: identical
 underlying data can render at different apparent positions across runs or incremental updates, so
@@ -858,10 +890,11 @@ The stability is *conditional on the anchor*: \( \lambda \) and \( d_{esc} \) ar
 so a system that moves \( c_1 \) moves its output too (§3.2 measures that arm at 0.13–0.61 per
 step). What the operator removes is not change but *unattributable* change — drift becomes a
 deterministic function of a variable the caller sets, rather than of hidden optimizer state. And
-the stability is *paid for*: §3.2 finds the operator preserves high-dimensional neighborhoods
-worse than either baseline (0.66 against 0.90–0.92). A reader weighing this operator against UMAP
-should weigh that number too; determinism is the contribution being argued, not a claim of
-across-the-board superiority.
+the stability is *paid for*, though not uniquely: §3.2 finds the operator preserves
+high-dimensional neighborhoods worse than the refit baselines (0.66 against 0.90–0.92), while a
+once-fitted PCA obtains the same stillness at 0.68. A reader weighing this operator against UMAP
+should weigh that number too; determinism places the operator among the fixed maps, and nothing in
+this section argues it is the best of them.
 
 The structurally closest prior art to the *shape* of this computation, rather than to its purpose,
 is random-hyperplane locality-sensitive hashing (Charikar, 2002): both reduce to an inner product
@@ -902,8 +935,9 @@ On manifold preservation a once-fitted PCA sits inside the operator's own range,
 selection rule that reaches the top of that range does so by aligning with variance, at which point
 the operator and the PCA are interchangeable on both instruments. Re-anchoring — the one lever
 genuinely specific to a local frame, and worth a factor of 28 at a frame cost three orders of
-magnitude below a local refit — is nevertheless beaten on its own instrument by a two-line radial
-coordinate subject to the same constraints.
+magnitude below a local refit — still trails a two-line radial coordinate subject to the same
+constraints: narrowly once \( \lambda \) is rendered in the same units as \( d_{esc} \) (0.925
+against 0.981), and by a wide margin when it is not.
 
 We report this as the outcome rather than restructuring around a comparison that survives, because
 the negative results are the part a reader cannot easily reconstruct. That a fixed random projection
