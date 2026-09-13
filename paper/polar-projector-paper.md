@@ -369,7 +369,7 @@ once per active context, while steps 13–17 are the only work a new stimulus co
 Nothing in either half iterates to convergence, draws a random number, or reads persistent storage,
 which is what makes Propositions 1–3 hold per call rather than in expectation. Two steps encode
 findings reported later rather than obvious choices: step 15 clamps with `min`/`max` instead of
-`np.clip` (§A: bit-for-bit identical, 1.37× faster), and step 16 computes the residual in vector
+`np.clip` (§A: bit-for-bit identical, 1.40× faster), and step 16 computes the residual in vector
 space rather than via the algebraically equivalent scalar rearrangement (§B: the scalar form loses
 all precision in the near-collinear regime, undetectably).
 
@@ -519,7 +519,7 @@ the per-call cost is fixed NumPy dispatch overhead independent of dimension, and
 it is the \( O(d) \) work Proposition 1 describes; the crossover where the asymptotic claim becomes
 visible sits between \( d = 1{,}024 \) and \( d = 4{,}096 \). §A measures this and states what it
 narrows. Every latency figure in this paper also reflects one substitution — clamping \( \lambda \)
-with `min`/`max` rather than `np.clip`, bit-for-bit identical on every input and 1.37× faster — also
+with `min`/`max` rather than `np.clip`, bit-for-bit identical on every input and 1.40× faster — also
 documented in §A; no table of *values* anywhere in this paper is affected by it.
 
 ### 3.2 Positional Stability Under Incremental Growth
@@ -1108,11 +1108,12 @@ gap to the floor without changing a single flop.
 
 That second claim is not left as an inference — it was tested by removing exactly one array
 operation. `evaluate()` clamps \( \lambda \) into \( [-1, 1] \), and clamping a single scalar
-through `np.clip` enters NumPy's ufunc machinery for 1.74 µs — 29% of the whole call — where
-`min(max(x, -1), 1)` does it in 0.19 µs. The two are bit-for-bit identical on every input, including
+through `np.clip` enters NumPy's ufunc machinery for 1.88 µs — 30% of the whole call — where
+`min(max(x, -1), 1)` does it in 0.23 µs. The two are bit-for-bit identical on every input, including
 NaN, signed zero, subnormals, infinities and the float either side of the boundary, so the
-substitution changes no value this paper reports. It made `evaluate()` **1.37× faster**, from 6.23
-to 4.56 µs, for zero change in arithmetic. Every latency figure in §3 reflects the substitution;
+substitution changes no value this paper reports. It made `evaluate()` **1.40× faster**, from 6.34
+to 4.54 µs, for zero change in arithmetic (`bench/clamp.py`, which restores the old clamp and measures
+both bodies side by side). Every latency figure in §3 reflects the substitution;
 every table of *values* — §B, §C, §3.2 — is unchanged by it, which is the check that the two
 forms really are equivalent.
 
@@ -1157,8 +1158,9 @@ its inaccuracy is undetectable from inside.
 
 The cost of refusing it is real, and it grew. Measured over 25,000 stimuli at \( d = 384 \), the
 vector form runs at 4.56 µs against the scalar form's 3.10 µs — the scalar rearrangement is
-**1.47× faster**. That margin was 1.23× before §A's clamp substitution removed 1.7 µs of fixed
-overhead from both arms; subtracting a constant from both sides of a ratio moves it, and the honest
+**1.47× faster**. Restoring the old clamp and re-measuring both forms side by side puts that margin
+at 1.24× before §A's substitution and 1.45× after it, which removed 1.8 µs from the vector form and
+2.0 µs from the scalar one — nearly the same fixed overhead from both arms; subtracting a constant from both sides of a ratio moves it, and the honest
 reading is that the residual computation is a larger share of a leaner call than it was of a fatter
 one. Refusing the scalar form now costs about a third of the hot path rather than a fifth. The
 argument is unchanged — a third of the hot path is not worth a silently wrong answer — but the

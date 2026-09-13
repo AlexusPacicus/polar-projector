@@ -262,8 +262,9 @@ class TestPolarProjectorUnit:
     def test_lambda_clamp_matches_np_clip_exactly(self, value):
         """evaluate() clamps λ with min/max, not np.clip. They must not diverge.
 
-        np.clip costs 1.74 µs on a single scalar against 0.19 µs for min/max --
-        29% of a whole evaluate() call -- so the hot path uses the latter. That
+        np.clip costs 1.88 µs on a single scalar against 0.23 µs for min/max --
+        30% of the evaluate() call it used to sit in (bench/results/clamp.json) --
+        so the hot path uses the latter. That
         is only safe while the two agree on every input, and the interesting
         inputs are the ones nobody reaches for: NaN, signed zero, subnormals,
         infinities, and the float either side of the clip boundary.

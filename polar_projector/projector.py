@@ -289,8 +289,9 @@ class PolarProjector:
         # prepare() rejects a degenerate frame, so the denominator is positive here.
         #
         # Clamped with min/max rather than np.clip. On a single scalar np.clip
-        # costs 1.74 µs against 0.19 µs here — 29% of this whole call — because
-        # it enters the ufunc machinery to bound one float. The two are
+        # costs 1.88 µs against 0.23 µs here — 30% of the call it used to sit
+        # in — because it enters the ufunc machinery to bound one float
+        # (bench/clamp.py). The two are
         # bit-for-bit identical on every input, NaN, signed zero, subnormals and
         # infinities included (tests/test_polar_projector_unit.py), and the
         # argument order matters: x first is what propagates NaN.

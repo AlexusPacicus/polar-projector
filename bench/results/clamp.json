@@ -1,0 +1,113 @@
+{
+  "experiment": "A9",
+  "config": {
+    "seed": 42,
+    "d": 384,
+    "n_latency": 25000,
+    "reps": 3,
+    "warmup": 1000,
+    "setup": "bench/conditioning.py form_latency",
+    "edge_values": [
+      "-inf",
+      "-3.0",
+      "-1.0000000000000002",
+      "-1.0",
+      "-0.5",
+      "-0.0",
+      "0.0",
+      "5e-324",
+      "0.5",
+      "1.0",
+      "1.0000000000000002",
+      "3.0",
+      "inf",
+      "nan"
+    ]
+  },
+  "host": {
+    "platform": "macOS-15.6-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "numpy": "2.4.1"
+  },
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "MKL_NUM_THREADS": "unset",
+    "VECLIB_MAXIMUM_THREADS": "unset",
+    "NUMEXPR_NUM_THREADS": "unset"
+  },
+  "results": {
+    "latency": {
+      "clamp_np_clip": {
+        "mean": 1.8800972799999998,
+        "p50": 1.834,
+        "p95": 1.958,
+        "p99": 2.125,
+        "min": 1.709,
+        "spread": 0.003715552420776826,
+        "reps": 3.0
+      },
+      "clamp_min_max": {
+        "mean": 0.22569444000000002,
+        "p50": 0.209,
+        "p95": 0.25,
+        "p99": 0.292,
+        "min": 0.125,
+        "spread": 0.07998212095964762,
+        "reps": 3.0
+      },
+      "evaluate_min_max": {
+        "mean": 4.54096676,
+        "p50": 4.5,
+        "p95": 4.709,
+        "p99": 5.0,
+        "min": 4.208,
+        "spread": 0.008235999507734773,
+        "reps": 3.0
+      },
+      "evaluate_np_clip": {
+        "mean": 6.3447774,
+        "p50": 6.25,
+        "p95": 6.542,
+        "p99": 6.917,
+        "min": 5.958,
+        "spread": 0.003592447545913786,
+        "reps": 3.0
+      },
+      "scalar_form_min_max": {
+        "mean": 3.1405897599999997,
+        "p50": 3.084,
+        "p95": 3.333,
+        "p99": 3.5,
+        "min": 2.875,
+        "spread": 0.020470231680307018,
+        "reps": 3.0
+      },
+      "scalar_form_np_clip": {
+        "mean": 5.12295592,
+        "p50": 5.042,
+        "p95": 5.292,
+        "p99": 5.584,
+        "min": 4.75,
+        "spread": 0.00291101470184033,
+        "reps": 3.0
+      }
+    },
+    "derived": {
+      "evaluate_speedup": 1.397230531588388,
+      "removed_us": 1.80381064,
+      "np_clip_share_of_old_call": 0.2963220238427907,
+      "scalar_margin_before": 1.2384993154498976,
+      "scalar_margin_after": 1.4458961873453986,
+      "refusal_share_before": 0.19257121297904,
+      "refusal_share_after": 0.30838741484203247
+    },
+    "equivalence": {
+      "stimuli_bitwise_equal": 25000,
+      "stimuli": 25000,
+      "edge_values_bitwise_equal": 14,
+      "edge_values": 14
+    }
+  }
+}
