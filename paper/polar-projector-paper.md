@@ -941,36 +941,69 @@ should be kept in mind when interpreting the results:
 
 ## 5. Conclusion
 
-We set out to show that a local, deterministic \( O(d) \) operator is the right primitive for
-placing an incoming vector in a spatial interface over a growing corpus, and we can report a
-narrower result than that. The operator is correct, its degenerate cases are proven non-degenerate,
-one of its two algebraically equivalent forms fails silently and must not be used, and its cost is
-flat in corpus size across a 25× range. Those are properties we can hand to someone building on it.
+This work began as a search for a way to decouple the interaction from the state of the corpus in a
+spatial interface, and the results support a narrower account. Decoupling the placement of a vector
+from the corpus turns out to be trivial: any fixed linear map achieves it without reading the corpus.
+What a local frame adds is a way to re-centre the view on a note without re-coupling the interaction
+to the corpus: re-anchoring on the query raises local neighbourhood recovery 29× without reading the
+corpus beyond a codebook built once, whereas a local refit re-centres only by reading the corpus
+again, and recovers less (0.023). That lever is nonetheless bounded by a two-line radial coordinate
+centred on the query, which reaches 0.981 local recovery against the operator's 0.925 under the
+isometric scale, an exploratory figure.
 
-What we cannot hand them is a reason to prefer it on the evidence assembled here. Exact positional
-stability, which motivated the work, is a property of any fixed linear map and three arms have it.
-On manifold preservation a once-fitted PCA sits inside the operator's own range, and the pole
-selection rule that reaches the top of that range does so by aligning with variance, at which point
-the operator and the PCA are interchangeable on both instruments. Re-anchoring — the one lever
-genuinely specific to a local frame, and worth a factor of 29 at a frame cost 121× below
-that of a local refit — still trails a two-line radial coordinate subject to the same
-constraints: narrowly once \( \lambda \) is rendered in the same units as \( d_{esc} \) (0.925
-against 0.981), and by a wide margin when it is not.
+The operator itself is correct: its collinear configurations do not degenerate, thanks to a
+deterministic null-space fallback (Proposition 2); its residual decomposition is exact when
+\( \lambda \) does not saturate (Proposition 3); and its per-stimulus latency is flat across a 25×
+range of corpus sizes. The numerical analysis also shows that the scalar form of the residual loses
+all precision below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), at two points of the sweep undetectably,
+while the vector form stays stable: of the two forms measured, it is the one to use. These are the
+properties that can be handed to whoever implements the system.
 
-We report this as the outcome rather than restructuring around a comparison that survives, because
-the negative results are the part a reader cannot easily reconstruct. That a fixed random projection
-lands at chance on both fidelity instruments is what makes every figure above it meaningful. That a
-locally refitted PCA scores below a globally fitted one identifies a whole family of approaches —
-refit the directions near the query — as the wrong lever, and says why: a projection reorients but
-cannot recentre. That pole selection trades manifold preservation against task-level agreement
-rather than improving both tells an implementer which knob they are actually turning. None of these
-would have appeared in a paper organized around a win.
+What the evidence cannot hand them is a reason to prefer the operator on numerical metrics alone.
+Positional stability does not distinguish it, since any fixed linear map keeps placed points still
+trivially. On manifold preservation, a PCA frozen after the initial window sits inside the operator's
+own range, and the pole-selection rule that reaches the highest fidelity does so by aligning with
+variance, which makes the operator interchangeable with a fixed PCA. And re-centring the origin — the
+one lever specific to a local frame — still falls short of a radial coordinate subject to the same
+constraints.
 
-The property that remains unmeasured is the one the construction was designed for: \( \lambda \) is
-a bounded coordinate between two named poles, and the baselines that beat it on numerical fidelity
-offer nothing comparable as an interface control signal. Whether that is worth anything to a person
-navigating is a behavioural question, and answering it is the work this paper makes possible rather
-than the work it does.
+For whoever implements this primitive, the results mark explicit design decisions:
+
+- **Declare the screen scale ratio \( S_x / S_y \).** Rendering \( \lambda \) under the isometric rule
+  (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)) preserves the on-screen distance to the anchor for
+  unsaturated points; the unit scale exaggerates the \( \lambda \) axis. The choice moves local recall
+  (an exploratory figure) but barely moves the global instruments — at most 0.003 in trustworthiness
+  and 0.02 in lift, with no ordering changed.
+- **Re-anchor rather than refit directions to re-centre.** Moving the anchor to the query re-centres
+  the view without reading stored vectors, whereas refitting local directions re-couples the
+  interaction to the corpus. With a growing corpus, the codebook of \( K \) centroids should be
+  rebuilt periodically, outside the active loop.
+- **Always compute \( d_{esc} \) in vector form,** as \( \|r - \lambda v_{dipole}\|_2 \). The scalar
+  rearrangement is 1.47× faster but loses all precision in near-collinear regimes, at two points of the
+  sweep without any detectable sign.
+- **Choose the pole-selection rule deliberately.** It is a knob between manifold preservation and
+  task-level agreement: rules aligned with variance match the fidelity of a fixed PCA, while the rule
+  built from labelled parts is the only one that keeps signal (1.17×) on the 500-chunk corpus.
+- **Check the frame's saturation.** \( \lambda = \pm 1 \) is the clamp's domain boundary, not the
+  location of the poles; check what share of points saturates for the frames in use.
+- **Pick the entry point according to batching needs.** `evaluate_batch` gives up to 5.16× at
+  \( B = 256 \), but is slower at \( B = 1 \) and does not guarantee bitwise identity across
+  permutations of the batch, because of BLAS reduction order. Where exact point-by-point
+  reproducibility matters, use the scalar path, `evaluate()`.
+
+We report these negative bounds because they clarify the design space in a way positive results
+would not. That a fixed random projection lands near chance on the fidelity instruments shows those
+instruments are not vacuous. That a locally refitted PCA fails despite being centred on the
+neighbourhood shows that neither moving a linear projection's origin nor reorienting its axes recovers
+the neighbourhood — and refitting re-couples the view to the corpus besides. And showing that pole
+selection trades manifold preservation against lift tells an implementer which knob they are
+actually turning.
+
+The question this numerical analysis cannot answer, and the one that will ultimately decide the
+operator's practical usefulness, is behavioural: whether having a bounded contrast coordinate
+\( \lambda \in [-1, 1] \) actually reduces the user's cognitive friction when navigating a spatial
+canvas. Answering it requires empirical tests with real users — a contact with reality not yet made,
+and the next necessary step to determine whether the method is useful (§6).
 
 ## 6. Open Questions
 
