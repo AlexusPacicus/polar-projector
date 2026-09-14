@@ -68,6 +68,111 @@ UNICODE_DECLARATIONS = {
 
 MATH_SPAN = re.compile(r"\\\((.+?)\\\)|\\\[(.+?)\\\]", flags=re.S)
 
+# pandoc's longtable output splits width evenly across columns when it can't
+# infer a ratio from the Markdown source, which is most of the time for this
+# manuscript's result tables: a wide row-label column next to several narrow
+# numeric ones ends up with every column the same size, so the label wraps
+# 4-5 lines deep and a long header ("Trustworthiness (isometric)") collides
+# with its neighbour. This rebalances each wrapped (p{}-column) longtable by
+# the actual text it holds, in two passes: total content length (so a column
+# mostly full of short numbers stays narrow) and longest unbreakable word
+# (so a header or a `texttt` identifier that cannot wrap gets enough room for
+# one line). Monospace text is weighted up because Latin Modern Mono renders
+# wider per character than the body roman font at the same size.
+_LONGTABLE = re.compile(
+    r"\\begin\{longtable\}\[\]\{@\{\}\n(.*?)@\{\}\}\n(.*?)(?=\\end\{longtable\})",
+    flags=re.S,
+)
+_TABLE_HEADER = re.compile(r"\\toprule\\noalign\{\}\n(.*?)\\\\\n\\midrule", flags=re.S)
+_TABLE_BODY = re.compile(r"\\endlastfoot\n(.*)$", flags=re.S)
+_MINIPAGE_CELL = re.compile(r"\\begin\{minipage\}\[b\]\{\\linewidth\}\\ragged(?:right|left)\n?")
+_MINIPAGE_SPLIT = re.compile(r"\\end\{minipage\}\s*&\s*")
+_TEXTT_CELL = re.compile(r"\\texttt\{([^}]*)\}")
+TABLE_MIN_FRACTION = 0.08
+TABLE_MONO_WEIGHT = 1.6
+
+
+def _cell_text(cell: str) -> str:
+    """Strip LaTeX markup down to roughly what will be visible, for sizing only."""
+
+    def _widen_mono(m: re.Match[str]) -> str:
+        inner = m.group(1)
+        return inner + "#" * round(len(inner) * (TABLE_MONO_WEIGHT - 1))
+
+    cell = _TEXTT_CELL.sub(_widen_mono, cell)
+    cell = _MINIPAGE_CELL.sub("", cell).replace("\\end{minipage}", "")
+    cell = re.sub(r"\\[a-zA-Z]+\{", "", cell)  # \emph{ \textbf{ ... -> drop the opener
+    cell = cell.replace("}", "")
+    cell = re.sub(r"\\\(|\\\)", "", cell)
+    cell = cell.replace("\\_", "_")
+    cell = re.sub(r"\\[a-zA-Z]+", "", cell)  # remaining bare commands, e.g. \times
+    cell = re.sub(r"\[[a-z]\]", "", cell)
+    return cell
+
+
+def _cell_lengths(cell: str) -> tuple[int, int]:
+    """(visible character count, longest single unbreakable word) for one cell."""
+    text = _cell_text(cell)
+    words = re.split(r"[\s\-]+", text.strip())
+    longest_word = max((len(w) for w in words if w), default=0) + 2  # rounding margin
+    visible = len(re.sub(r"\s+", " ", text.replace("~", " ")).strip())
+    return visible, longest_word
+
+
+def _column_fractions(n_cols: int, header: str, body: str) -> list[float]:
+    content_w = [1] * n_cols
+    word_w = [1] * n_cols
+    header_cells = _MINIPAGE_SPLIT.split(header)[:n_cols] if header else []
+    for i, cell in enumerate(header_cells):
+        visible, word = _cell_lengths(cell)
+        content_w[i], word_w[i] = max(content_w[i], visible), max(word_w[i], word)
+    for row in body.split("\\\\"):
+        if not row.strip():
+            continue
+        cells = " ".join(row.split("\n")).split("&")[:n_cols]
+        for i, cell in enumerate(cells):
+            visible, word = _cell_lengths(cell.strip())
+            content_w[i], word_w[i] = max(content_w[i], visible), max(word_w[i], word)
+
+    def normalize(weights: list[float]) -> list[float]:
+        total = sum(weights) or 1.0
+        return [w / total for w in weights]
+
+    fractions = [max(a, b) for a, b in zip(normalize(content_w), normalize(word_w))]
+    fractions = normalize(fractions)
+    deficits = [max(0.0, TABLE_MIN_FRACTION - f) for f in fractions]
+    if any(deficits):
+        excess = sum(deficits)
+        above = [max(0.0, f - TABLE_MIN_FRACTION) for f in fractions]
+        above_total = sum(above) or 1.0
+        fractions = [f + d - excess * (a / above_total) for f, d, a in zip(fractions, deficits, above)]
+    return normalize(fractions)
+
+
+def rebalance_table_columns(tex: str) -> tuple[str, int]:
+    """Recompute every wrapped longtable's column widths from its own text."""
+    n_rebalanced = 0
+
+    def fix_one(m: re.Match[str]) -> str:
+        nonlocal n_rebalanced
+        colspec, rest = m.group(1), m.group(2)
+        n_cols = colspec.count("\\real{")
+        if n_cols < 2:
+            return m.group(0)
+        header_m, body_m = _TABLE_HEADER.search(rest), _TABLE_BODY.search(rest)
+        fractions = _column_fractions(
+            n_cols, header_m.group(1) if header_m else "", body_m.group(1) if body_m else ""
+        )
+        n_rebalanced += 1
+        tabcolsep_n = 2 * (n_cols - 1)
+        lines = "\n".join(
+            f"  >{{\\raggedright\\arraybackslash}}p{{(\\linewidth - {tabcolsep_n}\\tabcolsep) * \\real{{{f:.4f}}}}}"
+            for f in fractions
+        )
+        return f"\\begin{{longtable}}[]{{@{{}}\n{lines}@{{}}}}\n{rest}"
+
+    return _LONGTABLE.sub(fix_one, tex), n_rebalanced
+
 
 def split_manuscript(text: str) -> tuple[str, dict[str, str], str, str]:
     """Title, front-matter fields, abstract and body of the manuscript."""
@@ -178,7 +283,9 @@ def main() -> int:
         check=True,
     )
 
-    tex = (out / "main.tex").read_text(encoding="utf-8")
+    tex, n_rebalanced = rebalance_table_columns((out / "main.tex").read_text(encoding="utf-8"))
+    (out / "main.tex").write_text(tex, encoding="utf-8")
+
     source_math = len(MATH_SPAN.findall(source[source.index("## Abstract"):]))
     tex_math = tex.count("\\(") + tex.count("\\[")
     problems = []
@@ -197,6 +304,7 @@ def main() -> int:
     print(f"  norms rewritten to \\Vert: {abstract_norms + body_norms}; "
           f"unicode characters declared: {len(UNICODE_DECLARATIONS)}; "
           f"figures {tex.count(chr(92) + 'includegraphics')} (manuscript {n_figures})")
+    print(f"  table columns rebalanced by content: {n_rebalanced}")
     todos = [m.start() for m in re.finditer(r"TODO", tex)]
     if todos:
         print(f"  WARNING: {len(todos)} TODO marker(s) still in the text")
