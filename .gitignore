@@ -19,3 +19,6 @@ dist/
 
 # Generated arXiv LaTeX (tools/build_arxiv.py); rebuild from the Markdown
 paper/build/
+
+# macOS Finder metadata
+.DS_Store
