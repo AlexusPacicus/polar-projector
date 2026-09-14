@@ -914,10 +914,10 @@ should be kept in mind when interpreting the results:
   Proposition 2 resolves the collapse of the dipole but not a badly placed origin. Every norm in
   Propositions 1–3 stays perfectly well-conditioned, so the operator returns confident values whose
   interpretation has stopped holding, with no internal test that detects the failure.
-- **No behavioural tests with users.** The need for positional stability is adopted as a design
-  requirement extrapolated from the hypertext-navigation literature (Boechler, 2001). No human user
-  evaluated the system, so whether a bounded contrast coordinate \( \lambda \in [-1, 1] \) is more
-  useful as a control signal than a pure radial distance remains an open question (§6).
+- **No behavioural tests with users.** The design requirement of positional stability is an
+  extrapolation from the hypertext-navigation literature, not something tested here (§1).
+  Whether a bounded contrast coordinate \( \lambda \in [-1, 1] \) is more useful as a control
+  signal than a pure radial distance is correspondingly open (§6).
 
 ## 5. Conclusion
 
@@ -980,10 +980,8 @@ selection trades manifold preservation against lift tells an implementer which k
 actually turning.
 
 The question this numerical analysis cannot answer, and the one that will ultimately decide the
-operator's practical usefulness, is behavioural: whether having a bounded contrast coordinate
-\( \lambda \in [-1, 1] \) actually reduces the user's cognitive friction when navigating a spatial
-canvas. Answering it requires empirical tests with real users — a contact with reality not yet made,
-and the next necessary step to determine whether the method is useful (§6).
+operator's practical usefulness, is behavioural rather than numerical (§6) — a contact with reality
+this work does not make.
 
 ## 6. Open Questions
 
@@ -991,13 +989,10 @@ Each item below is an independent open problem, so they are kept as a list rathe
 prose.
 
 - **Is any of this useful to a person?** This is the question the whole design rests on, and nothing
-  in this paper answers it. Both requirements of §1 are assumptions: that a layout which never moves
-  placed notes helps people navigate an embedding canvas is extrapolated from hypertext navigation
-  (Boechler, 2001), and that re-centring the view on the consulted note helps them find related
-  material is assumed, not observed. No user took part in this work (§4.3). A behavioural study would
-  have to test both against baselines as simple as the ones §3 uses — a fixed map for stability, a
-  radial coordinate for re-centring — before any question about the operator's own coordinates is
-  worth asking.
+  in this paper answers it: both requirements of §1 are inherited assumptions, not observations
+  (§1, §4.3). A behavioural study would have to test both against baselines as simple as the ones §3
+  uses — a fixed map for stability, a radial coordinate for re-centring — before any question about
+  the operator's own coordinates is worth asking.
 - **If re-centring helps, what does a bounded contrast axis add?** On local neighbourhood recovery
   the radial coordinate bounds the operator — 0.981 on the same instrument, under the same
   constraints (§3.5). The two views share an unbounded vertical axis and differ only in the
