@@ -200,18 +200,17 @@ state* in this paper means the content and size of the stored corpus, not its st
 
 *Proposition 1 (Complexity and Associative Equivalence).* Let \( v_n \in \mathbb{R}^d \) be an
 input vector, \( c_1 \in \mathbb{R}^d \) the local anchor centroid, and
-\( c_A, c_B \in \mathbb{R}^d \) secondary pole centroids selected from a bounded active codebook
-\( C \) ( \( |C| = K \leq 256 \) ). The anchor is normalized with a zero-guard threshold
-\( \epsilon_{norm} > 0 \):
+\( c_A, c_B \in \mathbb{R}^d \) secondary pole centroids. The anchor is normalized with a zero-guard
+threshold \( \epsilon_{norm} > 0 \):
 
 \[ \hat{c}_1 = \begin{cases} c_1 / \|c_1\|_2 & \text{if } \|c_1\|_2 > \epsilon_{norm} \\ 0 & \text{otherwise} \end{cases} \]
 
-The orthogonal projector \( P_\perp: \mathbb{R}^d \to \mathbb{R}^{d-1} \) onto the complement of
-\( \hat{c}_1 \) evaluates associatively as \( P_\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \),
-in \( O(d) \) time and space without materializing the dense \( d \times d \) matrix
-\( I - \hat{c}_1\hat{c}_1^T \). Codebook selection over \( K \leq 256 \) (a bounded constant, not
-asymptotic in \( d \) or \( N \)) adds \( O(K \cdot d) \); the full evaluation is \( O(d) \),
-independent of corpus size \( N \).
+The orthogonal projector \( P_\perp: \mathbb{R}^d \to \mathbb{R}^d \), onto the \( (d-1) \)-dimensional
+complement of \( \hat{c}_1 \), evaluates associatively as
+\( P_\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \), in \( O(d) \) time and space without
+materializing the dense \( d \times d \) matrix \( I - \hat{c}_1\hat{c}_1^T \). The full evaluation is
+\( O(d) \), independent of corpus size \( N \); §3.5 adds the \( O(K \cdot d) \) cost of selecting
+poles from a codebook when one is used.
 
 *The null-anchor branch, and what it costs.* When \( \|c_1\|_2 \leq \epsilon_{norm} \) the guard
 above sets \( \hat{c}_1 = 0 \), and the implementation proceeds rather than raising. In that branch
