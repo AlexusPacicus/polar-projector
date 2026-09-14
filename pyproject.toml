@@ -9,7 +9,7 @@ description = "Stateless O(d) orthogonal decomposition operator over the unit sp
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.11"
-authors = [{ name = "Alexis Zapfer" }]
+authors = [{ name = "Alexis Zapico" }]
 keywords = ["geometry", "projection", "subspace", "embeddings", "numerical-analysis"]
 classifiers = [
     "Intended Audience :: Science/Research",
