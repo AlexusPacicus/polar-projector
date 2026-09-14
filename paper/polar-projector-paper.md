@@ -1092,9 +1092,9 @@ prose.
 
 ## Appendix
 
-The four sections below were body sections of earlier drafts. They are retained in full — every
-figure still reproduces, and `tools/verify_paper_tables.py` still covers the tables CI checks — but
-each answers a narrower question than §3 does: whether the implementation is numerically sound and
+The four appendices below are retained in full — every figure still reproduces, and
+`tools/verify_paper_tables.py` still covers their tables — but each answers a narrower question than
+§3 does: whether the implementation is numerically sound and
 how it behaves off the single-stimulus path, rather than whether the operator works as a navigation
 substrate.
 
@@ -1292,9 +1292,9 @@ it holds there, and holds for the batched path only at fixed batch composition a
 the API exposes **no chunk size parameter**, because splitting a batch is a reduction-order change
 and would silently alter results.
 
-*The square root is free, so the energy form is not implemented.* An earlier draft of this section
-proposed returning \( E_{esc} = \|r_{esc}\|_2^2 \) instead of \( d_{esc} \) to skip the square-root
-instruction in hot loops. Measured, that saving is **1.0–1.6%** across \( B \in \{64, 1{,}024,
+*The square root is free, so the energy form is not implemented.* Returning
+\( E_{esc} = \|r_{esc}\|_2^2 \) instead of \( d_{esc} \) would skip the square-root instruction in
+hot loops. Measured, that saving is **1.0–1.6%** across \( B \in \{64, 1{,}024,
 4{,}096\} \) — one square root against \( d = 384 \) multiply-accumulates, which is within the
 run-to-run spread of the measurement itself. The proposal is therefore withdrawn rather than
 shipped: adding a second return shape to the API to save nothing measurable would be a cost with no
