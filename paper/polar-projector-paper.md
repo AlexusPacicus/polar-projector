@@ -90,16 +90,24 @@ together with a map of which parts of its design space are load-bearing and whic
 
 ## 1. Introduction
 
-A spatial interface over a personal knowledge corpus — a canvas the user navigates to reach their
-own notes — is not a corpus visualization that happens to be interactive. It imposes two
-constraints that a static layout never has to meet:
+A spatial interface over a personal knowledge corpus — a canvas on which the user reaches their own
+notes — is interactive at two moments. The first is *introducing a vector*: writing a note adds its
+embedding to the corpus and gives it a place on the canvas. The second is *navigating*: the user
+consults a note already in the corpus, and the view is organized around it. Each moment makes its
+own demands, and a static layout meets neither, because it never has to.
 
-1. **Adding one note must not move the others.** The user builds a persistent spatial mental model
-   of the interface, and instability in that layout measurably degrades navigation and orientation
+Introducing a vector imposes two constraints:
+
+1. **Writing one note must not move the others.** Users encode meaning in where things are
+   (Marshall & Shipman, 1995), and instability in a layout degrades navigation and orientation
    (Boechler, 2001). If positions shift on every write, spatial proximity stops reliably encoding
-   semantic proximity and the model the user built is invalidated by their own act of writing.
-2. **Each interaction must complete inside a frame budget.** The position of an incoming vector is
-   computed while the user is moving, so its cost cannot scale with how much the user has written.
+   semantic proximity, and the user's own act of writing invalidates the map they built.
+2. **Placing a note must not depend on what is stored.** The position is computed while the user
+   works, so its cost cannot scale with how much the user has written, and computing it should not
+   require reading the stored corpus.
+
+Both are one requirement seen twice: **the interaction must be decoupled from the state of the
+corpus** — its content and its size.
 
 *The premise, and its standing.* Both constraints are **assumptions this paper inherits, not
 results it establishes**, and the first one carries the weight. Boechler (2001) measures navigation
@@ -108,112 +116,94 @@ a continuous canvas over an embedding space — so applying it here is an extrap
 interface families. It is a defensible one, and it is the standard motivation in this literature,
 but nothing below tests it. No user touched anything in this work: every instrument reported in §3
 is numerical, computed on a frozen corpus, and none of them can tell whether a person navigating
-actually suffers from layout instability or benefits from its absence.
+actually suffers from layout instability or benefits from its absence. A reader who rejects the
+premise should know it by the end of this section rather than after §3.
 
-We state this plainly rather than in a limitations paragraph at the end, for two reasons. It is the
-premise the whole design rests on, so a reader who rejects it should know by the end of §1 rather
-than after §3. And the same gap reappears as this paper's leading open question: §6 asks what a
-bounded, interpretable contrast coordinate is worth to a person navigating, which is the
-behavioural experiment that would validate constraint 1 and adjudicate §3.5's bound at the same
-time. A reader should treat the constraints as a design brief we adopted and then measured against,
-not as findings — the findings are in §3, and several of them cut against the design the brief
-motivated.
+*What existing approaches do with the two constraints.* Reusing global dimensionality reduction
+violates both. Refitting alters existing coordinates as the corpus grows, and §3.2 measures what
+survives pinning the random seed: t-SNE (van der Maaten & Hinton, 2008) relocates previously placed
+points by 1.03–1.24 times the width of the layout at every growth step, and UMAP (McInnes et al.,
+2018) by 0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 15.7–25.0 s across
+the baselines against 0.051 s for the operator, a factor of 307–488×. We make no asymptotic claim
+about the baselines: Barnes-Hut t-SNE is \( O(N \log N) \) and UMAP's graph construction is
+sub-quadratic in practice, so the argument on this axis is the measured seconds-scale cost of a refit
+inside an interaction loop, not a complexity class.
 
-Reusing global dimensionality reduction for this violates both. Stochastic re-optimization alters
-existing coordinates on incremental update, and §3.2 measures what survives pinning the random
-seed: under refitting, t-SNE (van der Maaten & Hinton, 2008) relocates previously-placed points by
-1.03–1.24 times the width of the layout at every growth step and UMAP (McInnes et al., 2018) by
-0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 15.7–25.0 s across the
-baselines against 0.051 s for the operator, a factor of 307–488×. We make no asymptotic claim about
-the baselines here: Barnes-Hut t-SNE is \( O(N \log N) \) and UMAP's graph construction is
-sub-quadratic in practice, so the argument against them on this axis is the measured seconds-scale
-cost of a refit inside an interaction loop, not a complexity class.
-
-This instability is not news to the visualization community, and the approaches it has taken are
-the reason this paper argues for a different primitive rather than a better layout. Dynamic t-SNE
-adds a temporal-coherence penalty across a sequence of datasets, trading projection reliability for
+The visualization community has long treated this instability as a trade-off. Dynamic t-SNE adds a
+temporal-coherence penalty across a sequence of datasets, trading projection reliability for
 stability (Rauber et al., 2016); guided stable dynamic projections make that trade controllable
 (Vernier et al., 2021); and incremental techniques evolve a projection without revisiting the data,
 buying speed and stability at the cost of global distance preservation (Neves et al., 2020).
-Out-of-sample extension takes the complementary route of fitting once and mapping new points
-through a learned or interpolated function (Bengio et al., 2003; Sainburg et al., 2021) — §3.2
-measures exactly that configuration as one of its arms. Every one of these softens drift by
-constraining or amortizing a global optimization. None of them removes the optimization, so none
-delivers the *exact* repeatability a spatial interface can rely on per interaction; surveys of the
-field treat stability as one quality axis traded against others rather than a guarantee (Espadoto
-et al., 2021). Spatial hypertext identified the underlying interface requirement long before
-embeddings were the substrate: users encode meaning in where they put things, so the system must
-not move them (Marshall & Shipman, 1995).
+Out-of-sample extension fits once and maps new points through a learned or interpolated function
+(Bengio et al., 2003; Sainburg et al., 2021); §3.2 measures that configuration as one of its arms and
+finds it still at 5 of 7 growth steps and relocating at the other 2. Surveys of the field treat
+stability as one quality axis traded against others rather than a guarantee (Espadoto et al., 2021).
 
-The Polar Projector meets both constraints by refusing the problem the baselines solve. It is a
-per-interaction primitive, not a global layout: a local, deterministic \( O(d) \) operator that
-evaluates one incoming vector against one active contextual frame — a static anchor plus a contrast
-dipole — deriving a projection coefficient \( \lambda \in [-1, 1] \) and an orthogonal residual
-\( d_{esc} \) without reading, modifying or re-evaluating the persistent corpus, with correctness
-guarantees proven in §2.
+Decoupling itself, however, is cheap. A fixed linear map — a random projection drawn once, or a PCA
+fitted once — places a vector without reading the corpus and never moves a placed point, and §3.2
+confirms that both hold exactly; §4.1 tabulates both couplings for every method measured. The
+constraints of introducing a vector do not, on their own, call for a new primitive.
 
-**Contributions.** Three of the four are bounds rather than wins, and the baselines that supply
-them are in the paper because a result a two-line baseline matches is not a result.
+*Navigating is where they stop being enough.* Moving through one's own notes calls for a view
+organized around the note being consulted, which means re-centring the view on it. A fixed map has
+one view of the corpus for every query, and on a local neighbourhood-recovery instrument it scores
+0.056 (§3.5). Refitting a projection on the consulted note's neighbourhood does re-centre the view,
+but by construction it reads the corpus again for every view — re-coupling what the constraints
+decoupled — and it still scores only 0.023, for a frame 121× more expensive than the operator's.
+What is missing is a way to **re-centre the view on the query without re-coupling it to the
+corpus**.
 
-- **A local \( O(d) \) operator with a characterized numerical failure mode.** A stateless operator
-  evaluating one incoming vector against one active contextual frame in \( O(d) \) arithmetic and
-  \( O(d) \) memory, with non-degeneracy proven for collinear configurations via a deterministic
-  null-space fallback (Propositions 1–2) and an orthogonal decomposition identity for the residual
-  (Proposition 3). Proposition 3's algebraically equivalent scalar rearrangement is 1.47× faster and
-  must not be used: below \( d_{esc}/\|r\|_2 \approx 10^{-6} \) it returns finite, plausible values
-  wrong by factors of \( 10^3 \)–\( 10^5 \), and at two of the sweep's points its radicand stays
-  positive so the failure cannot be detected from inside. The identity is a theorem but not an
-  algorithm (§2, §B).
-- **Exact positional stability is free.** Any fixed linear map has it. A fixed random projection and
-  a once-fitted PCA hold every previously-placed point still across all seven growth steps, exactly
-  as the operator does, so stillness bounds nothing on its own. What the two baselines do establish
-  is that the operator's fidelity figures are not vacuous: the random projection lands near chance
-  on both instruments (0.5535 trustworthiness, 1.09× lift), while the PCA lands inside the
-  operator's own range (§3.2, §3.3).
-- **Pole selection is a knob, not a detail.** Across contrast axes trustworthiness moves over
-  0.6593–0.6966 and task-level lift over 1.42–1.57×, in opposite directions. Two leak-free selection
-  rules clear the PCA baseline's 0.6811, and the one that reaches the ceiling does it by aligning
-  with maximum variance — landing within noise of that PCA on *both* instruments, which is the
-  negative result the rule was written to test. The operator's distinctive behaviour lives at the
-  other end of the knob, where a part-based rule holds 1.17× lift on the 500-chunk corpus while
-  every other stable arm falls to chance (§3.4).
-- **A movable origin is the lever; better directions are not.** Re-anchoring on the query is worth
-  29× in local neighbourhood recovery (0.019 to 0.543) for one \( O(d) \) frame construction at
-  42.8 µs, against 5.2 ms for a locally refitted PCA and 69 ms for a global fit. That refitted PCA
-  scores *below* the global one, which supplies the mechanism: a linear projection reorients but
-  cannot recentre, and its two local components drop distant points on top of the query. The claim
-  is bounded in the same section: a radial coordinate \( (\langle v - q, e \rangle, \|v - q\|) \)
-  reaches 0.981 at 1.98 µs per stimulus while satisfying every constraint above. Most of the
-  operator's shortfall is a units mismatch in its own screen mapping: with \( \lambda \) rendered in
-  multiples of \( \|v_{dipole}\|_2 \) it reaches 0.925, which leaves the two close on this
-  instrument and makes the scale ratio of §2.1 a design rule rather than a free constant (§3.5).
+The Polar Projector is a local primitive for that. It evaluates one incoming vector against one
+active contextual frame — an anchor \( c_1 \) plus a contrast dipole \( (c_A, c_B) \) — in \( O(d) \)
+arithmetic and memory, returning a projection coefficient \( \lambda \in [-1, 1] \) and an orthogonal
+residual \( d_{esc} \geq 0 \) without reading the stored corpus: 4.57 µs per stimulus with a prepared
+frame and 11.75 µs stateless, with correctness guarantees proven in §2. Re-anchoring the frame on the
+consulted note re-centres the view without re-coupling it — the poles come from a codebook built once
+over the corpus (§3.5, §4.3) — and raises local neighbourhood recovery 29×, from 0.019 to 0.543, for a
+frame construction of 42.8 µs. The result is bounded from the start: a two-line radial coordinate
+centred on the query reaches 0.981 on the same instrument, under the same constraints, and most of
+the operator's remaining gap is the units of its screen mapping — with \( \lambda \) rendered in length
+units it reaches 0.925, in an exploratory ablation (§3.5).
+
+**Contributions.**
+
+- **A local \( O(d) \) operator with a characterized numerical failure mode.** Non-degeneracy is
+  proven for collinear poles via a deterministic null-space fallback (Proposition 2), and the residual
+  satisfies an orthogonal decomposition identity (Proposition 3). The identity's algebraically
+  equivalent scalar form is 1.47× faster and must not be used: below
+  \( d_{esc}/\|r\|_2 \approx 10^{-6} \) it returns finite, plausible values wrong by factors of
+  \( 10^3 \)–\( 10^5 \), and at two points of the sweep its radicand stays positive, so the failure
+  cannot be detected from inside (§2, §B).
+- **Decoupling from corpus state is cheap.** A fixed random projection and a once-fitted PCA hold
+  every placed point still across all seven growth steps without reading the corpus, exactly as the
+  operator does with a fixed frame, so stillness distinguishes nothing on its own. That the random
+  projection lands near chance on both fidelity instruments (0.5535 trustworthiness, 1.09× lift)
+  shows the instruments are not vacuous (§3.2, §3.3).
+- **Re-centring without re-coupling is what a local frame adds, and a radial coordinate does it
+  better.** Re-anchoring is worth 29× in local recovery, while a locally refitted PCA re-couples the
+  view and recovers less than a global one: moving a linear projection's origin changes no distance,
+  and what recovers the neighbourhood is a norm measured from the query (§3.5, §4.1). The radial
+  baseline bounds the operator, and the scale ratio of §2.1 is a design rule rather than a free
+  constant: in an exploratory ablation it moves local recall across most of its range, while the
+  global instruments of §3.2–§3.4 barely change (§3.4, §3.5).
 
 *What this paper is not.* It is not a demonstration that this operator should be preferred to the
 alternatives measured here. On every instrument we could construct, some baseline simple enough to
 write in a few lines either matches it or beats it, and those results are reported in the sections
-that would otherwise have carried the win. What survives is a primitive with proven guarantees, a
-documented failure mode, and a map of which of its design choices are load-bearing — which is the
-contribution we can support. The one property no instrument in this paper measures is what
-\( \lambda \)'s boundedness and interpretability are worth to a person navigating: it is a bounded
-coordinate between two named poles, where the radial baseline's horizontal axis is an arbitrary
-direction and its vertical axis is unbounded. §6 records that as the open question it is, rather
-than claiming it here.
+that would otherwise have carried the win. Nor does it establish what \( \lambda \) is worth as a
+control signal to a person navigating: no instrument here measures that, and §6 records it as open.
 
-*System context.* The constraints above are not hypothetical: the operator was extracted from
-Traianus, a local-first personal knowledge system the author is building, where it serves as the
-navigation primitive the two constraints describe. Traianus as a whole is at proof-of-concept stage,
-and this paper deliberately does not depend on it — the operator is packaged standalone with numpy
-as its only dependency, the corpus is frozen and hash-committed, and every figure below is either
-recomputed or checked against a committed artifact on every push. Reproducing the *operator's* own
-figures needs numpy alone; reproducing the baseline arms of §3.2 and §3.3 additionally needs
-`umap-learn` and `scikit-learn`, which the package deliberately does not require. What is claimed
-here is a property of the operator, not a demonstration that the surrounding system works.
-
-A third bottleneck — synchronous I/O blocking the interaction loop — is addressed at the systems
-level within the Traianus substrate, where this operator's output feeds a signal-filtering stage
-(a Schmitt Trigger) and an asynchronous batched-write path to SQLite WAL. That architecture is
-**out of scope for this paper** and is treated in forthcoming work; the persistence-related numbers
-reported in §3 are included only for deployment context, not as a claim proven here.
+*System context.* The requirements above are not hypothetical: the operator was extracted from
+Traianus, a local-first engine the author is building and on which a personal knowledge management
+application is built; within that engine it is the navigation primitive these requirements describe.
+Traianus as a whole is at proof-of-concept stage, and this paper
+deliberately does not depend on it — the operator is packaged standalone with numpy as its only
+dependency, the corpus is frozen and hash-committed, and every figure below is either recomputed or
+checked against a committed artifact on every push. Reproducing the *operator's* own figures needs
+numpy alone; reproducing the baseline arms of §3.2 and §3.3 additionally needs `umap-learn` and
+`scikit-learn`, which the package deliberately does not require. Persistence — how the system stores
+and indexes its corpus on disk — is addressed within Traianus and is out of scope here: *corpus
+state* in this paper means the content and size of the stored corpus, not its storage.
 
 ## Notation
 
