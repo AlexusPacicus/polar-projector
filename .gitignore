@@ -16,3 +16,6 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+# Generated arXiv LaTeX (tools/build_arxiv.py); rebuild from the Markdown
+paper/build/

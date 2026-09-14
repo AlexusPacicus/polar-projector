@@ -62,9 +62,10 @@ bounded at 0.19 ε in λ and 2.02 ε‖r‖ in `d_esc`. See §D.
 
 Anchor normalization, dipole-pole projection and dipole construction depend only on
 \( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
-context. At \( d = 384 \), float64, frame construction is **59.3%** of a stateless call
-(11.64 µs → `prepare` 6.90 µs + `evaluate` 4.56 µs), so the prepared form does **2.55× less work per
-interaction** whenever the context outlives a single stimulus.
+context. At \( d = 384 \), float64, frame construction is **59.7%** of a stateless call
+(`tools/decompose_polar_latency.py`: 11.51 µs stateless, `prepare` 6.87 µs), and with `evaluate` at
+4.57 µs against 11.75 µs for `project` (`bench/latency.py`) the prepared form does **2.57× less work
+per interaction** whenever the context outlives a single stimulus. Manuscript §3.1.
 
 `prepare()` fails loudly rather than returning plausible garbage: non-1-D inputs, mismatched pole
 shapes, \( d < 2 \), and dipoles whose squared norm underflows in float64 all raise `ValueError`.
@@ -94,14 +95,18 @@ pip install -e ".[test,repro]"
 | `bench/reanchor.py` | §3.5 local fidelity under re-anchoring; `--ablation` for the units decomposition |
 | `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
 | `bench/scale.py` | §3.2–§3.4 under a declared screen scale (E8), unit and isometric |
-| `bench/poles.py` | P1: where the named poles land on the λ axis in the published frame |
+| `bench/poles.py` | P1: where the published frame's poles land on the λ axis |
 | `bench/clamp.py` | §A and §B: the λ clamp substitution, re-measured and exported (A9) |
 
 The deterministic constructions these scripts use ship inside the package as
 `polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed
-distribution without cloning this repository. `paper/claims.md` registers every claim the manuscript makes against its script, artifact and
-verifier check; a claim marked checked that names no existing check fails the build. CI runs the §B and §C verifications on every
-push, so a change that silently moves a published number fails the build.
+distribution without cloning this repository.
+
+`tools/verify_paper_tables.py` runs in CI on every push. It recomputes the §B and §C tables from the
+operator, checks every other published figure against its committed artifact in `bench/results/`,
+requires each checked figure to be printed in the manuscript, and fails if a claim in
+`paper/claims.md` marked checked names a check that does not exist. A change that silently moves a
+published number, or a manuscript that quotes a figure no artifact holds, fails the build.
 
 Scripts under `bench/` write their results as JSON to `bench/results/`, in a common
 `{experiment, config, host, thread_env, results}` envelope; `bench/_harness.py` documents the
