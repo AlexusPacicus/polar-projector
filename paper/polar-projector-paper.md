@@ -905,13 +905,13 @@ should be kept in mind when interpreting the results:
 - **Proxy for semantic relevance.** The division of the text into five parts (`part`) serves as a
   coarse proxy for semantic coherence when computing same-part lift. It is not equivalent to a
   fine-grained evaluation of topical relevance or to a human judgement of usefulness.
-- **Pre-registration status and post hoc analysis.** The protocols of E1–E4 and E8 were committed
-  before their results, with two exceptions inside them: E1's two fixed linear baselines were
-  committed together with their results, and E2's dimension sweep was specified after E2's results.
-  E5, E6 and E7, the clamp re-measurement and the pole positions of §2.1 were likewise committed
-  together with their results, and the scale ablation on re-anchoring is post hoc; `paper/claims.md`
-  records the status of every figure. The manuscript includes no formal hypothesis tests and no
-  bootstrap confidence intervals.
+- **Pre-registration status and post hoc analysis.** The protocols of §3.2, Appendices A–C, and the
+  isometric-scale rerun of §3.2–§3.4 were committed before their results, with two exceptions inside
+  them: §3.2's two fixed linear baselines were committed together with their results, and Appendix
+  A's dimension sweep was specified after its own results. §3.3, §3.4 and §3.5, the clamp
+  re-measurement and the pole positions of §2.1 were likewise committed together with their results,
+  and the scale ablation on re-anchoring is post hoc; `paper/claims.md` records the status of every
+  figure. The manuscript includes no formal hypothesis tests and no bootstrap confidence intervals.
 - **Asymmetry of the published frame (P1).** In the static published frame (§3.2), the initial
   500-chunk window contains 409 chunks of P1_GOD and 91 of P2_MIND. As a consequence, the anchor
   \( c_1 \) is a convex combination of the two poles that places the projected poles at
