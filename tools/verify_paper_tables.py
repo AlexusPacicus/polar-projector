@@ -15,8 +15,14 @@ is the residue of cancellation and can shift by more than that under a
 different BLAS or a different libm. A tight relative band there would fail on
 somebody else's machine for no reason. What the guard must actually catch is a
 change of regime: someone swapping the vector form for the scalar one moves
-these numbers by four orders of magnitude or more. A half-decade band catches
-that with room to spare, and is honest about what it can and cannot detect.
+these numbers by four orders of magnitude or more.
+
+The published figures were measured on an Apple M1 (Accelerate). The first run
+on a second host -- GitHub Actions' ubuntu-latest, x86_64 -- showed the
+scalar-form error at d_esc/||r|| = 1e-7 land 1.21 decades away from the
+published 1.2e-3, still nine orders of magnitude worse than the vector form on
+both hosts. LOG_TOL is set to clear that gap with room to spare while staying
+far below the four-decade signal of an actual regime change.
 
 Reproduces the §C collinearity scenario on a controlled corpus of 10,000
 stimulus vectors in d=384 with a fixed seed (matching
@@ -54,10 +60,11 @@ N_VECTORS = 10_000
 DELTAS = (0.001, 0.010, 0.050, 0.100, 0.200, 0.500)
 RTOL = 0.03  # ~2.8% 2-sigma sampling bound on the variances at N=10,000
 
-# Section 3.2 is checked to within a half-decade: enough to catch a change of
+# Section 3.2 is checked to within two decades: enough to catch a change of
 # formulation (which moves it by 4+ orders of magnitude), loose enough to
-# survive a different BLAS computing the same cancellation.
-LOG_TOL = 0.5
+# survive a different BLAS computing the same cancellation -- see the module
+# docstring for the cross-host gap that motivated widening this from 0.5.
+LOG_TOL = 2.0
 
 # Published values from §B of paper/polar-projector-paper.md:
 # d_esc/||r|| -> (vector-form rel. error, scalar-form rel. error)
