@@ -1007,44 +1007,53 @@ and the next necessary step to determine whether the method is useful (§6).
 
 ## 6. Open Questions
 
-> TODO — draft, not reviewed. Four items, kept as a list rather than prose: each is an independent
-> open problem, and forcing transitions between unrelated questions would manufacture connections
-> that are not there. Earlier drafts carried eight; the four dropped were narrow numerical
-> questions about \( \epsilon_{collinear} \) tightness, sample size near collinearity, further
-> stabilization of the vector-form residual, and adversarial anchor dynamics. They remain open and
-> are recorded in the repository's issue history rather than padding this section.
+Each item below is an independent open problem, so they are kept as a list rather than joined into
+prose.
 
-- **What is a bounded, interpretable contrast coordinate worth?** This is the question the paper
-  cannot answer and the one everything else now rests on. §3.5's radial baseline beats the operator
-  at local neighbourhood recovery while meeting every constraint of §1, but its horizontal axis is
-  the projection onto an arbitrary direction and its vertical axis is unbounded. The operator's
-  \( \lambda \in [-1, 1] \) is a bounded coordinate between two *named* poles, which is what makes
-  it usable as an interface control signal rather than only as a position — and no instrument in
-  this paper measures that. A fair test is behavioural, not numerical: whether a person navigating
-  a corpus locates material faster, or builds a more durable spatial model, under a bounded named
-  axis than under an unbounded arbitrary one. Until that exists, §3.5's bound stands unqualified.
-- **Is intermittent relocation better or worse than steady drift?** §3.2 found UMAP fitted once and
-  extended by `transform()` to be bimodal — exactly still for 5 of 7 growth steps, then relocating
-  by 1.07. Our own moving-anchor arm does the opposite: it always moves a little (0.13–0.61) and
-  never spikes. Which profile damages a user's spatial mental model more is an empirical HCI
-  question that this paper's measurements cannot answer, and we decline to assume the answer
-  favours us. Boechler (2001) establishes that instability degrades navigation; it does not
-  distinguish these two shapes of instability.
-- **Is the trade-off of §3.4 a frontier or an artifact of one corpus?** Every rule that gained
-  trustworthiness lost task-level lift, on 2,221 chunks of one text with a five-way part label. That
-  the trade is real here does not establish that it is a property of the construction rather than of
-  this corpus's structure, and the part labels are a coarse proxy for relevance in any case. Open:
-  whether the same opposition appears on a corpus of a different shape, and whether a rule exists
-  that sits strictly above the line rather than on it.
-- **Detecting an unrepresentative anchor.** §4 notes that a centroid summarizing a bimodal
-  neighborhood can fall in the gap between its two modes, making it the least representative point
-  of both. Proposition 2 does not cover this — it handles a collapsed contrast axis, not a badly
-  placed origin — and every norm in Propositions 1–3 stays well-conditioned throughout, so the
-  operator returns confident values whose interpretation has quietly stopped holding. That is the
-  more dangerous of the two degeneracies and the one with no guard: what a cheap per-frame test for
-  it would look like, and whether \( d_{esc} \)'s own distribution across a context already carries
-  the signal, is unexamined. §3.5 sharpens this rather than resolving it: re-anchoring makes the
-  origin the most consequential choice in the construction, and nothing validates it.
+- **Is any of this useful to a person?** This is the question the whole design rests on, and nothing
+  in this paper answers it. Both requirements of §1 are assumptions: that a layout which never moves
+  placed notes helps people navigate an embedding canvas is extrapolated from hypertext navigation
+  (Boechler, 2001), and that re-centring the view on the consulted note helps them find related
+  material is assumed, not observed. No user took part in this work (§4.3). A behavioural study would
+  have to test both against baselines as simple as the ones §3 uses — a fixed map for stability, a
+  radial coordinate for re-centring — before any question about the operator's own coordinates is
+  worth asking.
+- **If re-centring helps, what does a bounded contrast axis add?** On local neighbourhood recovery
+  the radial coordinate bounds the operator — 0.981 on the same instrument, under the same
+  constraints (§3.5). The two views share an unbounded vertical axis and differ only in the
+  horizontal one: \( \lambda \), bounded by its clamp and built from two chosen poles, against a
+  projection onto an arbitrary direction. No instrument in this paper can tell whether that
+  difference matters to a person. A fair test is behavioural: whether someone navigating their own
+  corpus locates material faster, or keeps a more durable spatial model, with one horizontal axis
+  than with the other. Such a test would first have to settle what the ends of \( \lambda \) mean,
+  since in the published frame the poles sit at \( \lambda = +0.182 \) and \( \lambda = -0.818 \)
+  rather than at \( \pm 1 \) (§2.1).
+- **Is relocating in jumps worse than drifting a little?** UMAP fitted once and extended by
+  `transform()` is still at 5 of 7 growth steps and relocates at the other two, by 0.39 and 1.07;
+  the operator's moving-anchor arm moves at every step, by 0.13–0.61 at unit scale (§3.2). Which
+  profile does more damage to a user's spatial model is an empirical HCI question these
+  measurements cannot answer, and Boechler (2001), which establishes that instability degrades
+  navigation, does not distinguish the two.
+- **How often does re-anchoring re-couple?** A re-anchored frame reads the corpus only through a
+  codebook built once over it (§3.5), so a growing corpus eventually requires rebuilding that
+  codebook, and each rebuild reads the corpus again. How often a rebuild is needed as the corpus
+  grows, how much a rebuild changes views a user has already seen, and whether it can be done
+  incrementally are all unmeasured; §4.3 records the fixed codebook as a limitation of the
+  evaluation.
+- **Do the results hold beyond one corpus?** Every figure here comes from 2,221 chunks of one text,
+  one encoder and a five-way part label. Whether the trade-off of §3.4 — every rule that gained
+  trustworthiness lost task-level lift — belongs to the construction or to this corpus's structure,
+  whether a selection rule exists above that line rather than on it, and whether the re-centring
+  gain and the radial bound of §3.5 reappear on corpora of a different shape and under other
+  encoders, are open.
+- **Detecting an unrepresentative centroid.** A centroid that summarizes a bimodal context can fall
+  between its two modes and represent neither, while every norm in Propositions 1–3 stays
+  well-conditioned, so the operator returns confident values whose interpretation has stopped
+  holding and nothing here detects it (§4.3). In this paper the risk applies to the published
+  frame's anchor, the mean of the initial window, and to the centroids that serve as poles — part
+  centroids in the published frame, codebook centroids once a frame is re-anchored; a re-anchored
+  frame's origin is itself a real note. What a cheap per-frame test would look like, and whether the
+  distribution of \( d_{esc} \) across a context already carries the signal, is unexamined.
 
 ## Acknowledgements
 
