@@ -170,8 +170,7 @@ control signal to a person navigating: no instrument here measures that, and §6
 
 *System context.* The requirements above are not hypothetical: the operator was extracted from
 Traianus, a local-first engine the author is building and on which a personal knowledge management
-application is built; within that engine it is the navigation primitive these requirements describe.
-Traianus as a whole is at proof-of-concept stage, and this paper
+application is built. Traianus as a whole is at proof-of-concept stage, and this paper
 deliberately does not depend on it — the operator is packaged standalone with numpy as its only
 dependency, the corpus is frozen and hash-committed, and every figure below is either recomputed or
 checked against a committed artifact on every push. Reproducing the *operator's* own figures needs
