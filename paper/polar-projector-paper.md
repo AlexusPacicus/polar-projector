@@ -1,4 +1,4 @@
-# The Polar Projector: A Deterministic O(d) Subspace Operator, and the Trivial Baselines That Bound It
+# Decoupling Spatial Interaction from Corpus State: What a Local Frame Adds, and What Bounds It
 
 **Author:** Alexis Zapico
 **Affiliation:** Independent researcher
@@ -41,52 +41,26 @@
 
 ## Abstract
 
-A spatial interface over a personal knowledge corpus imposes two constraints that are easy to state
-and hard to satisfy together. **Adding one note must not move the others**, because the user's
-memory of where things are is the interface. And **each interaction must complete inside a frame
-budget**, because the layout is recomputed while the user is moving through it. Global
-dimensionality reduction satisfies neither: refitting UMAP or t-SNE as a corpus grows relocates
-previously-placed points even with the random seed pinned, and the refit itself costs seconds.
-
-We present the **Polar Projector**, a stateless local subspace operator that derives a planar
-position for an incoming vector \( v_n \) from an active contextual frame — a static anchor
-\( c_1 \) plus a contrast dipole \( (c_A, c_B) \) — in \( O(d) \) arithmetic and \( O(d) \) memory
-per stimulus, independently of corpus size \( N \), and without reading persistent storage. It
-returns a projection coefficient \( \lambda \in [-1, 1] \) along the dipole axis and an orthogonal
-residual \( d_{esc} \geq 0 \). We prove non-degeneracy for collinear configurations via a
-deterministic fallback direction in the anchor's null space (Propositions 1 and 2), and establish an
-orthogonal decomposition identity for the residual — exact whenever \( \lambda \) is unsaturated, an
-inequality once \( \lambda \) clamps at the dipole boundary (Proposition 3). Per-stimulus latency is
-4.57 µs with a prepared frame and 11.75 µs stateless, flat to 1.4% across corpora from 1,000 to
-25,000 vectors and to 0.4% across an 11× working set.
-
-**This paper is a measured account of what that construction buys, and it is bounded throughout by
-baselines simple enough that a reader may object they are too simple.** That is the point: each one
-satisfies every constraint stated above, and each bounds a different claim the operator might
-otherwise be read as making. Exact positional stability turns out to be free — any fixed linear map
-has it, and three arms hold every previously-placed point still across all seven growth steps of a
-2,221-chunk corpus, so stillness is a precondition rather than a result. On fidelity a once-fitted
-PCA lands *inside* the operator's own range (trustworthiness 0.6811 against 0.6639 at the frame we
-publish and 0.6593–0.6966 across selection rules), and the rule that reaches the fidelity ceiling
-does so by aligning with variance — which makes the operator behave like the PCA it was meant to
-improve on. Pole selection is therefore a knob, not a detail: it trades manifold preservation
-against task-level agreement, and the operator's distinctive behaviour lives at the agreement end,
-where it holds 1.17× lift on the smallest corpus while every other stable arm falls to chance.
-
-The one lever that is specific to a local frame is a **movable origin**. Re-anchoring on the query
-is worth 29× in local neighbourhood recovery (0.019 to 0.543) for a single \( O(d) \) frame
-construction of 42.8 µs, while refitting a linear map's directions on the query's own neighbourhood
-is *worse* than not refitting at all — a projection reorients but cannot recentre. Even there the
-operator is bounded: a two-line radial coordinate reaches 0.981 on the same instrument at 1.98 µs
-per stimulus, faster than the operator and subject to the same constraints. Most of that gap is
-units rather than information — rendering \( \lambda \) in multiples of \( \|v_{dipole}\|_2 \)
-instead of at unit scale lifts the operator to 0.925 — so the screen mapping's scale ratio is a
-design rule, not a free constant.
-
-What remains, and what we claim, is narrower than a dominating result and more useful than one: a
-correct and numerically characterized primitive — including an algebraically equivalent form of
-\( d_{esc} \) that loses all precision below \( d_{esc}/\|r\|_2 \approx 10^{-6} \) *undetectably* —
-together with a map of which parts of its design space are load-bearing and which are free.
+Spatial interfaces over personal knowledge corpora place each note on a canvas the user navigates.
+Global dimensionality reduction such as UMAP and t-SNE relocates placed points when refitted, even
+with a fixed seed, at a cost of seconds per refit, and stable or incremental projections soften that
+drift rather than remove it. Writing a note requires decoupling the interaction from the state of
+the corpus: new notes must not move placed ones, and placing one must not read what is stored.
+Navigating also requires re-centring the view on the note being consulted. Any fixed linear map
+meets the first requirement; the second is where methods differ. We present the Polar Projector, a
+local \( O(d) \) operator that places an incoming vector against an active frame, an anchor plus a
+contrast dipole, without reading the corpus, returning a clamped projection coefficient \( \lambda
+\in [-1, 1] \) and an orthogonal residual \( d_{esc} \geq 0 \). Its collinear configurations do not
+degenerate (Proposition 2), its residual decomposition is exact when \( \lambda \) is unsaturated
+(Proposition 3), and an algebraically equivalent scalar form of \( d_{esc} \) loses all precision
+below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), at two points undetectably. Re-anchoring the frame on
+the query re-centres the view without re-coupling it, beyond a codebook built once. Per-stimulus
+cost is 4.57 µs with a prepared frame, flat to 1.4% across corpora of 1,000 to 25,000 vectors. On
+2,221 chunks of Spinoza's *Ethics*, re-anchoring raises local neighbourhood recovery 29×, from 0.019
+to 0.543, while a local PCA refit reads the corpus again and recovers 0.023. A radial coordinate
+centred on the query bounds the operator at 0.981; rendering \( \lambda \) in length units lifts it
+to 0.925 in an exploratory ablation. No user took part, so whether any of this helps a person
+navigate remains open.
 
 ## 1. Introduction
 
