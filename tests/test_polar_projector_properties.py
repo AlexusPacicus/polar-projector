@@ -317,3 +317,26 @@ class TestPolarProjectorProperties:
             assert nearest - d_esc <= step * dipole_norm + tolerance, (
                 f"seed={seed} d={d}: d_esc {d_esc} below segment distance {nearest}"
             )
+
+    @P_DIMS_LIGHT
+    @P_SEED_20
+    def test_reanchored_residual_norm_folds_past_a_right_angle(self, d, seed):
+        """Paper §2.1: with c_1 = q on a unit-normalized corpus, ||r|| = sin(theta) folds past 90 degrees."""
+        rng = np.random.default_rng(seed)
+        q = rng.normal(size=d)
+        q /= np.linalg.norm(q)
+        w = rng.normal(size=d)
+        w -= np.dot(w, q) * q
+        w /= np.linalg.norm(w)
+        projector = PolarProjector()
+        c1_hat = projector._normalize_anchor(q)
+        norms = {}
+        for theta_deg in (10.0, 45.0, 90.0, 135.0, 170.0):
+            theta = np.radians(theta_deg)
+            v = np.cos(theta) * q + np.sin(theta) * w
+            r = projector._project_perp(v - q, c1_hat)
+            norms[theta_deg] = np.linalg.norm(r)
+            assert norms[theta_deg] == pytest.approx(np.sin(theta), abs=1e-9), (
+                f"seed={seed} d={d} theta={theta_deg}: ||r||={norms[theta_deg]}, sin(theta)={np.sin(theta)}"
+            )
+        assert norms[170.0] < norms[90.0], "the residual norm must fold back down past a right angle"

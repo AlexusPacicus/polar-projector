@@ -63,6 +63,7 @@ UNICODE_DECLARATIONS = {
     "▷": r"\ensuremath{\triangleright}",
     "⟨": r"\ensuremath{\langle}",
     "⟩": r"\ensuremath{\rangle}",
+    "°": r"\ensuremath{^\circ}",
 }
 
 MATH_SPAN = re.compile(r"\\\((.+?)\\\)|\\\[(.+?)\\\]", flags=re.S)

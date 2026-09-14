@@ -79,6 +79,7 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | A12 | The square root costs 1.0–1.6%, so the energy form is not worth shipping | checked | yes (4b159d0) | batched.json | `§D  sqrt saving` |
 | A13 | δ-sweep of the collinear fallback (§C) | checked | n/a (recomputed) | tools/generate_polar_delta_table.py | `recompute:§C` |
 | A14 | Under the isometric scale the screen distance to the anchor is S_y‖r‖₂ when λ is unsaturated and strictly less when it saturates; pairwise screen distances never exceed ‖r_i − r_j‖₂ ≤ ‖v_i − v_j‖₂, saturated points included; and d_esc is always the distance from r to the segment [−v_dipole, +v_dipole] | checked | n/a (derivation) | tests/test_polar_projector_properties.py | `pytest` |
+| A15 | When re-anchoring sets c_1 = q on a unit-normalized corpus, ‖r‖₂ = sinθ (θ the angle to the query): it rises to 1 at θ=90° and folds back to 0 as θ→180°, so a stimulus diametrically opposite the query lands on the anchor itself | checked | n/a (derivation) | tests/test_polar_projector_properties.py | `pytest` |
 
 ## Registered question
 

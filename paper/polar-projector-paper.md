@@ -388,6 +388,11 @@ changes \( \hat{c}_1 \), \( v_{dipole} \) and every stimulus's \( (\lambda, d_{e
 re-placed. Finally, \( d_{esc} \) is unbounded above while a viewport is not, so \( S_y \) requires a
 clipping policy that this paper does not specify.
 
+When re-anchoring sets \( c_1 = q \) on a unit-normalized corpus, \( \|r\|_2 \) is not monotone in the
+angle to the query: \( \|r\|_2 = \sin\theta \), rising to 1 at \( \theta = 90° \) and falling back
+toward 0 as \( \theta \to 180° \). A stimulus diametrically opposed to the query lands on the anchor
+itself, on screen indistinguishable from the query's own nearest neighbours.
+
 ![The published frame's 2,221 chunks placed on screen. Left, unit scale (\( S_x = S_y \)): \( \lambda \) spans the full width and the saturated stimuli, 11.39% of the corpus, collapse onto the clamp lines \( \lambda = \pm 1 \). Right, isometric scale (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)), same data and equal aspect: both axes are lengths and the horizontal spread shrinks accordingly. The poles sit at \( \lambda = +0.182 \) and \( \lambda = -0.818 \), not at \( \pm 1 \).](figures/fig1_screen_mapping.png)
 
 ## 3. Numerical Behavior
@@ -779,9 +784,12 @@ gap to the radial baseline's 0.981 is not established to have the same cause.
 ![Local recall@15 of the re-anchored operator as the screen ratio \( s = S_x / S_y \) varies, from the exploratory ablation. The unit scale (\( s = 1 \)) gives 0.543. Rendering \( \lambda \) in length units sets \( s = \|v_{dipole}\|_2 \) frame by frame, plotted at its median 0.463, and gives 0.925. The radial coordinate reaches 0.981 and \( \|r\|_2 \) alone 1.000.](figures/fig3_scale_ratio.png)
 
 *What that leaves the instrument able to settle.* Local recall@15 rewards any view whose distance
-from the query is monotone in true distance. At matched units both the radial baseline and the
-operator nearly are, so on this instrument they are close — 0.981 against 0.925 — rather than
-separated by the factor the unscaled row suggests. The defensible conclusions are the two above —
+from the query is monotone in true distance. The radial baseline's vertical axis is exactly that, for
+every stimulus. The operator's is not: with \( c_1 = q \), \( \|r\|_2 = \sin\theta \) is monotone only
+up to \( \theta = 90° \) and folds back toward the anchor beyond it (§2.1). Recall@15 cannot see the
+fold because every one of a query's 15 true nearest neighbours falls inside that range, which is why
+the two views are close on this instrument — 0.981 against 0.925 — rather than separated by the
+factor the unscaled row suggests. The defensible conclusions are the two above —
 re-anchoring matters, refitting directions does not — plus a design rule for §2.1: the scale ratio
 is not a free viewport constant, and \( S_x = \|v_{dipole}\|_2\, S_y \) is the ratio that preserves
 distance from the anchor. What the instrument cannot do is distinguish the two arms on what the
@@ -830,10 +838,14 @@ and costs 121× more per frame, and by construction it reads the corpus again fo
 re-anchoring does not. Re-centring alone would not rescue that projection: translation leaves
 every pairwise distance in a linear view unchanged, and a two-axis projection discards all but two of
 the 384 dimensions, so points far from the query in the discarded ones land on top of it. What
-re-anchoring adds is a coordinate that is a norm measured from the query — in the exploratory
-ablation of §3.5, \( \|r\|_2 \) alone recovers every neighbour of every query — and that coordinate
-measures distance from the query only once the origin sits there. What local exploration needs is an
-origin that moves with the query.
+re-anchoring adds is a coordinate that is a norm measured from the query, but not the same norm the
+radial baseline uses: removing \( \hat{c}_1 \) discards exactly the component of the residual that
+would otherwise disambiguate near from far, so \( \|r\|_2 = \sin\theta \) folds back down past
+\( \theta = 90° \) while the radial baseline's \( \|v - q\|_2 = 2\sin(\theta/2) \) does not (§2.1). In
+the exploratory ablation of §3.5, \( \|r\|_2 \) alone still recovers every neighbour of every query,
+because recall@15's true neighbours never reach that range — but the coordinate is not a general
+substitute for distance from the query, only a local one. What local exploration needs is an origin
+that moves with the query.
 
 *The radial baseline exploits the origin better, but the operator's gap was a unit mismatch that
 leaves the global instruments untouched.* The radial baseline reaches 0.981 local recall because
