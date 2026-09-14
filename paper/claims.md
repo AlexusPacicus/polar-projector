@@ -104,6 +104,7 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | C18 | Across the re-anchored frames of §3.5 the median share of saturated stimuli is 0.68% | checked | post hoc (07255f7) | reanchor_ablation.json | `§2.1 re-anchored saturation` |
 | C19 | Some methods need the stored corpus for each view: the refitted UMAP and t-SNE refit on every point present at each growth step, and the local PCA of §3.5 scans the corpus for the query's nearest neighbours before every view | construction | n/a | bench/drift.py `arm_umap_refit`, `arm_tsne_refit`; bench/reanchor.py `true_neighbours` before `pca_project` | — |
 | C20 | Some place a vector without reading the corpus: a fixed random projection, a once-fitted PCA after its fit, the operator's `evaluate()` against a fixed frame, and the radial coordinate. The re-anchored operator reads the corpus only through a codebook built once over all of it, so a growing corpus re-couples it at each rebuild | construction | n/a | bench/drift.py `arm_random_fixed`, `arm_pca_fit_once`; polar_projector/projector.py `evaluate`; bench/reanchor.py `build_codebook` and the radial arm | — |
+| C21 | UMAP fitted once and extended by transform() also needs the stored corpus for each view: transform() finds each new point's neighbours by searching self._raw_data, the training set kept in memory since fit(). Resolves R5, formerly "must not appear": the question was open only because nobody had read `transform()` | construction | n/a | umap-learn 0.5.12, `umap/umap_.py`: `UMAP.transform` calling `nearest_neighbors(X, self._raw_data, ...)` | — |
 
 ## Post hoc
 
@@ -119,7 +120,6 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | R2 | (λ, d_esc) is consumed as a planar position by at least one system | remove | — | the system this operator came from renders (λ, ⟨v, ĉ₁⟩); currently in §2.1 and §3.2 | — |
 | R3 | The O(N²) force-simulation column and the SQLite deployment figures | remove | — | reproduced by no code in this repository; removed from §3 in phase 4 | — |
 | R4 | Determinism is the paper's contribution | remove | — | removed from §4 in bd4de9b | — |
-| R5 | UMAP fitted once and extended by transform() does, or does not, need the stored corpus to place a new point | remove | — | not established by any code or measurement here; the revised question leaves it open | — |
 
 ## Exploration notebook
 

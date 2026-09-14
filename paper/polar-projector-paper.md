@@ -800,7 +800,7 @@ construction, not a measurement.
 | Method | Moves placed points as the corpus grows (§3.2) | Reads the stored corpus to place a point (construction) | Local recall@15 (§3.5) |
 |---|---|---|---:|
 | UMAP or t-SNE, refit per step | yes, at every step | yes | — |
-| UMAP, fit once + `transform()` | at 2 of 7 steps | not established | — |
+| UMAP, fit once + `transform()` | at 2 of 7 steps | yes, its own training set | — |
 | Fixed random projection | no | no | — |
 | PCA, fit once | no | no, after fitting | 0.056 |
 | PCA, refit on the query's neighbourhood | not measured | yes | 0.023 |
