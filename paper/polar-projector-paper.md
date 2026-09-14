@@ -739,7 +739,9 @@ interchangeable. Neither instrument touches the property that distinguishes them
 one view of the corpus, for every query, permanently. The operator's coordinates are
 anchor-relative, so moving the active context yields a different view, and §2.1 shows that moving
 it re-places every point by construction. Re-anchoring costs one `prepare()` — \( O(d) \), no
-corpus access.
+corpus access. In the terms of the question this paper answers, it re-centres the view on the query
+without re-coupling the view to the corpus; the refit below re-centres only by reading the corpus
+again.
 
 *Method.* 50 query chunks sampled under a fixed seed. For each query \( q \), local recall@15: of
 \( q \)'s 15 true nearest neighbours in the source 384-dimensional space, how many are among its 15
@@ -759,19 +761,21 @@ Per-stimulus cost is the same operation for every arm — placing one further ve
 already exists — because comparing frame-construction times would compare a one-off global fit
 against a per-query re-prepare. Poles for the re-anchored arm come from a 16-entry codebook built
 once over the corpus by k-means; per-query selection is the \( O(K \cdot d) \) codebook scan
-Proposition 1 already accounts for, so nothing here consults the corpus at query time.
+Proposition 1 already accounts for, so nothing here consults the corpus at query time — though a
+growing corpus would require rebuilding that codebook (§4.3).
 
 *The movable origin is the lever, and it is large.* The same operator goes from 0.019 to 0.543
 purely by moving the anchor to the query — a factor of 29 — for a frame construction 121× cheaper
 than the local PCA fit and 1,618× cheaper than the global one. This is the first measurement in this paper where a property
 specific to a local frame produces a difference of that size.
 
-*Better directions are not the lever.* The refitted PCA scores 0.023, *below* the global fit's
-0.056, and the mechanism is visible in the construction: a linear projection reorients but cannot
-recentre. Its two locally-fitted components span two of 384 dimensions, so points arbitrarily far
-from \( q \) can share a projection with it and land on top of it. Refitting the directions on the
-query's own neighbourhood — and paying 121× the frame cost, plus a corpus query to materialize that
-neighbourhood — buys less than not refitting at all. Whatever value the local frame has here comes
+*Better directions are not the lever, and they re-couple the view.* The refitted PCA scores 0.023,
+*below* the global fit's 0.056, and the reason is visible in the construction. Moving a linear
+projection's origin changes none of the distances in its view, and its two locally fitted components
+discard all but two of the 384 dimensions, so points far from \( q \) in the discarded ones land on
+top of it. Refitting the directions on the query's own neighbourhood — paying 121× the frame cost and,
+by construction, scanning the corpus for that neighbourhood before every view — buys less than not
+refitting at all. Whatever value the local frame has here comes
 from where it measures *from*, not from which directions it measures *along*.
 
 *The radial baseline leads, but most of the gap is the screen mapping's units.* A coordinate system
@@ -800,8 +804,9 @@ result across most of its range: \( (s\lambda, d_{esc}) \) scores 0.511, 0.628, 
 0.344 at \( s = 0.1, 0.25, 0.5, 1, 2 \). At \( s = \|v_{dipole}\|_2 \), Proposition 3 makes the
 view's distance from the query exactly \( \|r\|_2 \) wherever \( \lambda \) is unsaturated, and the
 operator reaches 0.925 with a median of 1.000. Because \( \|r\|_2 \) alone scores 1.000, what
-remains of the gap to the radial baseline can only come from saturated stimuli, where Proposition 3
-is an inequality and the view places them closer to the query than they are.
+remains between 0.925 and \( \|r\|_2 \) alone can only come from saturated stimuli, where
+Proposition 3 is an inequality and the view places them closer to the query than they are; the
+gap to the radial baseline's 0.981 is not established to have the same cause.
 
 *What that leaves the instrument able to settle.* Local recall@15 rewards any view whose distance
 from the query is monotone in true distance. At matched units both the radial baseline and the
@@ -817,6 +822,26 @@ of that would have to measure.
 
 ### 4.1 What the Results Answer
 
+The question this paper answers concerns two ways the interaction can be coupled to the state of the
+corpus: placed points moving as the corpus grows, and the corpus being read to place a point. The
+table arranges every measured method along both. Its middle column is a fact of each method's
+construction, not a measurement.
+
+| Method | Moves placed points as the corpus grows (§3.2) | Reads the stored corpus to place a point (construction) | Local recall@15 (§3.5) |
+|---|---|---|---:|
+| UMAP or t-SNE, refit per step | yes, at every step | yes | — |
+| UMAP, fit once + `transform()` | at 2 of 7 steps | not established | — |
+| Fixed random projection | no | no | — |
+| PCA, fit once | no | no, after fitting | 0.056 |
+| PCA, refit on the query's neighbourhood | not measured | yes | 0.023 |
+| Operator, the published frame | no | no | 0.019 |
+| Operator, re-anchored on the query | not measured | no, beyond a codebook built once | 0.543 |
+| Radial coordinate centred on the query | not measured | no | 0.981 |
+
+"—": not measured on that instrument. The PCA of §3.2 is fitted on the initial window and that of
+§3.5 on the whole corpus; both stay fixed after fitting. Local recall is at unit scale; with
+\( \lambda \) rendered in length units the re-anchored operator reaches 0.925 (exploratory, §3.5).
+
 *Positional stability does not distinguish the operator.* A fixed linear map has zero drift
 trivially: a Gaussian projection drawn once and a PCA frozen after the initial window hold every
 placed point still at 0.0000, exactly as the operator does with a fixed frame (§3.2). The class that
@@ -831,7 +856,8 @@ apart.
 anchor to the query (\( c_1 = q \)) raises local neighbourhood recovery 29×, from 0.019 to 0.543 at
 unit scale, for a frame construction of 42.8 µs (§3.5). Reorienting the view instead — refitting a
 linear projection on the query's own neighbourhood — fails to recover the local structure (0.023)
-and costs 121× more per frame. Re-centring alone would not rescue that projection: translation leaves
+and costs 121× more per frame, and by construction it reads the corpus again for every view, which
+re-anchoring does not. Re-centring alone would not rescue that projection: translation leaves
 every pairwise distance in a linear view unchanged, and a two-axis projection discards all but two of
 the 384 dimensions, so points far from the query in the discarded ones land on top of it. What
 re-anchoring adds is a coordinate that is a norm measured from the query — in the exploratory
