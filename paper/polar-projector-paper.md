@@ -389,6 +389,8 @@ changes \( \hat{c}_1 \), \( v_{dipole} \) and every stimulus's \( (\lambda, d_{e
 re-placed. Finally, \( d_{esc} \) is unbounded above while a viewport is not, so \( S_y \) requires a
 clipping policy that this paper does not specify.
 
+![The published frame's 2,221 chunks placed on screen. Left, unit scale (\( S_x = S_y \)): \( \lambda \) spans the full width and the saturated stimuli, 11.39% of the corpus, collapse onto the clamp lines \( \lambda = \pm 1 \). Right, isometric scale (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)), same data and equal aspect: both axes are lengths and the horizontal spread shrinks accordingly. The poles sit at \( \lambda = +0.182 \) and \( \lambda = -0.818 \), not at \( \pm 1 \).](figures/fig1_screen_mapping.png)
+
 ## 3. Numerical Behavior
 
 All figures in this section were measured on one machine: Apple M1 (8 cores), 8 GB RAM, macOS
@@ -506,6 +508,8 @@ Unmarked columns render the operator at \( S_x = S_y \) (§2.1). The isometric c
 \( \lambda \) in multiples of its frame's \( \|v_{dipole}\|_2 \), so both of its axes are lengths, as
 the other arms' already are; they apply to the operator's rows only, since no other arm has a
 \( \lambda \) axis (`bench/scale.py`, whose unit scale reproduces the unmarked columns exactly).
+
+![Aligned p95 displacement of previously placed points at each growth step, at unit scale (§3.2). The seed-pinned refits relocate points at every step; UMAP fitted once is still except at two steps, where it relocates by 0.39 and 1.07; the moving-anchor operator drifts by 0.13–0.61; the fixed random projection, the once-fitted PCA and the fixed-anchor operator stay at 0.0000.](figures/fig2_displacement.png)
 
 *What the stability column does not show.* Three arms are still at 7 of 7 steps, and two of them
 are a Gaussian matrix and an SVD. A fixed linear map's coordinates are a pure function of the
@@ -771,6 +775,8 @@ operator reaches 0.925 with a median of 1.000. Because \( \|r\|_2 \) alone score
 remains between 0.925 and \( \|r\|_2 \) alone can only come from saturated stimuli, where
 Proposition 3 is an inequality and the view places them closer to the query than they are; the
 gap to the radial baseline's 0.981 is not established to have the same cause.
+
+![Local recall@15 of the re-anchored operator as the screen ratio \( s = S_x / S_y \) varies, from the exploratory ablation. The unit scale (\( s = 1 \)) gives 0.543. Rendering \( \lambda \) in length units sets \( s = \|v_{dipole}\|_2 \) frame by frame, plotted at its median 0.463, and gives 0.925. The radial coordinate reaches 0.981 and \( \|r\|_2 \) alone 1.000.](figures/fig3_scale_ratio.png)
 
 *What that leaves the instrument able to settle.* Local recall@15 rewards any view whose distance
 from the query is monotone in true distance. At matched units both the radial baseline and the

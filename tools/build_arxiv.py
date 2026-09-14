@@ -10,6 +10,7 @@ What the build does, and why:
 - Strips the editorial note, which is repository scaffolding, and moves the title,
   author, date and abstract into pandoc metadata so they typeset as a title block.
 - Shifts headings up one level: the manuscript's "##" sections become \\section.
+- Points figures at the vector PDFs from tools/make_figures.py and copies them in.
 - Rewrites every "\\|" inside math as "\\Vert". In a Markdown pipe table pandoc reads
   "\\|" as an escaped cell separator and would print |r| for the norm ||r||.
 - Declares every non-ASCII character that pdfLaTeX (arXiv's default engine) cannot
@@ -28,6 +29,7 @@ Usage:
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -140,6 +142,11 @@ def main() -> int:
     abstract, abstract_norms = rewrite_math_norms(abstract)
     body, body_norms = rewrite_math_norms(body)
     body = shift_headings(body)
+    # Figures: the Markdown shows PNGs; LaTeX includes the vector PDFs beside them.
+    body, n_figures = re.subn(r"\]\(figures/([\w\-]+)\.png\)", r"](figures/\1.pdf)", body)
+    figures_dir = MANUSCRIPT.parent / "figures"
+    if n_figures:
+        shutil.copytree(figures_dir, out / "figures", dirs_exist_ok=True)
 
     metadata = "\n".join([
         "---",
@@ -156,7 +163,8 @@ def main() -> int:
     subprocess.run(
         [
             "pandoc", str(out / "arxiv.md"),
-            "--from", "markdown+tex_math_single_backslash-implicit_figures",
+            "--from", "markdown+tex_math_single_backslash",
+            "--resource-path", str(out),
             "--to", "latex", "--standalone",
             "--include-in-header", str(out / "header.tex"),
             "--columns", "100",
@@ -177,6 +185,8 @@ def main() -> int:
         problems.append("the editorial note reached the LaTeX")
     if re.search(r"\\\((?:(?!\\\)).)*\\textbar(?:(?!\\\)).)*\\\)", tex, flags=re.S):
         problems.append("a \\textbar survived inside inline math")
+    if tex.count("\\includegraphics") != n_figures:
+        problems.append("a figure in the manuscript did not reach the LaTeX")
     if tex_math < source_math:
         problems.append(f"math spans dropped: {source_math} in the manuscript, {tex_math} in the LaTeX")
 
@@ -184,7 +194,8 @@ def main() -> int:
     print(f"  sections {tex.count(chr(92) + 'section{')}, subsections {tex.count(chr(92) + 'subsection{')}, "
           f"tables {tex.count(chr(92) + 'begin{longtable}')}, math spans {tex_math} (manuscript {source_math})")
     print(f"  norms rewritten to \\Vert: {abstract_norms + body_norms}; "
-          f"unicode characters declared: {len(UNICODE_DECLARATIONS)}")
+          f"unicode characters declared: {len(UNICODE_DECLARATIONS)}; "
+          f"figures {tex.count(chr(92) + 'includegraphics')} (manuscript {n_figures})")
     todos = [m.start() for m in re.finditer(r"TODO", tex)]
     if todos:
         print(f"  WARNING: {len(todos)} TODO marker(s) still in the text")
