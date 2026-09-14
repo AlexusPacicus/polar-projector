@@ -836,7 +836,7 @@ measures distance from the query only once the origin sits there. What local exp
 origin that moves with the query.
 
 *The radial baseline exploits the origin better, but the operator's gap was a unit mismatch that
-leaves the global instruments untouched.* The `radial_plain` baseline reaches 0.981 local recall because
+leaves the global instruments untouched.* The radial baseline reaches 0.981 local recall because
 its vertical axis directly measures the exact Euclidean distance to the query. Most of the operator's
 initial gap came from expressing the dimensionless coefficient \( \lambda \) alongside the length
 \( d_{esc} \) at the same scale. Under the isometric rule (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)),
@@ -845,7 +845,7 @@ stimulus, raising recall to 0.925 (median 1.000) in the exploratory ablation of 
 remains between that figure and \( \|r\|_2 \) alone is confined to saturation at the boundaries.
 Likewise, while this scale corrects the local metric distance, on the global evaluations
 (§3.2–§3.4) it barely matters — at most 0.003 in trustworthiness and 0.02 in lift — and it leaves
-intact all four orderings of baselines and rules that F3 defined.
+intact all four orderings of baselines and rules that §3.4 defined.
 
 ### 4.2 Relation to Prior Work
 
