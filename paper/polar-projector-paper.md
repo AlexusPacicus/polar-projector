@@ -409,7 +409,8 @@ Stateless cost against corpus size, on synthetic unit vectors at \( d = 384 \), 
 
 Latency stays flat as \( N \) grows — 1.4% across a 25× corpus and a 25× working set, consistent
 with Proposition 1's independence from corpus size. `bench/latency.py --n-sweep`, 3 repetitions per
-row.
+row. Spreads and ratios throughout this manuscript are computed on unrounded measurements; reading
+them off the two-decimal figures printed in a table — 11.46 to 11.61 here — gives 1.3%, not 1.4%.
 
 ### 3.1 Frame Preparation vs. Per-Stimulus Cost
 
