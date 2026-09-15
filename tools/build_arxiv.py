@@ -182,7 +182,7 @@ def split_manuscript(text: str) -> tuple[str, dict[str, str], str, str]:
     title = lines[0][2:].strip()
 
     front = {}
-    for key in ("Author", "Affiliation", "Contact", "Date"):
+    for key in ("Author", "Affiliation", "Date"):
         match = re.search(rf"^\*\*{key}:\*\*\s*(.+)$", text, flags=re.M)
         if match is None:
             raise SystemExit(f"ERR: front matter has no **{key}:** line")
@@ -257,7 +257,7 @@ def main() -> int:
     metadata = "\n".join([
         "---",
         f"title: {yaml_block(title)}",
-        f"author: {yaml_block(front['author'] + ', ' + front['affiliation'] + ', ' + front['contact'])}",
+        f"author: {yaml_block(front['author'] + ', ' + front['affiliation'])}",
         f"date: {yaml_block(front['date'])}",
         f"abstract: {yaml_block(abstract)}",
         "---",

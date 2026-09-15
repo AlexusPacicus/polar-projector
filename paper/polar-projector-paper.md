@@ -2,7 +2,6 @@
 
 **Author:** Alexis Zapico
 **Affiliation:** Independent researcher
-**Contact:** alexis.zapfer@gmail.com
 **Date:** September 2026
 
 > **Editorial note — strip this block before submission.** It is repository scaffolding, not part
