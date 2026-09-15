@@ -1,4 +1,4 @@
-# Decoupling Spatial Interaction from Corpus State: What a Local Frame Adds, and What Bounds It
+# Decoupling Spatial Interaction from Corpus State: Re-centring Without Re-coupling
 
 **Author:** Alexis Zapico
 **Affiliation:** Independent researcher
