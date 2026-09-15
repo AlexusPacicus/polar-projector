@@ -1070,7 +1070,7 @@ prose.
 8. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
    Degenerate Cases in Geometric Algorithms. *ACM Transactions on Graphics*, 9(1), 66–104.
    DOI:10.1145/77635.77639.
-9. Espadoto, M., Martins, R. M., Hirata, N. S. T., Kerren, A., & Telea, A. C. (2021). Toward a
+9. Espadoto, M., Martins, R. M., Kerren, A., Hirata, N. S. T., & Telea, A. C. (2021). Toward a
    Quantitative Survey of Dimension Reduction Techniques. *IEEE Transactions on Visualization and
    Computer Graphics*, 27(3), 2153–2173.
 10. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
