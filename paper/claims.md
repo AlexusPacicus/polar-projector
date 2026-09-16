@@ -74,9 +74,9 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 | A7 | About 90% of per-call cost at d = 384 is dispatch; the crossover sits between d = 1,024 and 4,096 | checked | post hoc (protocol 21e8e45, specified after E2) | latency.json | `§A  d=`; `§3.1 dispatch`; `§3.1 O(d)` |
 | A8 | Clamping with min/max is bit-identical to np.clip | checked | no (c3dfb0b) | tests/test_polar_projector_unit.py | `pytest` |
 | A9 | The clamp substitution makes evaluate() 1.40× faster (6.34 → 4.54 µs). np.clip costs 1.88 µs per clamp against 0.23 µs, 30% of the old call, and outputs are bitwise identical on all 25,000 stimuli and 14 edge values | checked | no (re-measurement of figures c3dfb0b never exported) | bench/clamp.py → clamp.json | `§A  clamp` |
-| A10 | Batching peaks at 5.16× (B = 256), is 0.39× at B = 1, and is non-monotone | checked | yes (4b159d0) | bench/batched.py → batched.json | `§D  B=` |
-| A11 | Batched agreement is ≤ 0.19 ε in λ and ≤ 2.02 ε‖r‖ in d_esc; a permuted batch is not bitwise stable (≤ 0.12 ε in λ, ≤ 2.2e-16 in d_esc) | checked | yes (4b159d0) | batched.json | `§D  agreement`; `§D  row order` |
-| A12 | The square root costs 1.0–1.6%, so the energy form is not worth shipping | checked | yes (4b159d0) | batched.json | `§D  sqrt saving` |
+| A10 | Batching peaks at 5.16× (B = 256), is 0.39× at B = 1, and is non-monotone | remove | yes (4b159d0) | out of scope for the registered question — `evaluate_batch()` is never used by any §3 result; still exercised by bench/batched.py and pytest, no longer checked by tools/verify_paper_tables.py or stated in the manuscript (removed from Appendix D, phase 5) | — |
+| A11 | Batched agreement is ≤ 0.19 ε in λ and ≤ 2.02 ε‖r‖ in d_esc; a permuted batch is not bitwise stable (≤ 0.12 ε in λ, ≤ 2.2e-16 in d_esc) | remove | yes (4b159d0) | same as A10 | — |
+| A12 | The square root costs 1.0–1.6%, so the energy form is not worth shipping | remove | yes (4b159d0) | same as A10 | — |
 | A13 | δ-sweep of the collinear fallback (§C) | checked | n/a (recomputed) | tools/generate_polar_delta_table.py | `recompute:§C` |
 | A14 | Under the isometric scale the screen distance to the anchor is S_y‖r‖₂ when λ is unsaturated and strictly less when it saturates; pairwise screen distances never exceed ‖r_i − r_j‖₂ ≤ ‖v_i − v_j‖₂, saturated points included; and d_esc is always the distance from r to the segment [−v_dipole, +v_dipole] | checked | n/a (derivation) | tests/test_polar_projector_properties.py | `pytest` |
 | A15 | When re-anchoring sets c_1 = q on a unit-normalized corpus, ‖r‖₂ = sinθ (θ the angle to the query): it rises to 1 at θ=90° and folds back to 0 as θ→180°, so a stimulus diametrically opposite the query lands on the anchor itself | checked | n/a (derivation) | tests/test_polar_projector_properties.py | `pytest` |
@@ -117,7 +117,7 @@ occurs elsewhere in the paper passes. Phase 4 is done when `AWAITING_TEXT` is em
 
 | ID | Claim | Status | Pre-registered | Source | CI checks |
 |---|---|---|---|---|---|
-| R1 | λ is a bounded coordinate between two named poles | remove | — | contradicted by P1; currently in §1 (What this paper is not), §5 and §6 | — |
+| R1 | λ is a bounded coordinate between two named poles | remove | — | contradicted by P1; currently in §1 (What this paper is not), §5 and §4.3 | — |
 | R2 | (λ, d_esc) is consumed as a planar position by at least one system | remove | — | the system this operator came from renders (λ, ⟨v, ĉ₁⟩); currently in §2.1 and §3.2 | — |
 | R3 | The O(N²) force-simulation column and the SQLite deployment figures | remove | — | reproduced by no code in this repository; removed from §3 in phase 4 | — |
 | R4 | Determinism is the paper's contribution | remove | — | removed from §4 in bd4de9b | — |

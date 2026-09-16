@@ -20,9 +20,9 @@
 > `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
 > The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
 > compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (303 figures at present, produced by `bench/latency.py`,
+> committed artifact** in `bench/results/` (figures produced by `bench/latency.py`,
 > `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
-> `bench/conditioning.py`, `bench/batched.py` and `tools/decompose_polar_latency.py` against the
+> `bench/conditioning.py` and `tools/decompose_polar_latency.py` against the
 > hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
 > manuscript drifting away from its own measurements, not an error inside a benchmark.
 >
@@ -31,7 +31,7 @@
 > committed artifact like every other timing. `paper/claims.md` registers each claim against its
 > checks, and the verifier fails if a checked figure is not printed here.
 >
-> §4 and §6 are drafted but not reviewed and must not be treated as final. The speculative
+> §4 is drafted but not reviewed and must not be treated as final. The speculative
 > extensions carried by earlier drafts — multi-axis tangent frames and the tripolar model, adaptive
 > δ calibration, and active-codebook eviction — have been removed rather than relegated: none is
 > implemented in `polar_projector/projector.py`, and none supported a contribution this paper
@@ -64,11 +64,12 @@ navigate remains open.
 
 ## 1. Introduction
 
-A spatial interface over a personal knowledge corpus — a canvas on which the user reaches their own
-notes — is interactive at two moments. The first is *introducing a vector*: writing a note adds its
-embedding to the corpus and gives it a place on the canvas. The second is *navigating*: the user
-consults a note already in the corpus, and the view is organized around it. Each moment makes its
-own demands, and a static layout meets neither, because it never has to.
+**The interaction must be decoupled from the state of the corpus** — its content and its size. A
+spatial interface over a personal knowledge corpus — a canvas on which the user reaches their own
+notes — encounters that requirement at two moments. The first is *introducing a vector*: writing a
+note adds its embedding to the corpus and gives it a place on the canvas. The second is
+*navigating*: the user consults a note already in the corpus, and the view is organized around it.
+Each moment makes its own demands, and a static layout meets neither, because it never has to.
 
 Introducing a vector imposes two constraints:
 
@@ -79,9 +80,6 @@ Introducing a vector imposes two constraints:
 2. **Placing a note must not depend on what is stored.** The position is computed while the user
    works, so its cost cannot scale with how much the user has written, and computing it should not
    require reading the stored corpus.
-
-Both are one requirement seen twice: **the interaction must be decoupled from the state of the
-corpus** — its content and its size.
 
 *The premise, and its standing.* Both constraints are **assumptions this paper inherits, not
 results it establishes**, and the first one carries the weight. Boechler (2001) measures navigation
@@ -162,21 +160,17 @@ units it reaches 0.925, in an exploratory ablation (§3.5).
   global instruments of §3.2–§3.4 barely change (§3.4, §3.5).
 
 *What this paper is not.* It is not a demonstration that this operator should be preferred to the
-alternatives measured here. On every instrument we could construct, some baseline simple enough to
-write in a few lines either matches it or beats it, and those results are reported in the sections
-that would otherwise have carried the win. Nor does it establish what \( \lambda \) is worth as a
-control signal to a person navigating: no instrument here measures that, and §6 records it as open.
+alternatives measured here — on every instrument we could construct, some baseline simple enough to
+write in a few lines either matches it or beats it (§5) — nor does it establish what \( \lambda \)
+is worth as a control signal to a person navigating (§4.3).
 
 *System context.* The requirements above are not hypothetical: the operator was extracted from
-Traianus, a local-first engine the author is building and on which a personal knowledge management
-application is built. Traianus as a whole is at proof-of-concept stage, and this paper
-deliberately does not depend on it — the operator is packaged standalone with numpy as its only
-dependency, the corpus is frozen and hash-committed, and every figure below is either recomputed or
-checked against a committed artifact on every push. Reproducing the *operator's* own figures needs
-numpy alone; reproducing the baseline arms of §3.2 and §3.3 additionally needs `umap-learn` and
-`scikit-learn`, which the package deliberately does not require. Persistence — how the system stores
-and indexes its corpus on disk — is addressed within Traianus and is out of scope here: *corpus
-state* in this paper means the content and size of the stored corpus, not its storage.
+Traianus, a local-first engine the author is building at proof-of-concept stage, on which a personal
+knowledge management application is built. It is packaged standalone with numpy as its only
+dependency, so every figure below can be recomputed or checked against a committed artifact on every
+push. *Persistence* — how the system stores and indexes its corpus on disk — is addressed within
+Traianus and is out of scope here: *corpus state* in this paper means the content and size of the
+stored corpus, not its storage.
 
 ## Notation
 
@@ -543,7 +537,7 @@ steps and relocates at the other two, by 0.39 and then 1.07. Averaging across st
 figure that describes none of the steps that actually happen; the aggregation here is
 median-and-worst for that reason. Whether intermittent relocation is better or worse than steady
 drift is not settled by this measurement: a spatial mental model that is confirmed several times and
-then violated may be harmed more than one that is never trusted. §6 records it as open.
+then violated may be harmed more than one that is never trusted. §4.3 records it as open.
 
 Second: **the operator is the least faithful arm in the table.** Its trustworthiness (0.6639 fixed,
 0.6208 moving; 0.6666 and 0.6235 with \( \lambda \) in length units) sits below the refit baselines
@@ -572,7 +566,7 @@ the trustworthiness column is where it shows.
 
 ### 3.3 Task-Level Neighborhood Preservation: Same-Part Retrieval
 
-§3.2's trustworthiness column leaves an open question stated directly in §6: whether that
+§3.2's trustworthiness column leaves an open question stated directly in §4.3: whether that
 instrument is even the right one for a per-interaction signal. This section gives a second,
 task-shaped instrument on the same corpus and the same growth schedule, and lets a reader judge the
 fidelity gap against something more concrete than a manifold-preservation score: if a reader asked
@@ -638,7 +632,7 @@ are reported alongside it for that reason.
 *Scope.* This instrument answers a narrower question than trustworthiness — same-part agreement
 among 15 neighbours, not preservation of the full 384-dimensional neighborhood structure — and
 `part` is a coarse five-way proxy for semantic relevance, not a ground truth of what a reader would
-actually judge relevant. §6 revisits what agreement between the two instruments does and does not
+actually judge relevant. §4.3 revisits what agreement between the two instruments does and does not
 settle about the fidelity gap.
 
 ### 3.4 Pole Selection as a Trade-off Knob
@@ -792,7 +786,7 @@ factor the unscaled row suggests. The defensible conclusions are the two above �
 re-anchoring matters, refitting directions does not — plus a design rule for §2.1: the scale ratio
 is not a free viewport constant, and \( S_x = \|v_{dipole}\|_2\, S_y \) is the ratio that preserves
 distance from the anchor. What the instrument cannot do is distinguish the two arms on what the
-construction was built for, a contrast coordinate between two chosen poles; §6 records what a test
+construction was built for, a contrast coordinate between two chosen poles; §4.3 records what a test
 of that would have to measure.
 
 ## 4. Discussion
@@ -819,88 +813,72 @@ construction, not a measurement.
 §3.5 on the whole corpus; both stay fixed after fitting. Local recall is at unit scale; with
 \( \lambda \) rendered in length units the re-anchored operator reaches 0.925 (exploratory, §3.5).
 
-*Positional stability does not distinguish the operator.* A fixed linear map has zero drift
-trivially: a Gaussian projection drawn once and a PCA frozen after the initial window hold every
-placed point still at 0.0000, exactly as the operator does with a fixed frame (§3.2). The class that
-has this property is not "methods that avoid stochastic re-optimization" — UMAP fitted once and
-extended by `transform()` avoids it and still relocates points twice (§3.2) — but maps whose output
-is a pure function of the vector and of parameters that do not change. The operator belongs to that
-class only while its frame is fixed; when the anchor moves, its output moves with it,
-deterministically (§3.2). Stability is a precondition this design meets, not a property that sets it
-apart.
+*Positional stability does not distinguish the operator.* Any map whose output is a pure function
+of the vector and of parameters that do not change is exactly still — a Gaussian projection, a PCA
+frozen after the initial window, and the operator with a fixed frame all hold placed points at
+0.0000 (§3.2), while UMAP fitted once and merely *avoiding* re-optimization still relocates points
+twice. Stability is a precondition this design meets, not a property that sets it apart.
 
 *Re-centring the origin, not reorienting the axes, is the lever for local navigation.* Moving the
-anchor to the query (\( c_1 = q \)) raises local neighbourhood recovery 29×, from 0.019 to 0.543 at
-unit scale, for a frame construction of 42.8 µs (§3.5). Reorienting the view instead — refitting a
-linear projection on the query's own neighbourhood — fails to recover the local structure (0.023)
-and costs 121× more per frame, and by construction it reads the corpus again for every view, which
-re-anchoring does not. Re-centring alone would not rescue that projection: translation leaves
-every pairwise distance in a linear view unchanged, and a two-axis projection discards all but two of
-the 384 dimensions, so points far from the query in the discarded ones land on top of it. What
-re-anchoring adds is a coordinate that is a norm measured from the query, but not the same norm the
-radial baseline uses: removing \( \hat{c}_1 \) discards exactly the component of the residual that
-would otherwise disambiguate near from far, so \( \|r\|_2 = \sin\theta \) folds back down past
-\( \theta = 90° \) while the radial baseline's \( \|v - q\|_2 = 2\sin(\theta/2) \) does not (§2.1). In
-the exploratory ablation of §3.5, \( \|r\|_2 \) alone still recovers every neighbour of every query,
-because recall@15's true neighbours never reach that range — but the coordinate is not a general
-substitute for distance from the query, only a local one. What local exploration needs is an origin
-that moves with the query.
+anchor to the query raises local neighbourhood recovery 29×, while refitting the projection's
+directions on the query's own neighbourhood recovers less than not refitting at all (§3.5):
+translation changes no pairwise distance in a linear view, so a two-axis refit still discards the
+382 dimensions it never measured. What re-anchoring adds instead is a coordinate that is a norm
+measured from the query, but not the radial baseline's norm — removing \( \hat{c}_1 \) discards
+exactly the component that would disambiguate near from far, so \( \|r\|_2 = \sin\theta \) folds
+back past \( \theta = 90° \) while the radial baseline's \( \|v - q\|_2 = 2\sin(\theta/2) \) does not
+(§2.1), a fold recall@15 cannot see since every query's true neighbours fall inside that range. What
+local exploration needs is an origin that moves with the query; whether a bounded contrast axis adds
+anything beyond that is a separate, open question (§4.3).
 
-*The radial baseline exploits the origin better, but the operator's gap was a unit mismatch that
-leaves the global instruments untouched.* The radial baseline reaches 0.981 local recall because
-its vertical axis directly measures the exact Euclidean distance to the query. Most of the operator's
-initial gap came from expressing the dimensionless coefficient \( \lambda \) alongside the length
-\( d_{esc} \) at the same scale. Under the isometric rule (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)),
-Proposition 3 makes the screen distance to the query equal to \( \|r\|_2 \) for every unsaturated
-stimulus, raising recall to 0.925 (median 1.000) in the exploratory ablation of §3.5, and what
-remains between that figure and \( \|r\|_2 \) alone is confined to saturation at the boundaries.
-Likewise, while this scale corrects the local metric distance, on the global evaluations
-(§3.2–§3.4) it barely matters — at most 0.003 in trustworthiness and 0.02 in lift — and it leaves
-intact all four orderings of baselines and rules that §3.4 defined.
+*The operator's remaining gap to the radial baseline was mostly a unit mismatch.* Rendering
+\( \lambda \) under the isometric rule (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)) makes the screen
+distance to the query equal \( \|r\|_2 \) for unsaturated stimuli (Proposition 3), raising recall
+from 0.543 to 0.925 (§3.5); what is left between that and the radial baseline's 0.981 is saturation
+at the boundaries. The fix is free everywhere else: on the global evaluations of §3.2–§3.4 it moves
+trustworthiness by at most 0.003 and lift by at most 0.02, changing no ordering.
 
 ### 4.2 Relation to Prior Work
 
 The Polar Projector combines known linear-algebra identities into a volatile primitive oriented to
 human-computer interaction:
 
-- **Rank-1 orthogonal complement and Gram-Schmidt.** The projector
-  \( P_\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \) is the classical projection onto the
-  orthogonal complement of the anchor direction — the same identity as a single Gram-Schmidt step.
-  Its associative form avoids materializing the dense \( d \times d \) matrix, evaluating the
-  decomposition in \( O(d) \) memory and time.
-- **Embedding debiasing.** Removing a subspace with the orthogonal complement \( P_\perp \) is the same
-  projection used to debias word embeddings (Bolukbasi et al., 2016) when the removed bias subspace is
-  one-dimensional. The fundamental difference lies in when and where it is applied: Bolukbasi et al.
-  apply \( P_\perp \) as a global, static, one-time preprocessing step that permanently modifies the
-  stored embeddings. The Polar Projector applies it as a volatile \( O(d) \) operator per interaction
-  against an active anchor, without altering persisted representations.
-- **Centroid-difference axes and semantic axes.** Projecting embeddings onto the difference vector of
-  two groups, \( c_A - c_B \), is established practice in visualizing semantic relationships (Liu et
-  al., 2018; Bandyopadhyay et al., 2022) and in defining contrast axes (SemAxis, An et al., 2018;
-  semantic projection, Grand et al., 2022). What the Polar Projector adds by construction is removing
-  the anchor's component from both poles before building the axis. By linearity of \( P_\perp \),
-  \( P_\perp c_A - P_\perp c_B = P_\perp(c_A - c_B) \), which guarantees that the contrast dipole is
-  confined to the complement of the local anchor rather than to the raw embedding space. Those
-  methods also return a single scalar per item, a position along the axis; the operator returns the
-  residual \( d_{esc} \) as well, and with \( \lambda \) rendered at the isometric scale the pair
-  reconstructs \( \|r\|_2 \) for every unsaturated stimulus — the norm measured from the anchor that
-  §4.1 identifies as the lever for local navigation.
+- **Rank-1 orthogonal complement and Gram-Schmidt.** \( P_\perp v = v - \langle v, \hat{c}_1 \rangle
+  \hat{c}_1 \) (§2) is the classical projection onto the orthogonal complement of the anchor — the
+  same identity as a single Gram-Schmidt step, evaluated associatively to avoid the dense
+  \( d \times d \) matrix.
+- **Embedding debiasing.** Removing a subspace with \( P_\perp \) is the same projection used to
+  debias word embeddings (Bolukbasi et al., 2016) when the removed bias subspace is one-dimensional;
+  the difference is when and where it is applied. Bolukbasi et al. use it as a global, static,
+  one-time preprocessing step that permanently alters the stored embeddings, while the Polar
+  Projector applies it per interaction against an active anchor, without touching persisted
+  representations.
+- **Centroid-difference and semantic axes.** Projecting onto the difference of two group centroids,
+  \( c_A - c_B \), is established practice for visualizing semantic relationships (Liu et al., 2018;
+  Bandyopadhyay et al., 2022) and for contrast axes (SemAxis, An et al., 2018; semantic projection,
+  Grand et al., 2022). The Polar Projector removes the anchor's component from both poles first — by
+  linearity, \( P_\perp c_A - P_\perp c_B = P_\perp(c_A - c_B) \), confining the dipole to the
+  anchor's complement — and returns the residual \( d_{esc} \) alongside the scalar those methods
+  stop at, reconstructing \( \|r\|_2 \) at the isometric scale (§4.1).
 - **Locality-sensitive hashing.** As in random-hyperplane LSH (Charikar, 2002), evaluating the
-  projection reduces to an inner product. However, LSH is stochastic by design and targets
-  approximate retrieval over a global corpus, whereas the Polar Projector is deterministic, uses
-  chosen rather than random references, and evaluates relative direction against a local active
-  state.
+  projection reduces to an inner product — but LSH is stochastic and targets approximate retrieval
+  over a global corpus, while the Polar Projector is deterministic, uses chosen rather than random
+  references, and evaluates direction against a local active state.
 
-### 4.3 Limitations
+### 4.3 Limitations and Open Questions
 
-The experimental body and the formal characterization of the operator have explicit boundaries that
-should be kept in mind when interpreting the results:
+The experimental body and the formal characterization of the operator have explicit boundaries; each
+item below states what was not tested and, where it applies, what would need to be measured to close
+the gap:
 
-- **Scope of corpus, encoder and platform.** All quantitative evaluation runs on a single corpus
-  (2,221 chunks of Spinoza's *Ethics*), a single embedding model (`all-MiniLM-L6-v2`) and a single
-  passively cooled host (Apple M1). Absolute timings reflect this specific platform; the ratios
-  between arms and the flatness in \( N \) should depend on it less, but neither was measured on
-  another host.
+- **Scope of corpus, encoder and platform — untested beyond one of each.** All quantitative
+  evaluation runs on a single corpus (2,221 chunks of Spinoza's *Ethics*), a single embedding model
+  (`all-MiniLM-L6-v2`) and a single passively cooled host (Apple M1). Absolute timings reflect this
+  specific platform; the ratios between arms and the flatness in \( N \) should depend on it less,
+  but neither was measured on another host. Whether the trade-off of §3.4 — every rule that gained
+  trustworthiness lost task-level lift — belongs to the construction or to this corpus's structure,
+  and whether the re-centring gain and the radial bound of §3.5 reappear on corpora of a different
+  shape and under other encoders, are open.
 - **Proxy for semantic relevance.** The division of the text into five parts (`part`) serves as a
   coarse proxy for semantic coherence when computing same-part lift. It is not equivalent to a
   fine-grained evaluation of topical relevance or to a human judgement of usefulness.
@@ -916,47 +894,61 @@ should be kept in mind when interpreting the results:
   \( c_1 \) is a convex combination of the two poles that places the projected poles at
   \( \lambda = +0.182 \) and \( \lambda = -0.818 \), making clear that \( \lambda = \pm 1 \) is the bound
   of the clamp and not the position of the poles.
-- **Fixed codebook for re-anchoring.** In the re-anchoring evaluation (§3.5), the contrast poles are
-  selected from a static codebook of \( K = 16 \) centroids precomputed globally by k-means. Although
-  the codebook scan costs \( O(K \cdot d) \) without consulting the corpus at query time, the view
-  depends on how representative those \( K \) fixed centroids are, and \( K \) was not varied.
-- **Anchor degeneracy in bimodal distributions.** If the active context spans a bimodal distribution,
-  a centroid anchor \( c_1 \) can fall in the gap between the two clusters and represent neither.
-  Proposition 2 resolves the collapse of the dipole but not a badly placed origin. Every norm in
-  Propositions 1–3 stays perfectly well-conditioned, so the operator returns confident values whose
-  interpretation has stopped holding, with no internal test that detects the failure.
-- **No behavioural tests with users.** The design requirement of positional stability is an
-  extrapolation from the hypertext-navigation literature, not something tested here (§1).
-  Whether a bounded contrast coordinate \( \lambda \in [-1, 1] \) is more useful as a control
-  signal than a pure radial distance is correspondingly open (§6).
+- **If re-centring helps, what does a bounded contrast axis add?** On local neighbourhood recovery
+  the radial coordinate bounds the operator — 0.981 on the same instrument, under the same
+  constraints (§3.5). The two views share an unbounded vertical axis and differ only in the
+  horizontal one: \( \lambda \), bounded by its clamp and built from two chosen poles, against a
+  projection onto an arbitrary direction. No instrument in this paper can tell whether that
+  difference matters to a person; a fair test is behavioural, and would first have to settle what the
+  ends of \( \lambda \) mean, since the poles sit at \( +0.182 \) and \( -0.818 \) rather than at
+  \( \pm 1 \) in the published frame.
+- **Fixed codebook for re-anchoring, and how often it must be rebuilt.** In the re-anchoring
+  evaluation (§3.5), the contrast poles are selected from a static codebook of \( K = 16 \) centroids
+  precomputed globally by k-means; the scan costs \( O(K \cdot d) \) without consulting the corpus at
+  query time, but the view depends on how representative those \( K \) fixed centroids are, and
+  \( K \) was not varied. A growing corpus eventually requires rebuilding that codebook, which reads
+  the corpus again — how often a rebuild is needed, how much it changes views a user has already
+  seen, and whether it can be done incrementally, are all unmeasured.
+- **Anchor degeneracy in bimodal distributions, with no internal detector.** If the active context
+  spans a bimodal distribution, a centroid anchor \( c_1 \) can fall in the gap between the two
+  clusters and represent neither; Proposition 2 resolves the collapse of the dipole but not a badly
+  placed origin, and every norm in Propositions 1–3 stays well-conditioned, so the operator returns
+  confident values whose interpretation has stopped holding, with nothing here that detects it. The
+  risk applies to the published frame's anchor and to the centroids that serve as poles — part
+  centroids in the published frame, codebook centroids once re-anchored — and a re-anchored frame's
+  origin is itself a real note. What a cheap per-frame test would look like, and whether the
+  distribution of \( d_{esc} \) already carries the signal, is unexamined.
+- **Is relocating in jumps worse than drifting a little?** UMAP fitted once and extended by
+  `transform()` is still at 5 of 7 growth steps and relocates at the other two, by 0.39 and 1.07;
+  the operator's moving-anchor arm moves at every step, by 0.13–0.61 at unit scale (§3.2). Which
+  profile does more damage to a user's spatial model is an empirical HCI question these measurements
+  cannot answer, and Boechler (2001), which establishes that instability degrades navigation, does
+  not distinguish the two.
+- **No behavioural tests with users — the question the whole design rests on.** The design
+  requirement of positional stability is an extrapolation from the hypertext-navigation literature
+  (§1), and nothing here tests it, or whether a bounded contrast coordinate \( \lambda \in [-1, 1] \)
+  is more useful as a control signal than a pure radial distance. A behavioural study would have to
+  test both against baselines as simple as the ones §3 uses — a fixed map for stability, a radial
+  coordinate for re-centring — before any question about the operator's own coordinates is worth
+  asking.
 
 ## 5. Conclusion
 
 This work began as a search for a way to decouple the interaction from the state of the corpus in a
-spatial interface, and the results support a narrower account. Decoupling the placement of a vector
-from the corpus turns out to be trivial: any fixed linear map achieves it without reading the corpus.
-What a local frame adds is a way to re-centre the view on a note without re-coupling the interaction
-to the corpus: re-anchoring on the query raises local neighbourhood recovery 29× without reading the
-corpus beyond a codebook built once, whereas a local refit re-centres only by reading the corpus
-again, and recovers less (0.023). That lever is nonetheless bounded by a two-line radial coordinate
-centred on the query, which reaches 0.981 local recovery against the operator's 0.925 under the
-isometric scale, an exploratory figure.
+spatial interface, and the results support a narrower account: decoupling is trivial for any fixed
+linear map, and what a local frame adds is re-centring the view on the query without re-coupling it
+to the corpus — a lever a two-line radial coordinate still bounds (§3.5, §4.1).
 
-The operator itself is correct: its collinear configurations do not degenerate, thanks to a
-deterministic null-space fallback (Proposition 2); its residual decomposition is exact when
-\( \lambda \) does not saturate (Proposition 3); and its per-stimulus latency is flat across a 25×
-range of corpus sizes. The numerical analysis also shows that the scalar form of the residual loses
-all precision below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), at two points of the sweep undetectably,
-while the vector form stays stable: of the two forms measured, it is the one to use. These are the
-properties that can be handed to whoever implements the system.
+The operator itself is correct: its collinear configurations do not degenerate (Proposition 2), its
+residual decomposition is exact when \( \lambda \) does not saturate (Proposition 3), and its
+per-stimulus latency is flat across a 25× range of corpus sizes. The scalar form of the residual
+loses all precision below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), undetectably at two points of the
+sweep, while the vector form stays stable — these are the properties that can be handed to whoever
+implements the system.
 
-What the evidence cannot hand them is a reason to prefer the operator on numerical metrics alone.
-Positional stability does not distinguish it, since any fixed linear map keeps placed points still
-trivially. On manifold preservation, a PCA frozen after the initial window sits inside the operator's
-own range, and the pole-selection rule that reaches the highest fidelity does so by aligning with
-variance, which makes the operator interchangeable with a fixed PCA. And re-centring the origin — the
-one lever specific to a local frame — still falls short of a radial coordinate subject to the same
-constraints.
+What the evidence cannot hand them is a reason to prefer the operator on numerical metrics alone
+(§4.1): stability, manifold preservation and re-centring are each matched or beaten by a baseline
+simple enough to write in a few lines.
 
 For whoever implements this primitive, the results mark explicit design decisions:
 
@@ -977,69 +969,16 @@ For whoever implements this primitive, the results mark explicit design decision
   built from labelled parts is the only one that keeps signal (1.17×) on the 500-chunk corpus.
 - **Check the frame's saturation.** \( \lambda = \pm 1 \) is the clamp's domain boundary, not the
   location of the poles; check what share of points saturates for the frames in use.
-- **Pick the entry point according to batching needs.** `evaluate_batch` gives up to 5.16× at
-  \( B = 256 \), but is slower at \( B = 1 \) and does not guarantee bitwise identity across
-  permutations of the batch, because of BLAS reduction order. Where exact point-by-point
-  reproducibility matters, use the scalar path, `evaluate()`.
 
 We report these negative bounds because they clarify the design space in a way positive results
-would not. That a fixed random projection lands near chance on the fidelity instruments shows those
-instruments are not vacuous. That a locally refitted PCA fails despite being centred on the
-neighbourhood shows that neither moving a linear projection's origin nor reorienting its axes recovers
-the neighbourhood — and refitting re-couples the view to the corpus besides. And showing that pole
-selection trades manifold preservation against lift tells an implementer which knob they are
-actually turning.
+would not: that a fixed random projection lands near chance shows the fidelity instruments are not
+vacuous, that a locally refitted PCA fails despite being centred on the neighbourhood shows neither
+moving nor reorienting a linear projection recovers it, and that pole selection trades preservation
+against lift tells an implementer which knob they are actually turning.
 
 The question this numerical analysis cannot answer, and the one that will ultimately decide the
-operator's practical usefulness, is behavioural rather than numerical (§6) — a contact with reality
+operator's practical usefulness, is behavioural rather than numerical (§4.3) — a contact with reality
 this work does not make.
-
-## 6. Open Questions
-
-Each item below is an independent open problem, so they are kept as a list rather than joined into
-prose.
-
-- **Is any of this useful to a person?** This is the question the whole design rests on, and nothing
-  in this paper answers it: both requirements of §1 are inherited assumptions, not observations
-  (§1, §4.3). A behavioural study would have to test both against baselines as simple as the ones §3
-  uses — a fixed map for stability, a radial coordinate for re-centring — before any question about
-  the operator's own coordinates is worth asking.
-- **If re-centring helps, what does a bounded contrast axis add?** On local neighbourhood recovery
-  the radial coordinate bounds the operator — 0.981 on the same instrument, under the same
-  constraints (§3.5). The two views share an unbounded vertical axis and differ only in the
-  horizontal one: \( \lambda \), bounded by its clamp and built from two chosen poles, against a
-  projection onto an arbitrary direction. No instrument in this paper can tell whether that
-  difference matters to a person. A fair test is behavioural: whether someone navigating their own
-  corpus locates material faster, or keeps a more durable spatial model, with one horizontal axis
-  than with the other. Such a test would first have to settle what the ends of \( \lambda \) mean,
-  since in the published frame the poles sit at \( \lambda = +0.182 \) and \( \lambda = -0.818 \)
-  rather than at \( \pm 1 \) (§2.1).
-- **Is relocating in jumps worse than drifting a little?** UMAP fitted once and extended by
-  `transform()` is still at 5 of 7 growth steps and relocates at the other two, by 0.39 and 1.07;
-  the operator's moving-anchor arm moves at every step, by 0.13–0.61 at unit scale (§3.2). Which
-  profile does more damage to a user's spatial model is an empirical HCI question these
-  measurements cannot answer, and Boechler (2001), which establishes that instability degrades
-  navigation, does not distinguish the two.
-- **How often does re-anchoring re-couple?** A re-anchored frame reads the corpus only through a
-  codebook built once over it (§3.5), so a growing corpus eventually requires rebuilding that
-  codebook, and each rebuild reads the corpus again. How often a rebuild is needed as the corpus
-  grows, how much a rebuild changes views a user has already seen, and whether it can be done
-  incrementally are all unmeasured; §4.3 records the fixed codebook as a limitation of the
-  evaluation.
-- **Do the results hold beyond one corpus?** Every figure here comes from 2,221 chunks of one text,
-  one encoder and a five-way part label. Whether the trade-off of §3.4 — every rule that gained
-  trustworthiness lost task-level lift — belongs to the construction or to this corpus's structure,
-  whether a selection rule exists above that line rather than on it, and whether the re-centring
-  gain and the radial bound of §3.5 reappear on corpora of a different shape and under other
-  encoders, are open.
-- **Detecting an unrepresentative centroid.** A centroid that summarizes a bimodal context can fall
-  between its two modes and represent neither, while every norm in Propositions 1–3 stays
-  well-conditioned, so the operator returns confident values whose interpretation has stopped
-  holding and nothing here detects it (§4.3). In this paper the risk applies to the published
-  frame's anchor, the mean of the initial window, and to the centroids that serve as poles — part
-  centroids in the published frame, codebook centroids once a frame is re-anchored; a re-anchored
-  frame's origin is itself a real note. What a cheap per-frame test would look like, and whether the
-  distribution of \( d_{esc} \) across a context already carries the signal, is unexamined.
 
 ## References
 
@@ -1104,11 +1043,10 @@ prose.
 
 ## Appendix
 
-The four appendices below are retained in full — every figure still reproduces, and
+The three appendices below are retained in full — every figure still reproduces, and
 `tools/verify_paper_tables.py` still covers their tables — but each answers a narrower question than
-§3 does: whether the implementation is numerically sound and
-how it behaves off the single-stimulus path, rather than whether the operator works as a navigation
-substrate.
+§3 does: whether the implementation is numerically sound, rather than whether the operator works as
+a navigation substrate.
 
 ### Appendix A — Dimension Sweep and Where Dispatch Stops Dominating
 
@@ -1233,84 +1171,3 @@ fixed seed, so any reader can regenerate this exact table. \( \sigma^2_{d_{esc}}
 constant floor for \( \delta \geq 0.1 \), where the fallback branch stops dominating the residual;
 below that, shrinking \( \delta \) inflates \( R \) by orders of magnitude as the dipole norm
 collapses toward its \( 2\delta \) floor (Proposition 2).
-
-*Methodological note:* an earlier pass of this table at \( N = 1{,}000 \) reproduced only 4 of 6
-rows within a 5% tolerance band — the two small-\( \delta \) rows deviated by 9–12%, consistent
-with the theoretical ≈4.5% sampling error at that N in the near-collinear regime. This table
-supersedes it.
-
-### Appendix D — Batched Subspace Evaluation
-
-*`evaluate_batch()` ships in `polar_projector/projector.py` and the figures below are measured by
-`bench/batched.py`. It is in the appendix because it sits off the single-stimulus path §3 measures,
-not because it is unimplemented — and because the determinism claims of §2 and §4 are stated for
-the scalar entry points, which is the distinction this section exists to make precise.*
-
-The associative projection \( P^\perp v = v - \langle v, \hat{c}_1 \rangle \hat{c}_1 \) extends
-directly to batched inputs \( V \in \mathbb{R}^{B \times d} \):
-
-\[ V P^\perp = V - (V \hat{c}_1) \hat{c}_1^T \]
-
-which evaluates \( B \) stimuli against a fixed frame in \( \mathcal{O}(B \cdot d) \) without
-instantiating a dense \( d \times d \) intermediate — Proposition 1's identity applied row-wise.
-Against a Python loop over `evaluate()`, both arms measured under the same protocol
-(\( d = 384 \), float64, \( N = 16{,}384 \)):
-
-| \( B \) | Loop (µs/vec) | Batched (µs/vec) | Speedup | Vectors/s | Temporaries (MB) |
-|---|---|---|---|---|---|
-| 1 | 5.380 | 13.874 | **0.39×** | 72,075 | 0.01 |
-| 4 | 5.464 | 3.649 | 1.50× | 274,064 | 0.04 |
-| 16 | 4.689 | 1.568 | 2.99× | 637,692 | 0.15 |
-| 64 | 4.904 | 1.102 | 4.45× | 907,198 | 0.59 |
-| 256 | 4.610 | 0.893 | **5.16×** | 1,119,291 | 2.36 |
-| 1,024 | 4.468 | 1.283 | 3.48× | 779,626 | 9.44 |
-| 4,096 | 4.481 | 1.624 | 2.76× | 615,720 | 37.75 |
-
-*The gain is bounded and non-monotone.* Speedup peaks at \( B = 256 \) and **falls thereafter**,
-to 2.76× by \( B = 4{,}096 \) — the opposite of the "larger batches are better" reading the
-identity invites. The last column explains it: the implementation holds three \( (B \times d) \)
-temporaries, and at \( B = 256 \) they occupy 2.36 MB, while at \( B = 1{,}024 \) they occupy
-9.44 MB and stop fitting alongside the input in this host's shared L2. Past that point the routine
-is memory-bandwidth bound and batching buys less, not more. A caller choosing a batch size should
-choose one that keeps \( 3Bd \) floats in cache, not the largest one available.
-
-*At \( B = 1 \) batching is 2.6× slower than not batching.* This is reported because omitting it
-would be choosing the range that flatters the result: a batch of one pays the setup and receives no
-amortization. `evaluate()` remains the right entry point for a single stimulus.
-
-*What the speedup is made of.* §A established that at \( d = 384 \) per-call cost is dominated
-by the number of array operations issued, not by arithmetic. The batched path issues a fixed number
-of NumPy calls regardless of \( B \), so what it amortizes is dispatch overhead — roughly 4.5 µs per
-vector in the loop — rather than floating-point work. The flop count is unchanged. This is why the
-ceiling is around 5× and not an order of magnitude, and why the ceiling is set by memory traffic
-once dispatch has been amortized away.
-
-*Agreement is bounded, not exact.* The batched path is **not** bitwise identical to a loop over
-`evaluate()`, and the divergence begins at the matrix-vector product rather than at the norm: BLAS
-switches to a blocked reduction order once \( B \geq 2 \), which a sequence of single-row dot
-products does not use. Measured across all batch sizes above, the deviation is at most
-\( 0.19\,\varepsilon \) in \( \lambda \) and \( 2.02\,\varepsilon\|r\|_2 \) in \( d_{esc} \). The
-normalization by \( \|r\|_2 \) is not cosmetic: the error in \( d_{esc} \) is amplified by
-\( \|r\|_2/d_{esc} \), so a *relative* tolerance would pass on generic stimuli and fail in exactly
-the near-collinear regime of §B.
-
-Two consequences follow, and the implementation documents both rather than leaving them to be
-discovered. First, \( \texttt{evaluate\_batch}(V)_i \) **is not a pure function of** \( V_i \) and
-the frame: permuting a batch and un-permuting the result is not bitwise stable at \( B = 64 \),
-\( 1{,}024 \) or \( 4{,}096 \), though the magnitude is last-bit
-(\( \leq 0.12\,\varepsilon \) in \( \lambda \), \( \leq 2.2 \times 10^{-16} \) in \( d_{esc} \)).
-This qualifies the "deterministic execution for fixed inputs" claim §2 makes for the scalar path:
-it holds there, and holds for the batched path only at fixed batch composition and order. Second,
-the API exposes **no chunk size parameter**, because splitting a batch is a reduction-order change
-and would silently alter results.
-
-*The square root is free, so the energy form is not implemented.* Returning
-\( E_{esc} = \|r_{esc}\|_2^2 \) instead of \( d_{esc} \) would skip the square-root instruction in
-hot loops. Measured, that saving is **1.0–1.6%** across \( B \in \{64, 1{,}024,
-4{,}096\} \) — one square root against \( d = 384 \) multiply-accumulates, which is within the
-run-to-run spread of the measurement itself. The proposal is therefore withdrawn rather than
-shipped: adding a second return shape to the API to save nothing measurable would be a cost with no
-corresponding benefit. The Corollary of §2 stands as an exposition device, which is all it claimed
-to be, and \( E_{esc} \) remains available to any caller as `d_esc ** 2` — which is precisely the
-"square the numerically stable vector-form residual" the Corollary requires, and never the expanded
-form §B measured losing all precision near collinearity.

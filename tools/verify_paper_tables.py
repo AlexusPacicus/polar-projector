@@ -314,25 +314,6 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§B  scalar-form mean", "3.10", con["latency"]["scalar_form"]["mean"]))
     out.append(("§B  scalar speedup", "1.47", con["scalar_speedup"]))
 
-    # Appendix D batched throughput
-    bat = _load("batched.json")
-    for b, loop, batch, speed, vps in [("1", "5.380", "13.874", "0.39", "72075"),
-                                       ("4", "5.464", "3.649", "1.50", "274064"),
-                                       ("16", "4.689", "1.568", "2.99", "637692"),
-                                       ("64", "4.904", "1.102", "4.45", "907198"),
-                                       ("256", "4.610", "0.893", "5.16", "1119291"),
-                                       ("1024", "4.468", "1.283", "3.48", "779626"),
-                                       ("4096", "4.481", "1.624", "2.76", "615720")]:
-        s = bat["throughput"][b]
-        out.append((f"§D  B={b} scalar loop", loop, s["scalar_loop_us_per_vec"]))
-        out.append((f"§D  B={b} evaluate_batch", batch, s["evaluate_batch_us_per_vec"]))
-        out.append((f"§D  B={b} speedup", speed, s["speedup"]))
-        out.append((f"§D  B={b} vectors/s", vps, s["vectors_per_second"]))
-    # the sqrt is free: every measured saving rounds to <= 2%
-    for b in ("64", "1024", "4096"):
-        out.append((f"§D  sqrt saving B={b} <2%", "0.0",
-                    round(bat["sqrt_cost"][b]["saving"], 1)))
-
     # Appendix A dimension sweep
     for d, ev, floor, ratio in [("16", "4.18", "0.72", "5.78"), ("64", "4.12", "0.74", "5.58"),
                                 ("256", "4.54", "0.90", "5.07"), ("384", "4.58", "1.08", "4.25"),
@@ -371,16 +352,6 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
         out.append((f"§B  undetectable 1e{exponent} scalar error mantissa", mantissa, float(significand)))
         out.append((f"§B  undetectable 1e{exponent} scalar error power", power, int(error_exponent)))
         out.append((f"§B  undetectable 1e{exponent} radicand negative", "0", int(s["scalar_negative_under_sqrt"])))
-
-    # Appendix D: agreement with the scalar loop and row-order sensitivity, worst case over B
-    agreement = list(bat["agreement"].values())
-    out.append(("§D  agreement max dlambda/eps", "0.19", max(a["max_dlambda_over_eps"] for a in agreement)))
-    out.append(("§D  agreement max dd_esc/(eps r)", "2.02", max(a["max_desc_over_eps_r"] for a in agreement)))
-    row_order = list(bat["row_order"].values())
-    out.append(("§D  row order max dlambda/eps", "0.12", max(r["max_dlambda_over_eps"] for r in row_order)))
-    out.append(("§D  row order max dd_esc (x1e-16)", "2.2", max(r["max_ddesc_abs"] for r in row_order) / 1e-16))
-    out.append(("§D  row order bitwise-identical batch sizes", "0",
-                sum(int(r["bitwise_identical"]) for r in row_order)))
 
     # E8 declared scale (bench/scale.py). Isometric renders lambda in multiples of ||v_dipole||.
     sc = _load("scale.json")
@@ -537,7 +508,7 @@ PAPER = Path(__file__).resolve().parent.parent / "paper" / "polar-projector-pape
 AWAITING_TEXT: tuple[str, ...] = ()
 
 # Rows that check a derived condition rather than a number the paper prints.
-NOT_A_PRINTED_FIGURE = ("§D  sqrt saving", "§B  clamp refusal share")
+NOT_A_PRINTED_FIGURE = ("§B  clamp refusal share",)
 
 
 def _verify_presence(checks: list[tuple[str, str, float]]) -> int:
