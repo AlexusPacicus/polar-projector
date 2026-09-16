@@ -4,39 +4,6 @@
 **Affiliation:** Independent researcher
 **Date:** September 2026
 
-> **Editorial note — strip this block before submission.** It is repository scaffolding, not part
-> of the manuscript.
->
-> This file is canonical for the manuscript. An earlier draft was mirrored by hand into a Corca
-> document (https://corca.app/doc/er5CXGbjDUaGnbFE45Hse); that copy has since diverged substantially
-> and is superseded, not synchronized. Edits belong here, where CI checks the figures.
->
-> Provenance: this operator and its test suite were extracted, with git history, from the
-> Traianus substrate (https://github.com/AlexusPacicus/Traianus), where the design record lives
-> in `docs/LEDGER.md` seq 40-43. The extraction exists so this manuscript can be reproduced with
-> numpy alone, without the substrate's fastapi/torch dependency stack.
->
-> Status: DRAFT. Sections 1–3, §5 and the appendices are grounded, and
-> `tools/verify_paper_tables.py` — which CI runs on every push — checks them two different ways.
-> The tables in §B and §C are **recomputed** from `polar_projector/projector.py` on every run and
-> compared cell by cell. Every other published figure is checked for **consistency with its
-> committed artifact** in `bench/results/` (figures produced by `bench/latency.py`,
-> `bench/drift.py`, `bench/recall.py`, `bench/frame_sensitivity.py`, `bench/reanchor.py`,
-> `bench/conditioning.py` and `tools/decompose_polar_latency.py` against the
-> hash-committed corpus in `bench/data/`). The second check is the weaker of the two: it catches a
-> manuscript drifting away from its own measurements, not an error inside a benchmark.
->
-> No figure in §3 now escapes both checks: the \( O(N^2) \) column and the SQLite deployment numbers
-> carried over from the substrate were removed, and §3.5's timing columns are checked against their
-> committed artifact like every other timing. `paper/claims.md` registers each claim against its
-> checks, and the verifier fails if a checked figure is not printed here.
->
-> §4 is drafted but not reviewed and must not be treated as final. The speculative
-> extensions carried by earlier drafts — multi-axis tangent frames and the tripolar model, adaptive
-> δ calibration, and active-codebook eviction — have been removed rather than relegated: none is
-> implemented in `polar_projector/projector.py`, and none supported a contribution this paper
-> claims.
-
 ---
 
 ## Abstract
@@ -168,8 +135,8 @@ is worth as a control signal to a person navigating (§4.3).
 *System context.* The requirements above are not hypothetical: the operator was extracted from
 Traianus, a local-first engine the author is building at proof-of-concept stage, on which a personal
 knowledge management application is built. It is packaged standalone with numpy as its only
-dependency, so every figure below can be recomputed or checked against a committed artifact on every
-push. *Persistence* — how the system stores and indexes its corpus on disk — is addressed within
+dependency, so every figure below can be recomputed or checked against the committed artifacts.
+*Persistence* — how the system stores and indexes its corpus on disk — is addressed within
 Traianus and is out of scope here: *corpus state* in this paper means the content and size of the
 stored corpus, not its storage.
 
@@ -294,33 +261,30 @@ reading would most need to be trustworthy.
 §3.1's measurement both turn on: steps 1–12 depend only on the frame \( (c_1, c_A, c_B) \) and run
 once per active context, while steps 13–17 are the only work a new stimulus costs.
 
-```
-────────────────────────────────────────────────────────────────────────────
- Algorithm 1   Polar Projector — frame preparation and per-stimulus evaluation
-────────────────────────────────────────────────────────────────────────────
- PREPARE(c₁, c_A, c_B)                            ▷ once per active context
-     require  d ≥ 2,  finite inputs,  δ > 0,  ε_norm > 0,  ε_collinear > 0
-  1  if ‖c₁‖₂ > ε_norm  then  ĉ₁ ← c₁/‖c₁‖₂   else  ĉ₁ ← 0
-  2  c_A⊥ ← c_A − ⟨c_A, ĉ₁⟩·ĉ₁                                      ▷ O(d)
-  3  c_B⊥ ← c_B − ⟨c_B, ĉ₁⟩·ĉ₁                                      ▷ O(d)
-  4  d_raw ← c_A⊥ − c_B⊥
-  5  if ‖d_raw‖₂ ≥ ε_collinear then
-  6      v_dipole ← d_raw
-  7  else                                    ▷ collinear fallback, Prop. 2
-  8      k ← argmin_i |ĉ₁[i]|                ▷ canonical; ties break by index
-  9      σ ← √(1 − ĉ₁[k]²)                   ▷ closed form, Remark above
- 10      u⊥ ← (−ĉ₁[k]/σ)·ĉ₁ ;   u⊥[k] ← σ    ▷ no e_k, no dot, no norm pass
- 11      v_dipole ← 2δ·u⊥
- 12  return frame ← (c₁, ĉ₁, v_dipole, ‖v_dipole‖₂²)
-
- EVALUATE(vₙ, frame)                              ▷ per stimulus, hot path
- 13  r ← (vₙ − c₁) − ⟨vₙ − c₁, ĉ₁⟩·ĉ₁                                ▷ O(d)
- 14  λ* ← ⟨r, v_dipole⟩ / ‖v_dipole‖₂²          ▷ norm cached in the frame
- 15  λ  ← min(max(λ*, −1), 1)                   ▷ scalar clamp, not np.clip
- 16  d_esc ← ‖r − λ·v_dipole‖₂                  ▷ vector form, never scalar
- 17  return (λ, d_esc)
-────────────────────────────────────────────────────────────────────────────
-```
+$$
+\begin{aligned}
+&\text{PREPARE}(c_1, c_A, c_B) &&\triangleright\;\text{once per active context}\\
+&\quad\text{require}\ d \geq 2,\ \text{finite inputs},\ \delta > 0,\ \varepsilon_{\mathrm{norm}} > 0,\ \varepsilon_{\mathrm{collinear}} > 0\\
+1\quad&\textbf{if}\ \lVert c_1\rVert_2 > \varepsilon_{\mathrm{norm}}\ \textbf{then}\ \hat c_1 \leftarrow c_1/\lVert c_1\rVert_2\ \textbf{else}\ \hat c_1 \leftarrow 0\\
+2\quad&c_{A\perp} \leftarrow c_A - \langle c_A, \hat c_1\rangle\,\hat c_1 &&\triangleright\; O(d)\\
+3\quad&c_{B\perp} \leftarrow c_B - \langle c_B, \hat c_1\rangle\,\hat c_1 &&\triangleright\; O(d)\\
+4\quad&d_{\mathrm{raw}} \leftarrow c_{A\perp} - c_{B\perp}\\
+5\quad&\textbf{if}\ \lVert d_{\mathrm{raw}}\rVert_2 \geq \varepsilon_{\mathrm{collinear}}\ \textbf{then}\\
+6\quad&\quad v_{\mathrm{dipole}} \leftarrow d_{\mathrm{raw}}\\
+7\quad&\textbf{else} &&\triangleright\;\text{collinear fallback, Prop. 2}\\
+8\quad&\quad k \leftarrow \arg\min_i\, |\hat c_1[i]| &&\triangleright\;\text{canonical; ties break by index}\\
+9\quad&\quad \sigma \leftarrow \sqrt{1 - \hat c_1[k]^2} &&\triangleright\;\text{closed form, Remark above}\\
+10\quad&\quad u_\perp \leftarrow (-\hat c_1[k]/\sigma)\,\hat c_1\,;\quad u_\perp[k] \leftarrow \sigma &&\triangleright\;\text{no } e_k,\ \text{no dot, no norm pass}\\
+11\quad&\quad v_{\mathrm{dipole}} \leftarrow 2\delta\, u_\perp\\
+12\quad&\textbf{return}\ \text{frame} \leftarrow (c_1,\ \hat c_1,\ v_{\mathrm{dipole}},\ \lVert v_{\mathrm{dipole}}\rVert_2^2)\\[6pt]
+&\text{EVALUATE}(v_n,\ \text{frame}) &&\triangleright\;\text{per stimulus, hot path}\\
+13\quad&r \leftarrow (v_n - c_1) - \langle v_n - c_1, \hat c_1\rangle\,\hat c_1 &&\triangleright\; O(d)\\
+14\quad&\lambda^* \leftarrow \langle r, v_{\mathrm{dipole}}\rangle\, /\, \lVert v_{\mathrm{dipole}}\rVert_2^2 &&\triangleright\;\text{norm cached in the frame}\\
+15\quad&\lambda \leftarrow \min\bigl(\max(\lambda^*, -1),\, 1\bigr) &&\triangleright\;\text{scalar clamp, not }\texttt{np.clip}\\
+16\quad&d_{\mathrm{esc}} \leftarrow \lVert r - \lambda\cdot v_{\mathrm{dipole}}\rVert_2 &&\triangleright\;\text{vector form, never scalar}\\
+17\quad&\textbf{return}\ (\lambda,\ d_{\mathrm{esc}})
+\end{aligned}
+$$
 
 Nothing in either half iterates to convergence, draws a random number, or reads persistent storage,
 which is what makes Propositions 1–3 hold per call rather than in expectation. Two steps encode
@@ -940,8 +904,8 @@ the gap:
   them: §3.2's two fixed linear baselines were committed together with their results, and Appendix
   A's dimension sweep was specified after its own results. §3.3, §3.4 and §3.5, the clamp
   re-measurement and the pole positions of §2.1 were likewise committed together with their results,
-  and the scale ablation on re-anchoring is post hoc; `paper/claims.md` records the status of every
-  figure. The manuscript includes no formal hypothesis tests and no bootstrap confidence intervals.
+  and the scale ablation on re-anchoring is post hoc, as the accompanying claims registry records
+  for every figure. The manuscript includes no formal hypothesis tests and no bootstrap confidence intervals.
 - **Asymmetry of the published frame (P1).** In the static published frame (§3.2), the initial
   500-chunk window contains 409 chunks of P1_GOD and 91 of P2_MIND. As a consequence, the anchor
   \( c_1 \) is a convex combination of the two poles that places the projected poles at
@@ -1192,8 +1156,8 @@ not a usable substitute: it subtracts nearly equal quantities as \( d_{esc} \) s
 
 Generated by `bench/conditioning.py`; both forms scored against a residual known analytically by
 construction (`polar_projector.fixtures.near_collinear_stimulus`), with \( \lambda \) pinned at 0.5
-so conditioning is measured without saturation confounding it. CI re-derives these four rows on
-every push (`tools/verify_paper_tables.py`).
+so conditioning is measured without saturation confounding it. These four rows are re-derived from
+the operator by `tools/verify_paper_tables.py`.
 
 Below \( d_{esc}/\|r\|_2 \approx 10^{-6} \) the scalar form returns values uncorrelated with the
 true distance, while the vector form degrades gracefully across the full sweep. This is not a
