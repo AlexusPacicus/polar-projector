@@ -91,6 +91,7 @@ _MINIPAGE_SPLIT = re.compile(r"\\end\{minipage\}\s*&\s*")
 _TEXTT_CELL = re.compile(r"\\texttt\{([^}]*)\}")
 TABLE_MIN_FRACTION = 0.08
 TABLE_MONO_WEIGHT = 1.6
+WIDE_TABLE_COLUMNS = 7
 
 
 def _cell_text(cell: str) -> str:
@@ -222,13 +223,43 @@ def yaml_block(value: str) -> str:
 
 
 def header_tex() -> str:
+    # pdfLaTeX already maps some of these characters (‖ ← ⟨ ⟩ °) to text-mode commands, and
+    # newunicodechar warns when it redefines them. The kernel's \DeclareUnicodeCharacter
+    # overrides silently, so pdfLaTeX gets that; engines with native Unicode (XeTeX, used by
+    # Tectonic) get newunicodechar, where nothing is predefined. The redefinition itself is
+    # needed: ° appears inside math, where the kernel's \textdegree is not allowed.
     lines = [
         r"\usepackage{amsmath,amssymb}",
-        r"\usepackage{newunicodechar}",
+        r"\usepackage{iftex}",
         r"\usepackage{microtype}",
+        r"\ifPDFTeX",
     ]
-    lines += [rf"\newunicodechar{{{ch}}}{{{tex}}}" for ch, tex in UNICODE_DECLARATIONS.items()]
+    lines += [rf"  \DeclareUnicodeCharacter{{{ord(ch):04X}}}{{{tex}}}" for ch, tex in UNICODE_DECLARATIONS.items()]
+    lines += [r"\else", r"  \usepackage{newunicodechar}"]
+    lines += [rf"  \newunicodechar{{{ch}}}{{{tex}}}" for ch, tex in UNICODE_DECLARATIONS.items()]
+    lines += [r"\fi"]
     return "\n".join(lines) + "\n"
+
+
+def allow_breaks(tex: str) -> tuple[str, int]:
+    r"""Keep wide tables and DOIs inside the text block instead of overflowing into the margin.
+
+    A table with WIDE_TABLE_COLUMNS or more columns cannot give every header its longest word on
+    one line at body size ("Trustworthiness" beside "farthest_neighbourhoods"), and forcing
+    hyphenation splits headers badly, so those tables are set in \footnotesize with narrower
+    column gaps. A DOI printed as
+    plain text has no break points at all; as \url it breaks at its slashes and dots.
+    """
+    whole_table = re.compile(r"\\begin\{longtable\}\[\]\{@\{\}\n(.*?)@\{\}\}\n.*?\\end\{longtable\}", flags=re.S)
+
+    def shrink(m: re.Match[str]) -> str:
+        if m.group(1).count("\\real{") < WIDE_TABLE_COLUMNS:
+            return m.group(0)
+        return "\\begingroup\\footnotesize\\setlength{\\tabcolsep}{4pt}\n" + m.group(0) + "\n\\endgroup"
+
+    tex = whole_table.sub(shrink, tex)
+    tex, n_dois = re.subn(r"DOI:(10\.\S+?)\.(?=\s)", lambda m: r"DOI:\url{" + m.group(1) + "}.", tex)
+    return tex, n_dois
 
 
 def main() -> int:
@@ -285,6 +316,7 @@ def main() -> int:
     )
 
     tex, n_rebalanced = rebalance_table_columns((out / "main.tex").read_text(encoding="utf-8"))
+    tex, n_breaks = allow_breaks(tex)
     (out / "main.tex").write_text(tex, encoding="utf-8")
 
     source_math = len(MATH_SPAN.findall(source[source.index("## Abstract"):]))
@@ -305,7 +337,7 @@ def main() -> int:
     print(f"  norms rewritten to \\Vert: {abstract_norms + body_norms}; "
           f"unicode characters declared: {len(UNICODE_DECLARATIONS)}; "
           f"figures {tex.count(chr(92) + 'includegraphics')} (manuscript {n_figures})")
-    print(f"  table columns rebalanced by content: {n_rebalanced}")
+    print(f"  table columns rebalanced by content: {n_rebalanced}; break points added: {n_breaks}")
     todos = [m.start() for m in re.finditer(r"TODO", tex)]
     if todos:
         print(f"  WARNING: {len(todos)} TODO marker(s) still in the text")

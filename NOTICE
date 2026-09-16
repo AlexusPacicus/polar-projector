@@ -1,0 +1,8 @@
+Polar Projector
+Copyright 2026 Alexis Zapico-Fernández
+
+The source code in this repository is licensed under the Apache License,
+Version 2.0 (see LICENSE). The manuscript and figures under paper/ and the
+frozen corpus data under bench/data/ are licensed under the Creative Commons
+Attribution 4.0 International License (see paper/LICENSE.md and
+bench/data/LICENSE.md).

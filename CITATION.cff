@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software or build on the paper, please cite the paper."
+title: "Polar Projector"
+type: software
+authors:
+  - family-names: Zapico-Fernández
+    given-names: Alexis
+repository-code: "https://github.com/AlexusPacicus/polar-projector"
+license: Apache-2.0
+version: "1.0-paper"
+date-released: "2026-09-16"
+keywords:
+  - embeddings
+  - dimensionality reduction
+  - spatial interfaces
+  - personal knowledge management
+  - numerical analysis
+preferred-citation:
+  type: report
+  title: "Decoupling Spatial Interaction from Corpus State: Re-centring Without Re-coupling"
+  authors:
+    - family-names: Zapico-Fernández
+      given-names: Alexis
+  year: 2026
+  month: 9
+  url: "https://github.com/AlexusPacicus/polar-projector/releases/tag/v1.0-paper"
+  license: CC-BY-4.0

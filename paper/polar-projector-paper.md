@@ -1,6 +1,6 @@
 # Decoupling Spatial Interaction from Corpus State: Re-centring Without Re-coupling
 
-**Author:** Alexis Zapico
+**Author:** Alexis Zapico-Fernández
 **Affiliation:** Independent researcher
 **Date:** September 2026
 
@@ -1031,7 +1031,8 @@ this work does not make.
 
 The operator, every benchmark script, the frozen corpus embeddings with their SHA-256 digests and
 encoder revision, the committed result artifacts and the figure scripts are available at
-<https://github.com/AlexusPacicus/polar-projector> under the GNU AGPL v3. The tables of Appendices B
+<https://github.com/AlexusPacicus/polar-projector>. The code is released under the Apache License 2.0,
+and this manuscript, its figures and the frozen embeddings under CC BY 4.0. The tables of Appendices B
 and C are recomputed, and every other figure in this manuscript is checked against the committed
 artifacts, by `tools/verify_paper_tables.py`.
 
@@ -1115,9 +1116,9 @@ reviewed every passage, and takes full responsibility for the content.
 
 ## Appendix
 
-The three appendices below answer a narrower question than §3 does, and
-`tools/verify_paper_tables.py` covers their tables as well: whether the implementation is numerically sound, rather than whether the operator works as
-a navigation substrate.
+The three appendices below answer a narrower question than §3 does — whether the implementation is
+numerically sound, rather than whether the operator works as a navigation substrate — and
+`tools/verify_paper_tables.py` covers their tables as well.
 
 ### Appendix A — Dimension Sweep and Where Dispatch Stops Dominating
 

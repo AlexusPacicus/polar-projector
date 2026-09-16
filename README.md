@@ -1,30 +1,23 @@
 # Polar Projector
 
-A stateless, deterministic **O(d)** orthogonal decomposition operator over the unit sphere
-\( S^{d-1} \). Given a stimulus vector and a local frame — a static anchor plus a dipole pair — it
-returns a projection coefficient \( \lambda \in [-1, 1] \) along the dipole axis and an orthogonal
-residual \( d_{esc} \geq 0 \) perpendicular to it.
+A stateless, deterministic **O(d)** operator that places a vector against a local frame — an anchor
+plus a dipole pair — and returns a projection coefficient λ ∈ [−1, 1] along the dipole axis and an
+orthogonal residual d_esc ≥ 0. It never reads the stored corpus, so its cost does not depend on
+corpus size. It depends on numpy and nothing else.
 
-Cost is independent of corpus size \( N \): the operator never touches persistent storage and never
-compares a stimulus against the corpus. It is the reference implementation accompanying the
-manuscript in [`paper/`](paper/polar-projector-paper.md).
+## The paper
 
-## Why this is a separate package
+This is the reference implementation for **Decoupling Spatial Interaction from Corpus State:
+Re-centring Without Re-coupling** (Alexis Zapico-Fernández, 2026).
 
-The operator depends on **numpy and nothing else**. It was extracted from the
-[Traianus](https://github.com/AlexusPacicus/Traianus) substrate, where it sits behind `fastapi`,
-`torch` and `sentence-transformers`. Reproducing the manuscript's numerical sections should not
-require a deep-learning stack — here it requires `pip install numpy`.
+- **PDF:** [release `v1.0-paper`](https://github.com/AlexusPacicus/polar-projector/releases/tag/v1.0-paper)
+- **Manuscript source:** [`paper/polar-projector-paper.md`](paper/polar-projector-paper.md)
+- **Claims registry:** [`paper/claims.md`](paper/claims.md) — every claim, its pre-registration
+  status and the check that backs it
+- **How to cite:** see [`CITATION.cff`](CITATION.cff), or GitHub's "Cite this repository"
 
-Git history for every extracted file is preserved, so each figure in the paper traces back to the
-commit that produced it.
-
-**This repository is canonical for the operator.** Traianus keeps a vendored copy of
-`projector.py` while its v1.0.0 release freeze holds — depending on this package would touch its
-pinned `pyproject.toml` and tie a frozen release to an unpublished `0.1.0`. The duplication is a
-deliberate, time-boxed trade, not an accident: changes land here first and are ported by hand, and
-when the freeze lifts the copy is deleted in favour of a real dependency. A fix applied only on the
-Traianus side would make the paper's reference implementation stop matching what actually runs.
+The paper is a measured report, not a case for the operator: on every instrument it uses, a baseline
+simple enough to write in a few lines matches or beats the operator, and the paper says so.
 
 ## Install
 
@@ -32,99 +25,121 @@ Traianus side would make the paper's reference implementation stop matching what
 pip install -e ".[test]"
 ```
 
-## Use
-
-Two entry points, numerically identical:
+## Quick start
 
 ```python
 import numpy as np
 from polar_projector import PolarProjector
 
+rng = np.random.default_rng(0)
+anchor, pole_a, pole_b = rng.standard_normal((3, 384))
+stimuli = rng.standard_normal((1000, 384))
+
 projector = PolarProjector()
 
-# Stateless: rebuilds the local frame on every call.
-centroid_id, lam, d_esc = projector.project(v_n, c_1, c_A, c_B, centroid_id=7)
+# Stateless: builds the frame and evaluates one stimulus.
+_, lam, d_esc = projector.project(stimuli[0], anchor, pole_a, pole_b, centroid_id=0)
 
-# Prepared: hoists the frame out of the loop when the active context is fixed.
-frame = projector.prepare(c_1, c_A, c_B)
-for i, v in enumerate(stimuli):
-    centroid_id, lam, d_esc = projector.evaluate(v, frame, i)
+# Prepared: build the frame once, evaluate many stimuli against it.
+frame = projector.prepare(anchor, pole_a, pole_b)
+coords = [projector.evaluate(v, frame, i)[1:] for i, v in enumerate(stimuli)]
+assert coords[0] == (lam, d_esc)  # the two paths are numerically identical
 
-# Batched: one frame, many stimuli, V of shape (B, d).
-lambdas, d_escs = projector.evaluate_batch(V, frame)
+# Batched: same frame, all stimuli at once (agrees to within rounding, not bit for bit).
+batch = projector.evaluate_batch(stimuli, frame)
 ```
 
-`evaluate_batch()` is worth up to **5.2× per vector**, peaking around `B = 256` and *falling* for
-larger batches once its three `(B, d)` temporaries stop fitting in cache — at `B = 1` it is 2.6×
-slower than `evaluate()`. It is not bitwise identical to a loop over `evaluate()`: BLAS reorders
-the reduction at `B ≥ 2`, so a row's result is not a pure function of that row. Deviation is
-bounded, but not by a constant: the disagreement in λ scales with ‖r‖/‖v_dipole‖, so it grows as the
-poles approach each other (`tests/test_polar_batch.py`). `evaluate_batch()` is not used by any result
-in the manuscript.
+The frame depends only on (anchor, pole_a, pole_b), so when the active context outlives a single
+stimulus, `prepare()` once and `evaluate()` per stimulus does less than half the work of calling
+`project()` each time. Measured costs are in the manuscript's §3.1; they belong to the host they
+were measured on, not to the operator.
 
-Anchor normalization, dipole-pole projection and dipole construction depend only on
-\( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
-context. At \( d = 384 \), float64, frame construction is **60.0%** of a stateless call
-(`tools/decompose_polar_latency.py`: 12.03 µs stateless, `prepare` 7.22 µs), and with `evaluate` at
-4.66 µs against 12.20 µs for `project` (`bench/latency.py`) the prepared form does **2.62× less work
-per interaction** whenever the context outlives a single stimulus. Manuscript §3.1.
+## Guarantees and failure modes
 
-`prepare()` fails loudly rather than returning plausible garbage: non-1-D inputs, mismatched pole
-shapes, \( d < 2 \), non-finite inputs or norms that overflow, and dipoles whose squared norm
-underflows in float64 all raise `ValueError`.
-The load-bearing case is the column vector — a `(d, 1)` input would otherwise broadcast into a
-`(d, d)` matrix and return a wrong answer silently.
+- **Deterministic.** `project()` and `prepare()` + `evaluate()` return identical values for identical
+  inputs; nothing iterates, samples or reads storage.
+- **Non-degenerate.** Collinear poles fall back to a canonical direction instead of a zero-length
+  dipole (Proposition 2).
+- **Fails loudly.** `prepare()` raises `ValueError` for non-1-D inputs, mismatched shapes, d < 2,
+  non-finite inputs or norms that overflow float64, and dipoles whose squared norm underflows. The
+  load-bearing case is the column vector: a `(d, 1)` input would otherwise broadcast into a `(d, d)`
+  matrix and return a wrong answer silently.
+- **No aliasing.** The frame keeps its own copy of the anchor, so changing the caller's array after
+  `prepare()` does not change the frame.
+- **d_esc is computed in vector form.** The algebraically equivalent scalar form is faster but loses
+  all precision near collinearity, in places without any detectable sign (manuscript Appendix B).
+- **`evaluate_batch()` is not bit-for-bit.** BLAS reorders the reduction for batches of two or more,
+  so a row's result depends on its batch. The disagreement in λ scales with ‖r‖/‖v_dipole‖ and grows
+  as the poles approach each other (`tests/test_polar_batch.py`). No result in the manuscript uses it.
 
 ## Reproducing the paper
 
-Every numerical table in the manuscript is regenerated by a committed script under `tools/`, offline
-and under fixed seeds. For the environment the published figures were measured in, install the
-pinned extra:
+Every figure in the manuscript comes from a committed script under `bench/` or `tools/`, run offline
+under fixed seeds:
 
 ```bash
-pip install -e ".[test,repro]"
+pip install -e ".[test,repro,bench]"
+python tools/verify_paper_tables.py
 ```
+
+`repro` pins numpy (2.4.1). The `bench` extra — umap-learn and scikit-learn, for the UMAP and t-SNE
+baselines and the trustworthiness metric of §3.2–§3.4 — is not pinned. The committed artifacts were
+produced with umap-learn 0.5.12, scikit-learn 1.8.0 and numba 0.67.0 on Python 3.11.6, and other
+versions can move the baseline rows. Absolute timings are specific to the Apple M1 described in §3.
 
 | Script | Manuscript section |
 |---|---|
-| `tools/decompose_polar_latency.py` | §3.1 frame vs. per-stimulus cost, §B `d_esc` conditioning |
+| `bench/latency.py --sweep --n-sweep` | §3 cost vs. corpus size, §3.1 cost vs. O(d) primitives, §A dimension sweep |
+| `tools/decompose_polar_latency.py` | §3.1 `prepare()` row and stateless decomposition (`--out` to avoid overwriting the committed artifact) |
+| `bench/conditioning.py` | §B conditioning sweep and scalar- vs. vector-form latency |
+| `bench/clamp.py` | §A and §B: the λ clamp substitution, re-measured side by side |
 | `tools/generate_polar_delta_table.py` | §C δ-sweep table (N = 10,000) |
-| `tools/verify_paper_tables.py` | §B and §C independent re-derivation, PASS/MISMATCH per cell |
-| `bench/latency.py` | §3.1 cost vs. O(d) primitives, §A dimension sweep |
-| `bench/conditioning.py` | §B conditioning sweep and form latency |
-| `bench/drift.py` | §3.2 positional stability, 7 arms (baseline arms need the `[bench]` extra) |
-| `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
-| `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob (baseline arms need the `[bench]` extra) |
-| `bench/reanchor.py` | §3.5 local fidelity under re-anchoring; `--ablation` for the units decomposition |
-| `bench/batched.py` | batched throughput, agreement and row-order sensitivity (not in the manuscript) |
-| `bench/scale.py` | §3.2–§3.4 under a declared screen scale (E8), unit and isometric |
-| `bench/poles.py` | P1: where the published frame's poles land on the λ axis |
-| `bench/clamp.py` | §A and §B: the λ clamp substitution, re-measured and exported (A9) |
+| `bench/drift.py` | §3.2 positional stability, 7 arms (baselines need `[bench]`) |
+| `bench/recall.py` | §3.3 same-part recall@k (baselines need `[bench]`) |
+| `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob |
+| `bench/scale.py` | §3.2–§3.4 under a declared screen scale, unit and isometric |
+| `bench/reanchor.py` | §3.5 re-anchoring recall and cost columns; `--ablation` for the units decomposition |
+| `bench/poles.py` | §2.1: where the published frame's poles land on the λ axis |
+| `tools/make_figures.py` | Figures 1–3 |
+| `tools/build_arxiv.py` | LaTeX build and upload zip (`paper/build/arxiv-source.zip`) |
+| `bench/batched.py` | batched throughput and agreement (not in the manuscript) |
 
-The deterministic constructions these scripts use ship inside the package as
-`polar_projector.fixtures`, so a reader can rebuild the experimental setups from an installed
-distribution without cloning this repository.
+Scripts under `bench/` write JSON to `bench/results/` in a common
+`{experiment, config, host, thread_env, results}` envelope; `bench/_harness.py` documents the timing
+protocol, including what it does not control. The deterministic constructions they use ship in the
+package as `polar_projector.fixtures`.
 
-`tools/verify_paper_tables.py` runs in CI on every push. It recomputes the §B and §C tables from the
-operator, checks every other published figure against its committed artifact in `bench/results/`,
-requires each checked figure to be printed in the manuscript, and fails if a claim in
-`paper/claims.md` marked checked names a check that does not exist. A change that silently moves a
-published number, or a manuscript that quotes a figure no artifact holds, fails the build.
+## What CI checks, and what it doesn't
 
-Scripts under `bench/` write their results as JSON to `bench/results/`, in a common
-`{experiment, config, host, thread_env, results}` envelope; `bench/_harness.py` documents the
-timing protocol they share.
+`tools/verify_paper_tables.py` runs on every push. It:
 
-## Tests
+- recomputes the Appendix B and C tables from the operator and compares the tables printed in the
+  manuscript cell by cell;
+- checks every other published figure against its committed artifact in `bench/results/`;
+- requires each checked figure to be printed in the manuscript, ignoring section references so that
+  "§3.2" does not count as printing 3.2;
+- fails if a claim in `paper/claims.md` marked checked names a check that does not exist, names a
+  whole section instead of a check, or is a malformed row.
 
-```bash
-pytest
-```
+It checks consistency between the manuscript and its artifacts. It cannot catch a benchmark that
+measures something other than what the paper says it measures.
 
-708 tests across property, unit, frame-equivalence and block-benchmark suites; the operator is at
-100% line coverage. `tests/test_polar_frame.py` asserts the `prepare()`/`evaluate()` split is
-behavior-preserving by exact equality against `project()`.
+CI also runs 800 tests on Python 3.11–3.13, ruff, mypy, and a 100% line-coverage gate over the
+operator.
+
+## Relationship to Traianus
+
+The operator was extracted, with git history, from [Traianus](https://github.com/AlexusPacicus/Traianus),
+a local-first engine on which a personal knowledge management application is being built. This
+repository is canonical: Traianus keeps a vendored copy during its v1.0.0 release freeze, changes
+land here first and are ported by hand, and the copy is replaced by a dependency when the freeze
+lifts.
 
 ## License
 
-AGPL-3.0-or-later — inherited from Traianus, where this operator originated.
+- **Code:** [Apache License 2.0](LICENSE). See also [`NOTICE`](NOTICE).
+- **Manuscript and figures** (`paper/`): [CC BY 4.0](paper/LICENSE.md).
+- **Frozen corpus data** (`bench/data/`): [CC BY 4.0](bench/data/LICENSE.md). The embeddings encode
+  R. H. M. Elwes' public-domain translation of Spinoza's *Ethics*; the text is not included.
+
+Releases up to and including `v1.0-paper` were published under AGPL-3.0-or-later.
