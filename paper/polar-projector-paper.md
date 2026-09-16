@@ -41,11 +41,12 @@
 
 ## Abstract
 
-Spatial interfaces over personal knowledge corpora place each note on a canvas the user navigates.
-Global dimensionality reduction such as UMAP and t-SNE relocates placed points when refitted, even
-with a fixed seed, at a cost of seconds per refit, and stable or incremental projections soften that
-drift rather than remove it. Writing a note requires decoupling the interaction from the state of
-the corpus: new notes must not move placed ones, and placing one must not read what is stored.
+Spatial interfaces place a personal knowledge corpus of embeddings on a canvas, commonly using
+global dimensionality reduction such as UMAP or t-SNE. Refitting these projections to keep the
+canvas current relocates placed points, even with a fixed seed, at a cost of seconds per refit, and
+stable or incremental projections soften that drift rather than remove it. Writing a note requires
+decoupling the interaction from the state of the corpus: new notes must not move placed ones, and
+placing one must not read what is stored.
 Navigating also requires re-centring the view on the note being consulted. Any fixed linear map
 meets the first requirement; the second is where methods differ. We present the Polar Projector, a
 local \( O(d) \) operator that places an incoming vector against an active frame, an anchor plus a
@@ -878,7 +879,11 @@ the gap:
   but neither was measured on another host. Whether the trade-off of §3.4 — every rule that gained
   trustworthiness lost task-level lift — belongs to the construction or to this corpus's structure,
   and whether the re-centring gain and the radial bound of §3.5 reappear on corpora of a different
-  shape and under other encoders, are open.
+  shape and under other encoders, are open. The dimension sweep of Appendix A is the same limitation
+  from the implementation side: every real figure in this paper comes from that one 384-dimensional
+  encoder, so whether the operator's behaviour past the dispatch/arithmetic crossover holds on real
+  embeddings from a higher-dimensional model, rather than the synthetic vectors swept there, is
+  untested.
 - **Proxy for semantic relevance.** The division of the text into five parts (`part`) serves as a
   coarse proxy for semantic coherence when computing same-part lift. It is not equivalent to a
   fine-grained evaluation of topical relevance or to a human judgement of usefulness.
@@ -1053,7 +1058,8 @@ a navigation substrate.
 §3.1 closes by saying the operator's per-call gap to the floor is dispatch rather than arithmetic.
 That caveat is testable: if it holds, per-call latency should be flat in \( d \) until the arithmetic
 becomes large enough to matter.
-Sweeping the prepared hot path and the random-projection floor across dimension:
+Sweeping the prepared hot path and the random-projection floor across dimension, on synthetic unit
+vectors — no encoder used in this paper produces vectors above \( d = 384 \) (§4.3):
 
 | \( d \) | `evaluate()` (µs) | Floor (µs) | Ratio | vs. \( d = 16 \) |
 |---|---|---|---|---|
@@ -1069,23 +1075,19 @@ Sweeping the prepared hot path and the random-projection floor across dimension:
 `bench/latency.py --sweep`. Exploratory: this sweep was specified after §3.1's registered run, in
 response to what it showed, and is not covered by that experiment's pre-registration.
 
-The prediction holds. From \( d = 16 \) to \( d = 64 \) — four times the arithmetic — per-call cost
-*falls* slightly, from 4.18 to 4.12 µs. At \( d = 384 \), the dimension every published figure in
-this paper is measured at, `evaluate()` costs 1.10× what it costs at \( d = 16 \) despite doing 24×
-the floating-point work. **Roughly 90% of the operator's per-call cost at \( d = 384 \) is fixed
-overhead independent of dimension**, and about 0.4 µs of it is the \( O(d) \) work Proposition 1
-describes.
+The prediction holds. Per-call cost is nearly flat from \( d = 16 \) to \( d = 384 \) — the output
+dimension of the sentence-transformer encoder used throughout this paper (`all-MiniLM-L6-v2`,
+§3.2) — costing only 1.10× more despite 24× the floating-point work, because **roughly 90% of the
+per-call cost at that dimension is fixed dispatch overhead**, not the \( O(d) \) arithmetic
+Proposition 1 describes. The crossover into arithmetic-dominated cost sits between
+\( d = 1{,}024 \) and \( d = 4{,}096 \) — well above \( d = 384 \) — where the ratio to the floor
+collapses from 5.78× to 2.38×; the further rise at \( d = 8{,}192 \) (2.92×) is a memory effect, a
+65 MB working set no longer fitting in cache, not an arithmetic one.
 
-The crossover sits between \( d = 1{,}024 \) and \( d = 4{,}096 \). Above it the curve turns linear
-and the gap to the floor collapses — from 5.78× at \( d = 16 \) to 2.38× at \( d = 4{,}096 \),
-approaching the ratio of vector passes the two methods actually make. The widening at
-\( d = 8{,}192 \) (2.92×) is a memory effect, not an arithmetic one: a 65 MB working set at that
-dimension no longer sits in cache.
-
-Two consequences, both of which narrow this paper's claims rather than widening them. First, the
-microsecond figures in §3 and §3.1 characterize a NumPy implementation at a dimension where NumPy
-overhead dominates — they are not a measurement of Proposition 1's asymptotic claim, and the
-crossover dimension is where a reader should expect that claim to become visible. Second, the
+Two consequences follow, both narrowing this paper's claims rather than widening them. First, the
+microsecond figures in §3 and §3.1 are not a measurement of Proposition 1's asymptotic claim, and
+whether the operator's behaviour past the crossover holds on real embeddings rather than the
+synthetic vectors swept here is untested (§4.3). Second, the
 lever that would most reduce cost at \( d = 384 \) is **issuing fewer array operations**, not doing
 less arithmetic; a fused or compiled implementation of the same mathematics would close most of the
 gap to the floor without changing a single flop.
@@ -1123,11 +1125,15 @@ so conditioning is measured without saturation confounding it. CI re-derives the
 every push (`tools/verify_paper_tables.py`).
 
 Below \( d_{esc}/\|r\|_2 \approx 10^{-6} \) the scalar form returns values uncorrelated with the
-true distance, while the vector form degrades gracefully across the full sweep. The identity of
-Proposition 3 therefore stands as a theorem but not as an algorithm: the residual is computed in
-vector space before the norm is taken. This regime — a stimulus lying almost entirely along the
-dipole axis — is precisely the one where \( \lambda \) saturates, so precision there is not
-incidental.
+true distance, while the vector form degrades gracefully across the full sweep. This is not a
+property of the corpus or of \( d \): the scalar form subtracts terms of order \( \|r\|_2^2 \) to
+recover a quantity of order \( d_{esc}^2 \), so float64's rounding noise
+(\( \sim\varepsilon\|r\|_2^2 \)) overtakes the true signal once \( d_{esc}/\|r\|_2 \) drops below
+\( \sqrt{\varepsilon} \approx 1.49 \times 10^{-8} \) — matching where the table's failure sits.
+The identity of Proposition 3 therefore stands as a theorem but not as an algorithm: the residual is
+computed in vector space before the norm is taken. This regime — a stimulus lying almost entirely
+along the dipole axis — is precisely the one where \( \lambda \) saturates, so precision there is
+not incidental.
 
 Continuing the sweep past the published window, to \( d_{esc}/\|r\|_2 = 10^{-14} \), shows the
 failure is worse than a loss of accuracy — it is a loss of accuracy that does not announce itself.
@@ -1142,13 +1148,11 @@ its inaccuracy is undetectable from inside.
 
 The cost of refusing it is real, and it grew. Measured over 25,000 stimuli at \( d = 384 \), the
 vector form runs at 4.56 µs against the scalar form's 3.10 µs — the scalar rearrangement is
-**1.47× faster**. Restoring the old clamp and re-measuring both forms side by side puts that margin
-at 1.24× before §A's substitution and 1.45× after it, which removed 1.8 µs from the vector form and
-2.0 µs from the scalar one — nearly the same fixed overhead from both arms; subtracting a constant from both sides of a ratio moves it, and the honest
-reading is that the residual computation is a larger share of a leaner call than it was of a fatter
-one. Refusing the scalar form now costs about a third of the hot path rather than a fifth. The
-argument is unchanged — a third of the hot path is not worth a silently wrong answer — but the
-price is stated at its current value, not its more flattering old one.
+**1.47× faster**, up from 1.24× under the old clamp: §A's clamp substitution removed nearly the
+same fixed overhead (1.8–2.0 µs) from both arms, so the residual computation is now a larger share
+of a leaner call. Refusing the scalar form costs about a third of the hot path rather than a fifth
+— the argument is unchanged, a third of the hot path is not worth a silently wrong answer, but the
+price is stated at its current value.
 
 ### Appendix C — δ-Sweep Behavior
 
