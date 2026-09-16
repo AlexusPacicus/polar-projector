@@ -331,7 +331,7 @@ class TestPolarProjectorProperties:
         projector = PolarProjector()
         c1_hat = projector._normalize_anchor(q)
         norms = {}
-        for theta_deg in (10.0, 45.0, 90.0, 135.0, 170.0):
+        for theta_deg in (10.0, 45.0, 90.0, 135.0, 170.0, 180.0):
             theta = np.radians(theta_deg)
             v = np.cos(theta) * q + np.sin(theta) * w
             r = projector._project_perp(v - q, c1_hat)
@@ -340,3 +340,4 @@ class TestPolarProjectorProperties:
                 f"seed={seed} d={d} theta={theta_deg}: ||r||={norms[theta_deg]}, sin(theta)={np.sin(theta)}"
             )
         assert norms[170.0] < norms[90.0], "the residual norm must fold back down past a right angle"
+        assert norms[180.0] < 1e-9, "a diametrically opposite stimulus must land on the anchor"

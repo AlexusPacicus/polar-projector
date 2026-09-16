@@ -7,6 +7,7 @@ this repository is the copy CI verifies against the figures published in
 paper/polar-projector-paper.md.
 """
 
+import math
 from typing import NamedTuple
 
 import numpy as np
@@ -98,8 +99,18 @@ class PolarProjector:
 
         Returns:
             Normalized anchor ĉ₁ if ||c₁|| > eps_norm, else zero vector.
+
+        Raises:
+            ValueError: If ||c₁|| is not finite -- a NaN or infinite component, or a
+                norm that overflows float64. A NaN norm would otherwise fail the
+                comparison below and be silently treated as the null anchor.
         """
-        c1_norm = np.linalg.norm(c_1)
+        c1_norm = float(np.linalg.norm(c_1))
+        if not math.isfinite(c1_norm):
+            raise ValueError(
+                f"anchor norm is not finite ({c1_norm}): c_1 has a non-finite component "
+                "or its norm overflows float64"
+            )
         if c1_norm > self.eps_norm:
             return c_1 / c1_norm
         return np.zeros_like(c_1)
@@ -219,10 +230,14 @@ class PolarProjector:
         Raises:
             ValueError: If the inputs are not 1-D vectors of one common dimension d >= 2
                 (d >= 2 is what makes the orthogonal complement of the anchor non-empty,
-                and mismatched ranks would otherwise broadcast into a (d, d) matrix), or
-                if the resulting dipole is degenerate.
+                and mismatched ranks would otherwise broadcast into a (d, d) matrix), if
+                any input is non-finite or its norm overflows float64, or if the
+                resulting dipole is degenerate.
+
+        The frame holds its own copy of c_1, so mutating the caller's array after
+        prepare() cannot leave c_1 out of step with the ĉ₁ and v_dipole derived from it.
         """
-        c_1 = np.asarray(c_1, dtype=np.float64)
+        c_1 = np.array(c_1, dtype=np.float64)
         c_A = np.asarray(c_A, dtype=np.float64)
         c_B = np.asarray(c_B, dtype=np.float64)
 
@@ -245,6 +260,13 @@ class PolarProjector:
         v_dipole = self._compute_dipole(cA_perp, cB_perp, c1_hat)
 
         v_dipole_norm_sq = float(np.dot(v_dipole, v_dipole))
+        # A non-finite pole, or poles whose difference overflows when squared, lands
+        # here as NaN or inf; NaN would also slip past the degeneracy check below.
+        if not math.isfinite(v_dipole_norm_sq):
+            raise ValueError(
+                f"dipole norm is not finite ({v_dipole_norm_sq}): a pole has a non-finite "
+                "component or ||c_A_perp - c_B_perp||^2 overflows float64"
+            )
         if v_dipole_norm_sq <= 0.0:
             raise ValueError(
                 "degenerate dipole: ||v_dipole||^2 underflowed to zero in float64 "
@@ -289,7 +311,7 @@ class PolarProjector:
         # prepare() rejects a degenerate frame, so the denominator is positive here.
         #
         # Clamped with min/max rather than np.clip. On a single scalar np.clip
-        # costs 1.88 µs against 0.23 µs here — 30% of the call it used to sit
+        # costs 1.86 µs against 0.23 µs here — 29% of the call it used to sit
         # in — because it enters the ufunc machinery to bound one float
         # (bench/clamp.py). The two are
         # bit-for-bit identical on every input, NaN, signed zero, subnormals and
@@ -318,12 +340,14 @@ class PolarProjector:
         Not bit-for-bit identical to a loop over evaluate(), and cannot be.
         The divergence begins at the matrix-vector product, not at the norm:
         BLAS uses a blocked reduction order for B ≥ 2 that a sequence of
-        single-row dot products does not. Agreement is bounded instead: the
-        test fixtures measure |Δλ| ≤ 2·ε and |Δd_esc| ≤ 1.4·ε·||r||₂, including
-        saturation and near-collinearity, and bench/batched.py on the frozen
-        corpus measures up to 0.19·ε and 2.02·ε·||r||₂ (manuscript §D). Neither
-        is a proven bound; tests/test_polar_batch.py asserts 8·ε, because the
-        constant depends on the BLAS.
+        single-row dot products does not. Agreement is bounded instead, and the
+        bound is not a constant: λ divides ⟨r, v_dipole⟩ by ||v_dipole||², so its
+        disagreement scales with ||r||₂/||v_dipole||₂ and grows without limit as
+        the poles approach each other. tests/test_polar_batch.py asserts
+        |Δλ| ≤ 8·ε·max(1, ||r||₂/||v_dipole||₂) and |Δd_esc| ≤ 8·ε·||r||₂,
+        including frames with nearly coincident poles; the constant depends on
+        the BLAS. bench/batched.py measures the agreement on synthetic unit
+        vectors.
 
         Two consequences follow, and neither is hidden by this implementation.
         Row i of the result is not a pure function of row i of the input: the

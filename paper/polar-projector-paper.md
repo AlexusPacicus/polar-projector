@@ -56,7 +56,7 @@ degenerate (Proposition 2), its residual decomposition is exact when \( \lambda 
 (Proposition 3), and an algebraically equivalent scalar form of \( d_{esc} \) loses all precision
 below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), at two points undetectably. Re-anchoring the frame on
 the query re-centres the view without re-coupling it, beyond a codebook built once. Per-stimulus
-cost is 4.57 µs with a prepared frame, and a stateless call stays flat to 1.4% across corpora of
+cost is 4.66 µs with a prepared frame, and a stateless call stays flat to 2.7% across corpora of
 1,000 to 25,000 vectors. On 2,221 chunks of Spinoza's *Ethics*, re-anchoring raises the recall of a
 query's 15 nearest neighbours 29×, from 0.019 to 0.543, while a local PCA refit reads the corpus again
 and recovers 0.023. A radial coordinate centred on the query bounds the operator at 0.981 on this
@@ -97,9 +97,9 @@ premise should know it by the end of this section rather than after §3.
 *What existing approaches do with the two constraints.* Reusing global dimensionality reduction
 violates both. Refitting alters existing coordinates as the corpus grows, and §3.2 measures what
 survives pinning the random seed: t-SNE (van der Maaten & Hinton, 2008) relocates previously placed
-points by 1.03–1.24 times the width of the layout at every growth step, and UMAP (McInnes et al.,
-2018) by 0.31–1.25. Refitting is also not cheap — the same seven growth steps cost 15.7–25.0 s across
-the baselines against 0.051 s for the operator, a factor of 307–488×. We make no asymptotic claim
+points by 1.03–1.55 times the width of the layout at every growth step, and UMAP (McInnes et al.,
+2018) by 0.31–1.52. Refitting is also not cheap — the same seven growth steps cost 12.6–24.9 s across
+the baselines against 0.053 s for the operator, a factor of 240–474×. We make no asymptotic claim
 about the baselines: Barnes-Hut t-SNE is \( O(N \log N) \) and UMAP's graph construction is
 sub-quadratic in practice, so the argument on this axis is the measured seconds-scale cost of a refit
 inside an interaction loop, not a complexity class.
@@ -111,7 +111,7 @@ stability (Rauber et al., 2016); guided stable dynamic projections make that tra
 buying speed and stability at the cost of global distance preservation (Neves et al., 2020).
 Out-of-sample extension fits once and maps new points through a learned or interpolated function
 (Bengio et al., 2003; Sainburg et al., 2021); §3.2 measures that configuration as one of its arms and
-finds it still at 5 of 7 growth steps and relocating at the other 2. Surveys of the field treat
+finds it still at all 7 growth steps, provided each point keeps the coordinates it was first given. Surveys of the field treat
 stability as one quality axis traded against others rather than a guarantee (Espadoto et al., 2021).
 
 Decoupling itself, however, is cheap. A fixed linear map — a random projection drawn once, or a PCA
@@ -124,18 +124,18 @@ organized around the note being consulted, which means re-centring the view on i
 one view of the corpus for every query, and on a local neighbourhood-recovery instrument it scores
 0.056 (§3.5). Refitting a projection on the consulted note's neighbourhood does re-centre the view,
 but by construction it reads the corpus again for every view — re-coupling what the constraints
-decoupled — and it still scores only 0.023, at 238× the operator's cost per query.
+decoupled — and it still scores only 0.023, at 229× the operator's cost per query.
 What is missing is a way to **re-centre the view on the query without re-coupling it to the
 corpus**.
 
 The Polar Projector is a local primitive for that. It evaluates one incoming vector against one
 active contextual frame — an anchor \( c_1 \) plus a contrast dipole \( (c_A, c_B) \) — in \( O(d) \)
 arithmetic and memory, returning a projection coefficient \( \lambda \in [-1, 1] \) and an orthogonal
-residual \( d_{esc} \geq 0 \) without reading the stored corpus: 4.57 µs per stimulus with a prepared
-frame and 11.75 µs stateless, with correctness guarantees proven in §2. Re-anchoring the frame on the
+residual \( d_{esc} \geq 0 \) without reading the stored corpus: 4.66 µs per stimulus with a prepared
+frame and 12.20 µs stateless, with correctness guarantees proven in §2. Re-anchoring the frame on the
 consulted note re-centres the view without re-coupling it — the poles come from a codebook built once
 over the corpus (§3.5, §4.3) — and raises local neighbourhood recovery 29×, from 0.019 to 0.543, for
-16.3 µs per query. The result is bounded from the start: a two-line radial coordinate
+16.4 µs per query. The result is bounded from the start: a two-line radial coordinate
 centred on the query reaches 0.981 on the same instrument, under the same constraints, and most of
 the operator's remaining gap is the units of its screen mapping — with \( \lambda \) rendered in length
 units it reaches 0.925, in an exploratory ablation (§3.5).
@@ -145,7 +145,7 @@ units it reaches 0.925, in an exploratory ablation (§3.5).
 - **A local \( O(d) \) operator with a characterized numerical failure mode.** Non-degeneracy is
   proven for collinear poles via a deterministic null-space fallback (Proposition 2), and the residual
   satisfies an orthogonal decomposition identity (Proposition 3). The identity's algebraically
-  equivalent scalar form is 1.47× faster and must not be used: below
+  equivalent scalar form is 1.39× faster and must not be used: below
   \( d_{esc}/\|r\|_2 \approx 10^{-6} \) it returns finite, plausible values wrong by factors of
   \( 10^3 \)–\( 10^5 \), and at two points of the sweep its radicand stays positive, so the failure
   cannot be detected from inside (§2, §B).
@@ -301,7 +301,7 @@ once per active context, while steps 13–17 are the only work a new stimulus co
  Algorithm 1   Polar Projector — frame preparation and per-stimulus evaluation
 ────────────────────────────────────────────────────────────────────────────
  PREPARE(c₁, c_A, c_B)                            ▷ once per active context
-     require  d ≥ 2,  δ > 0,  ε_norm > 0,  ε_collinear > 0
+     require  d ≥ 2,  finite inputs,  δ > 0,  ε_norm > 0,  ε_collinear > 0
   1  if ‖c₁‖₂ > ε_norm  then  ĉ₁ ← c₁/‖c₁‖₂   else  ĉ₁ ← 0
   2  c_A⊥ ← c_A − ⟨c_A, ĉ₁⟩·ĉ₁                                      ▷ O(d)
   3  c_B⊥ ← c_B − ⟨c_B, ĉ₁⟩·ĉ₁                                      ▷ O(d)
@@ -327,7 +327,7 @@ once per active context, while steps 13–17 are the only work a new stimulus co
 Nothing in either half iterates to convergence, draws a random number, or reads persistent storage,
 which is what makes Propositions 1–3 hold per call rather than in expectation. Two steps encode
 findings reported later rather than obvious choices: step 15 clamps with `min`/`max` instead of
-`np.clip` (§A: bit-for-bit identical, 1.40× faster), and step 16 computes the residual in vector
+`np.clip` (§A: bit-for-bit identical, 1.37× faster), and step 16 computes the residual in vector
 space rather than via the algebraically equivalent scalar rearrangement (§B: the scalar form loses
 all precision in the near-collinear regime, undetectably).
 
@@ -402,15 +402,16 @@ Stateless cost against corpus size, on synthetic unit vectors at \( d = 384 \), 
 
 | Corpus size (N) | Mean (µs) | p95 (µs) |
 |---|---|---|
-| 1,000 | 11.46 | 11.92 |
-| 2,221 | 11.61 | 11.79 |
-| 4,000 | 11.61 | 12.21 |
-| 25,000 | 11.58 | 12.00 |
+| 1,000 | 11.86 | 12.50 |
+| 2,221 | 12.05 | 12.54 |
+| 4,000 | 12.04 | 12.46 |
+| 25,000 | 12.18 | 12.62 |
 
-Latency stays flat as \( N \) grows — 1.4% across a 25× corpus and a 25× working set, consistent
+Latency stays flat as \( N \) grows — 2.7% across a 25× corpus and a 25× working set, consistent
 with Proposition 1's independence from corpus size. `bench/latency.py --n-sweep`, 3 repetitions per
-row. Spreads and ratios throughout this manuscript are computed on unrounded measurements; reading
-them off the two-decimal figures printed in a table — 11.46 to 11.61 here — gives 1.3%, not 1.4%.
+row. Stimuli are visited in a fixed random order rather than front to back, because a sequential scan
+lets the hardware prefetcher hide exactly the cache misses a larger working set would cause. Spreads
+and ratios throughout this manuscript are computed on unrounded measurements.
 
 ### 3.1 Frame Preparation vs. Per-Stimulus Cost
 
@@ -422,49 +423,55 @@ and the most work a planar local coordinate could require places it in its compl
 
 | Arm | Mean (µs) | p95 (µs) | Relative cost |
 |---|---|---|---|
-| Random projection, \( (2 \times d) \) matrix-vector | 1.03 | 1.08 | 0.23× |
-| Multi-anchor cosine, \( K = 3 \) | 1.14 | 1.21 | 0.25× |
-| **`evaluate()` — per stimulus, prepared frame** | **4.57** | 4.79 | **1.00×** |
-| `prepare()` — invariant frame, once per context † | 6.87 | 7.21 | 1.50× |
-| `project()` — full stateless call | 11.75 | 12.50 | 2.57× |
-| Sliding-window PCA, \( W = 32 \) | 292.55 | 316.67 | 64.02× |
+| Harness only — fetch the stimulus, no work | 0.13 | 0.17 | 0.03× |
+| Random projection, \( (2 \times d) \) matrix-vector | 1.08 | 1.25 | 0.23× |
+| Multi-anchor cosine, \( K = 3 \) | 1.21 | 1.38 | 0.26× |
+| **`evaluate()` — per stimulus, prepared frame** | **4.66** | 4.96 | **1.00×** |
+| `prepare()` — invariant frame, once per context † | 7.22 | 7.62 | 1.55× |
+| `project()` — full stateless call | 12.20 | 12.75 | 2.62× |
+| Sliding-window PCA, \( W = 32 \) | 296.20 | 328.17 | 63.50× |
 
 Frozen Spinoza corpus (\( N = 2{,}221 \), \( d = 384 \), float64), 3 repetitions of 2,221 calls
-after 1,000 warmup iterations, arms interleaved round-robin; `bench/latency.py`. Run-to-run spread
-is 2.5–2.8% on the polar arms and 0.5–2.5% elsewhere; `bench/_harness.py` reports the median across
-repetitions and the peak-to-peak spread alongside it, and rotates arm order so that no arm is
-permanently measured on the coolest machine.
+after 1,000 warmup iterations, stimuli in a fixed random order, arms interleaved round-robin;
+`bench/latency.py`. Run-to-run spread is 1.5–3.5% on the polar arms and 0.1–11.9% elsewhere;
+`bench/_harness.py` reports the median across repetitions and the peak-to-peak spread alongside it,
+and rotates arm order between repetitions. With fewer repetitions than arms that rotation is partial,
+so a thermal ramp within a repetition is not spread evenly across all six arms. The first row is not
+a method: it is the per-call work of the timing harness itself, which every other row measured by
+`bench/latency.py` also includes.
 
 † The `prepare()` row and the stateless decomposition come from an independent script on a
 different frame (`tools/decompose_polar_latency.py`, artifact `bench/results/decompose.json`):
-11.51 µs stateless
-against the 11.75 measured here, with `prepare()` accounting for 59.7% of it. That script reports
+12.03 µs stateless
+against the 12.20 measured here, with `prepare()` accounting for 60.0% of it. That script reports
 the median of 3 repetitions rather than a single pass, because on this passively cooled host single
 passes were observed inflated by thermal throttling; the per-repetition means are recorded in the
-artifact, and their spread on `evaluate()` is 0.5%.
+artifact, and their spread on `evaluate()` is 1.8%.
 
-Two things follow, in opposite directions. Hoisting the frame out of the loop leaves **2.57× less
+Two things follow, in opposite directions. Hoisting the frame out of the loop leaves **2.62× less
 work per interaction** whenever the active context outlives a single stimulus — which, for an
 interface where one anchor serves a whole navigation gesture, is the common case rather than the
-optimization. But the operator is **not at the floor**: it costs 4.4× a random projection and 4.0× a
+optimization. But the operator is **not at the floor**: it costs 4.3× a random projection and 3.8× a
 three-anchor cosine, and that gap is the price of what it additionally computes — anchor isolation, a
-contrast axis, and a residual orthogonal to it. What it buys against the other end of the table is
-larger: a locally adaptive frame by sliding-window SVD costs **64.0×** the prepared evaluation,
-which is the comparison that matters for a hot path.
+contrast axis, and a residual orthogonal to it. Those ratios include the harness's 0.13 µs on both
+sides, which pulls every ratio toward 1; net of it the operator costs 4.8× a random projection. At the
+other end of the table, a locally adaptive frame by sliding-window SVD costs **63.5×** the prepared
+evaluation — though that arm refits its frame for every stimulus, so the like-for-like comparison is
+with the stateless `project()`, which it exceeds by a factor of 24.
 
 *The prepared path is flat in the working set, not just in \( N \).* The table above is the frozen
 Spinoza corpus at 6.8 MB, largely cache-resident on this host. Repeating the whole experiment on the
-synthetic corpus at \( N = 25{,}000 \) — 76.8 MB, which is not — moves `evaluate()` from 4.57 to
-4.59 µs: **0.4% for 11× the working set.** The per-call cost is not memory-bound at these sizes, so
+synthetic corpus at \( N = 25{,}000 \) — 76.8 MB, which is not — moves `evaluate()` from 4.66 to
+4.71 µs: **0.9% for 11× the working set**, with stimuli visited in random order. The per-call cost is not memory-bound at these sizes, so
 the \( N \)-sweep above and the figures here are comparable, and the flatness claim covers the
 prepared path and not only the stateless one.
 
 *What these figures do not establish is that the gap is arithmetic.* At \( d = 384 \) roughly 90% of
-the per-call cost is fixed NumPy dispatch overhead independent of dimension, and only about 0.4 µs of
+the per-call cost is fixed NumPy dispatch overhead independent of dimension, and only about 0.6 µs of
 it is the \( O(d) \) work Proposition 1 describes; the crossover where the asymptotic claim becomes
 visible sits between \( d = 1{,}024 \) and \( d = 4{,}096 \). §A measures this and states what it
 narrows. Every latency figure in this paper also reflects one substitution — clamping \( \lambda \)
-with `min`/`max` rather than `np.clip`, bit-for-bit identical on every input and 1.40× faster — also
+with `min`/`max` rather than `np.clip`, bit-for-bit identical on every input and 1.37× faster — also
 documented in §A; no table of *values* anywhere in this paper is affected by it.
 
 ### 3.2 Positional Stability Under Incremental Growth
@@ -479,8 +486,8 @@ the 7 transitions we measure how far the points **already present and unchanged*
 *Method.* Layouts produced by UMAP and t-SNE are defined only up to a similarity transform, so raw
 displacement largely measures global reorientation — which an interface could absorb by
 re-anchoring its camera, and which the baselines should not be charged for. Displacement is
-therefore reported after full Procrustes alignment (translation, rotation, scale; Gower, 1975), and
-normalized
+therefore reported after full Procrustes alignment (translation, proper rotation, scale; Gower,
+1975) — a mirror image is charged as displacement, since a camera cannot undo it — and normalized
 by each embedding's own RMS radius, since the coordinate spaces are not commensurable (UMAP's units
 are arbitrary; the operator's are \( (\lambda, d_{esc}) \) with \( \lambda \in [-1,1] \)). A value
 of 1.0 means points moved as far as the layout is wide. Both baselines run with a fixed
@@ -495,9 +502,9 @@ apparent movement is global reorientation that the charitable reading forgives.
 | PCA, fit once on the initial window | **0.0000** | 0.0000 | **7/7** | 0.6811 | — | — |
 | Polar Projector, fixed anchor | **0.0000** | 0.0000 | **7/7** | 0.6639 | 0.0000 | 0.6666 |
 | Polar Projector, moving anchor | 0.2984 | 0.6138 | 0/7 | 0.6208 | 0.8144 | 0.6235 |
-| UMAP, fit once + `transform()` | 0.0000 | 1.0725 | 5/7 | 0.7681 | — | — |
-| UMAP, refit per step | 1.1607 | 1.2527 | 0/7 | 0.9049 | — | — |
-| t-SNE, refit per step | 1.1408 | 1.2439 | 0/7 | **0.9197** | — | — |
+| UMAP, fit once + `transform()` | 0.0000 | 0.0000 | 7/7 | 0.7730 | — | — |
+| UMAP, refit per step | 1.1606 | 1.5165 | 0/7 | 0.9049 | — | — |
+| t-SNE, refit per step | 1.2201 | 1.5471 | 0/7 | **0.9197** | — | — |
 
 Aligned p95 displacement per growth step; "still" counts steps under \( 10^{-9} \).
 Trustworthiness (\( k = 15 \); Venna & Kaski, 2001) of the final layout against the source 384D
@@ -508,9 +515,9 @@ Unmarked columns render the operator at \( S_x = S_y \) (§2.1). The isometric c
 the other arms' already are; they apply to the operator's rows only, since no other arm has a
 \( \lambda \) axis (`bench/scale.py`, whose unit scale reproduces the unmarked columns exactly).
 
-![Aligned p95 displacement of previously placed points at each growth step, at unit scale (§3.2). The seed-pinned refits relocate points at every step; UMAP fitted once is still except at two steps, where it relocates by 0.39 and 1.07; the moving-anchor operator drifts by 0.13–0.61; the fixed random projection, the once-fitted PCA and the fixed-anchor operator stay at 0.0000.](figures/fig2_displacement.png)
+![Aligned p95 displacement of previously placed points at each growth step, at unit scale (§3.2). The seed-pinned refits relocate points at every step; the moving-anchor operator drifts by 0.13–0.61; UMAP fitted once, the fixed random projection, the once-fitted PCA and the fixed-anchor operator stay at 0.0000.](figures/fig2_displacement.png)
 
-*What the stability column does not show.* Three arms are still at 7 of 7 steps, and two of them
+*What the stability column does not show.* Four arms are still at 7 of 7 steps, and two of them
 are a Gaussian matrix and an SVD. A fixed linear map's coordinates are a pure function of the
 vector, so no amount of new data can move a placed point — in \( O(d) \), deterministically, with
 no guard needed. The operator's stillness is therefore not a finding, and the first two rows exist
@@ -523,8 +530,8 @@ depends on how the operator's poles are chosen.
 *What the displacement column does show.* Under refitting — the path required to keep a global
 layout faithful as a corpus grows — both global baselines relocate previously-placed points at
 every single step, with the seed pinned.
-This is not seed noise; it is what refitting does. t-SNE moves them by 1.03–1.24 times the layout
-width on all 7 transitions; UMAP's per-step range is wider and reaches lower, 0.31–1.25 with a
+This is not seed noise; it is what refitting does. t-SNE moves them by 1.03–1.55 times the layout
+width on all 7 transitions; UMAP's per-step range is wider and reaches lower, 0.31–1.52 with a
 median of 1.16, so "roughly the full width, always" overstates UMAP specifically even though it
 never reaches stillness. The operator with a fixed anchor is still at all 7 steps to float64
 rounding — aligned p95 between \( 4.3 \times 10^{-16} \) and \( 5.0 \times 10^{-15} \), which is
@@ -533,16 +540,16 @@ zero at the resolution the arithmetic affords, not an exact algebraic zero.
 *What does not.* Three results cut against the simple reading.
 
 First, UMAP fitted once and extended by `transform()` — the out-of-sample configuration §1 names
-(Bengio et al., 2003) — is not steadily unstable; it is intermittent. It is exactly still for 5 of 7
-steps and relocates at the other two, by 0.39 and then 1.07. Averaging across steps yields 0.21, a
-figure that describes none of the steps that actually happen; the aggregation here is
-median-and-worst for that reason. Whether intermittent relocation is better or worse than steady
-drift is not settled by this measurement: a spatial mental model that is confirmed several times and
-then violated may be harmed more than one that is never trusted. §4.3 records it as open.
+(Bengio et al., 2003) — is exactly still at all 7 steps too, but for a different reason than the
+linear maps. Its stillness comes from storage, not from the map: each new batch goes through
+`transform()` once and every placed point keeps the coordinates it was first given. `transform()` is
+not a pure function of each vector — by construction it prunes edges and schedules its optimization
+relative to the largest edge weight in the batch it receives — so a system that re-transformed
+earlier points together with later batches would move them.
 
 Second: **the operator is the least faithful arm in the table.** Its trustworthiness (0.6639 fixed,
 0.6208 moving; 0.6666 and 0.6235 with \( \lambda \) in length units) sits below the refit baselines
-(0.9049–0.9197) and below fit-once UMAP (0.7681). Part of that gap is a category difference — the
+(0.9049–0.9197) and below fit-once UMAP (0.7730). Part of that gap is a category difference — the
 operator never constructs a global layout, and trustworthiness scores exactly the thing it does not
 attempt. It is not purely a category error: §2.1 maps \( (\lambda, d_{esc}) \) to a planar position,
 and under that reading the metric is a fair question. What this section supports is a trade, not a
@@ -555,7 +562,7 @@ construction, so \( \lambda \) and \( d_{esc} \) change when \( c_1 \) does, and
 only the fixed-anchor row would be claiming a stability the operator does not have. What the
 measurement shows is that this drift stays bounded — 0.13–0.61 across steps at unit scale, worst
 step 0.8144 with \( \lambda \) in length units, which includes the per-step change of aspect ratio
-declared before that measurement — and never exhibits the relocation spikes of fit-once UMAP. The defensible claim is accordingly narrower than "no drift",
+declared before that measurement. The defensible claim is accordingly narrower than "no drift",
 and stronger: **drift is a deterministic function of one explicit, caller-controlled variable, not
 of hidden stochastic state and not of corpus size.**
 
@@ -592,7 +599,7 @@ coordinates a third way.
 | PCA, fit once on the initial window | 1.47× | 1.48× | 1.01× | — | — |
 | Polar Projector, fixed anchor | 1.57× | 1.59× | **1.17×** | 1.59× | **1.17×** |
 | Polar Projector, moving anchor | 1.39× | 1.34× | 1.17× | 1.41× | 1.17× |
-| UMAP, fit once + `transform()` | 1.57× | 1.57× | 1.12× | — | — |
+| UMAP, fit once + `transform()` | 1.55× | 1.55× | 1.12× | — | — |
 | UMAP, refit per step | 2.05× | 2.41× | 1.12× | — | — |
 | t-SNE, refit per step | **2.12×** | **2.47×** | 1.10× | — | — |
 
@@ -605,16 +612,15 @@ worst step — chance, to within measurement. Whatever the arms above it are doi
 artifact of projecting 384 dimensions onto two. That is the check §3.2's stability column could not
 provide, and it is why this instrument carries more of the paper's weight than trustworthiness does.
 
-*What holds.* Against this instrument the fixed-anchor operator is level with fit-once UMAP to two
-decimals — 1.57× median lift for both, 1.59× against 1.57× at the final step; no significance test
-was run. It also leads the once-fitted PCA that beat it on trustworthiness — 1.57× against 1.47×
+*What holds.* Against this instrument the fixed-anchor operator is level with fit-once UMAP — 1.57×
+against 1.55× median lift, 1.59× against 1.55× at the final step; no significance test was run. It also leads the once-fitted PCA that beat it on trustworthiness — 1.57× against 1.47×
 (1.59× with \( \lambda \) in length units), and 1.17× against 1.01× at the smallest corpus, where the
 PCA finds no more signal than chance. That lead has a caveat: the published frame's contrast axis is
 built from the `part` labels of the initial window, the same labels this instrument scores, while the
 PCA sees no labels; §3.4 shows the label-free rules landing level with the PCA. The two instruments
 disagree about that pair, which §3.4 resolves into a property of pole selection rather than of either
 method. It is also a closer race
-with fit-once UMAP than §3.2's trustworthiness column shows (0.6639 against 0.7681): the two arms
+with fit-once UMAP than §3.2's trustworthiness column shows (0.6639 against 0.7730): the two arms
 that never fully re-account for new data land in the same place on a task a reader can interpret
 directly.
 
@@ -622,9 +628,9 @@ directly.
 t-SNE and UMAP-refit cross 2× lift by the middle of the growth schedule and reach 2.41–2.47× by the
 final step, while the operator and fit-once UMAP stay within 1.40–1.62× after the first step. That
 is the same story §3.2 already tells about trustworthiness (0.9049–0.9197 for the refit arms against
-0.6208–0.7681 for the operator and fit-once UMAP) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
+0.6208–0.7730 for the operator and fit-once UMAP) — refitting buys measurably more locally-coherent neighbourhoods, on this task as on that
 one, and it buys it at exactly the cost §3.2 measures: relocating previously-placed points at
-every step — t-SNE by 1.03–1.24 times the layout width, UMAP by 0.31–1.25.
+every step — t-SNE by 1.03–1.55 times the layout width, UMAP by 0.31–1.52.
 
 *The worst-step column does not discriminate.* Every
 arm's lowest lift is its first step, where the 500-chunk prefix is almost entirely one or two parts
@@ -733,11 +739,11 @@ one figure, with each column timing the same operation for every arm:
 
 | Arm | Once (ms) | Query (µs) | Stimulus (µs) | View (ms) | Loop (ms) |
 |---|---:|---:|---:|---:|---:|
-| PCA, whole corpus | 63.7 | — | 1.56 | 1.75 | 3.2 |
-| Polar, published frame | 0.24 | — | 4.58 | 3.71 | 10.1 |
-| PCA, local refit | — | 3,889 | 1.52 | 5.81 | 7.2 |
-| **Polar, re-anchored** | 581 | **16.3** | 4.64 | 3.67 | 10.4 |
-| Radial | — | — | 1.97 | **1.99** | **4.3** |
+| PCA, whole corpus | 63.2 | — | 1.54 | 1.71 | 3.2 |
+| Polar, published frame | 0.25 | — | 4.68 | 3.42 | 10.1 |
+| PCA, local refit | — | 3,749 | 1.56 | 5.53 | 7.0 |
+| **Polar, re-anchored** | 534 | **16.4** | 4.64 | 3.54 | 10.1 |
+| Radial | — | — | 2.05 | **1.91** | **4.3** |
 
 *Once* is paid over the whole corpus before any query: the global PCA's fit, the published frame's
 centroids and `prepare()`, the re-anchoring codebook. *Query* is paid each time the view re-centres,
@@ -745,21 +751,21 @@ before any point is placed: the local PCA's neighbour scan and refit, the re-anc
 scan and `prepare()`. *Stimulus* places one further vector in a view that already exists, through each
 arm's scalar path. *View* and *Loop* are one full refresh for one query — the per-query step plus all
 2,221 points, placed as a single array operation or one at a time. A dash marks a step the arm does
-not have by construction. Timings are medians of five interleaved repetitions on the host of §3; the
-artifact records each column's spread.
+not have by construction. Timings are medians of five interleaved repetitions on the host of §3, with
+each query's frame timed twenty times per repetition; the artifact records each column's spread.
 
 Poles for the re-anchored arm come from a 16-entry codebook built once over the corpus by k-means;
 per-query selection is the \( O(K \cdot d) \) codebook scan Proposition 1 already accounts for, so
-nothing here consults the corpus at query time. The build is not free: at 581 ms it is the most
-expensive single step in the table, 9.1× the global PCA's fit, and a growing corpus would require
+nothing here consults the corpus at query time. The build is not free: at 534 ms it is the most
+expensive single step in the table, 8.5× the global PCA's fit, and a growing corpus would require
 repeating it (§4.3).
 
 *Re-centring is cheap; refreshing the view is not specific to it.* The per-query column isolates the
-step that re-centring adds, and there the operator's 16.3 µs is 238× less than the local PCA's scan
+step that re-centring adds, and there the operator's 16.4 µs is 229× less than the local PCA's scan
 and refit. A full refresh still places every stored point, which is \( O(N \cdot d) \) for every arm
-in the table. Vectorized, the re-anchored view costs 3.67 ms against 5.81 ms for the local PCA and
-1.99 ms for the radial coordinate. One point at a time the operator is the most expensive of the
-three — 10.4 ms against 7.2 and 4.3 ms — because its per-stimulus path (4.64 µs) outweighs its cheaper
+in the table. Vectorized, the re-anchored view costs 3.54 ms against 5.53 ms for the local PCA and
+1.91 ms for the radial coordinate. One point at a time the operator is the most expensive of the
+three — 10.1 ms against 7.0 and 4.3 ms — because its per-stimulus path (4.64 µs) outweighs its cheaper
 frame. At this corpus size every refresh in the table is shorter than one frame of a 60 Hz display,
 so cost does not separate the arms here; the ordering that holds at both granularities is that the
 radial coordinate is cheaper than the operator.
@@ -772,14 +778,14 @@ paper where a property specific to a local frame produces a difference of that s
 *below* the global fit's 0.056, and the reason is visible in the construction. Moving a linear
 projection's origin changes none of the distances in its view, and its two locally fitted components
 discard all but two of the 384 dimensions, so points far from \( q \) in the discarded ones land on
-top of it. Refitting the directions on the query's own neighbourhood — paying 238× the re-anchored
+top of it. Refitting the directions on the query's own neighbourhood — paying 229× the re-anchored
 arm's per-query cost and, by construction, scanning the corpus for that neighbourhood before every
 view — buys less than not refitting at all. Whatever value the local frame has here comes from where
 it measures *from*, not from which directions it measures *along*.
 
 *The radial baseline leads, but most of the gap is the screen mapping's units.* A coordinate system
 whose vertical axis is simply \( \|v - q\| \) and whose horizontal axis is the projection onto an
-arbitrary fixed unit vector reaches 0.981 — median 1.000, minimum 0.933 — at 1.97 µs per stimulus
+arbitrary fixed unit vector reaches 0.981 — median 1.000, minimum 0.933 — at 2.05 µs per stimulus
 against the operator's 4.64, and with nothing to build once or per query. It satisfies every
 constraint §1 states: \( O(d) \) per stimulus, no corpus access, exactly stable for a fixed \( q \),
 fully deterministic.
@@ -837,7 +843,7 @@ construction, not a measurement.
 | Method | Moves placed points as the corpus grows (§3.2) | Reads the stored corpus to place a point (construction) | Local recall@15 (§3.5) |
 |---|---|---|---:|
 | UMAP or t-SNE, refit per step | yes, at every step | yes | — |
-| UMAP, fit once + `transform()` | at 2 of 7 steps | yes, its own training set | — |
+| UMAP, fit once + `transform()` | no, if placed coordinates are kept | yes, its own training set | — |
 | Fixed random projection | no | no | — |
 | PCA, fit once | no | no, after fitting | 0.056 |
 | PCA, refit on the query's neighbourhood | not measured | yes | 0.023 |
@@ -852,8 +858,8 @@ construction, not a measurement.
 *Positional stability does not distinguish the operator.* Any map whose output is a pure function
 of the vector and of parameters that do not change is exactly still — a Gaussian projection, a PCA
 frozen after the initial window, and the operator with a fixed frame all hold placed points at
-0.0000 (§3.2), while UMAP fitted once and merely *avoiding* re-optimization still relocates points
-twice. Stability is a precondition this design meets, not a property that sets it apart.
+0.0000 (§3.2), and UMAP fitted once is still only because it stores each placement rather than
+re-deriving it. Stability is a precondition this design meets, not a property that sets it apart.
 
 *Re-centring the origin, not reorienting the axes, is the lever for local navigation.* Moving the
 anchor to the query raises local neighbourhood recovery 29×, while refitting the projection's
@@ -967,12 +973,6 @@ the gap:
   centroids in the published frame, codebook centroids once re-anchored — and a re-anchored frame's
   origin is itself a real note. What a cheap per-frame test would look like, and whether the
   distribution of \( d_{esc} \) already carries the signal, is unexamined.
-- **Is relocating in jumps worse than drifting a little?** UMAP fitted once and extended by
-  `transform()` is still at 5 of 7 growth steps and relocates at the other two, by 0.39 and 1.07;
-  the operator's moving-anchor arm moves at every step, by 0.13–0.61 at unit scale (§3.2). Which
-  profile does more damage to a user's spatial model is an empirical HCI question these measurements
-  cannot answer, and Boechler (2001), which establishes that instability degrades navigation, does
-  not distinguish the two.
 - **No behavioural tests with users — the question the whole design rests on.** The design
   requirement of positional stability is an extrapolation from the hypertext-navigation literature
   (§1), and nothing here tests it, or whether a bounded contrast coordinate \( \lambda \in [-1, 1] \)
@@ -1011,7 +1011,7 @@ For whoever implements this primitive, the results mark explicit design decision
   interaction to the corpus. With a growing corpus, the codebook of \( K \) centroids should be
   rebuilt periodically, outside the active loop.
 - **Always compute \( d_{esc} \) in vector form,** as \( \|r - \lambda v_{dipole}\|_2 \). The scalar
-  rearrangement is 1.47× faster but loses all precision in near-collinear regimes, at two points of the
+  rearrangement is 1.39× faster but loses all precision in near-collinear regimes, at two points of the
   sweep without any detectable sign.
 - **Choose the pole-selection rule deliberately.** It is a knob between manifold preservation and
   task-level agreement: rules aligned with variance match the fidelity of a fixed PCA, and no
@@ -1131,26 +1131,29 @@ vectors — no encoder used in this paper produces vectors above \( d = 384 \) (
 
 | \( d \) | `evaluate()` (µs) | Floor (µs) | Ratio | vs. \( d = 16 \) |
 |---|---|---|---|---|
-| 16 | 4.18 | 0.72 | 5.78× | 1.00× |
-| 64 | 4.12 | 0.74 | 5.58× | 0.99× |
-| 256 | 4.54 | 0.90 | 5.07× | 1.09× |
-| 384 | 4.58 | 1.08 | 4.25× | 1.10× |
-| 1024 | 5.64 | 1.64 | 3.43× | 1.35× |
-| 4096 | 11.00 | 4.62 | 2.38× | 2.63× |
-| 8192 | 25.18 | 8.63 | 2.92× | 6.03× |
+| 16 | 3.81 | 0.66 | 5.78× | 1.00× |
+| 64 | 3.86 | 0.69 | 5.59× | 1.01× |
+| 256 | 4.38 | 0.88 | 4.99× | 1.15× |
+| 384 | 4.40 | 1.00 | 4.39× | 1.16× |
+| 1024 | 5.51 | 1.64 | 3.37× | 1.45× |
+| 4096 | 10.88 | 4.77 | 2.28× | 2.85× |
+| 8192 | 21.52 | 8.76 | 2.46× | 5.65× |
 
-1,000 vectors per dimension, 3 repetitions, 1,000 warmup iterations, arms interleaved;
-`bench/latency.py --sweep`. Exploratory: this sweep was specified after §3.1's registered run, in
+1,000 vectors per dimension in a fixed random order, 3 repetitions over the whole sweep with the order
+of dimensions rotated between them, 1,000 warmup iterations, arms interleaved; `bench/latency.py
+--sweep`. Run-to-run spread on `evaluate()` is 1.1–3.2% at every dimension except \( d = 8{,}192 \),
+where it is 16.4%. Exploratory: this sweep was specified after §3.1's registered run, in
 response to what it showed, and is not covered by that experiment's pre-registration.
 
 The prediction holds. Per-call cost is nearly flat from \( d = 16 \) to \( d = 384 \) — the output
 dimension of the sentence-transformer encoder used throughout this paper (`all-MiniLM-L6-v2`,
-§3.2) — costing only 1.10× more despite 24× the floating-point work, because **roughly 90% of the
+§3.2) — costing only 1.16× more despite 24× the floating-point work, because **roughly 90% of the
 per-call cost at that dimension is fixed dispatch overhead**, not the \( O(d) \) arithmetic
 Proposition 1 describes. The crossover into arithmetic-dominated cost sits between
 \( d = 1{,}024 \) and \( d = 4{,}096 \) — well above \( d = 384 \) — where the ratio to the floor
-collapses from 5.78× to 2.38×; the further rise at \( d = 8{,}192 \) (2.92×) is a memory effect, a
-65 MB working set no longer fitting in cache, not an arithmetic one.
+collapses from 5.78× to 2.28×. The ratio rises again at \( d = 8{,}192 \) (2.46×), but the operator's
+figure there carries the 16.4% spread, and this sweep cannot attribute the rise to memory: both arms
+read the same rows in the same order, so a cache effect on the stimuli would move them together.
 
 Two consequences follow, both narrowing this paper's claims rather than widening them. First, the
 microsecond figures in §3 and §3.1 are not a measurement of Proposition 1's asymptotic claim, and
@@ -1162,11 +1165,12 @@ single flop.
 
 That second claim is not left as an inference — it was tested by removing exactly one array
 operation. `evaluate()` clamps \( \lambda \) into \( [-1, 1] \), and clamping a single scalar
-through `np.clip` enters NumPy's ufunc machinery for 1.88 µs — 30% of the whole call — where
-`min(max(x, -1), 1)` does it in 0.23 µs. The two are bit-for-bit identical on every input, including
+through `np.clip` enters NumPy's ufunc machinery for 1.86 µs — 29% of the whole call — where
+`min(max(x, -1), 1)` does it in 0.23 µs, both figures including the harness's own per-call work
+(§3.1), which is a large share of the smaller one. The two are bit-for-bit identical on every input, including
 NaN, signed zero, subnormals, infinities and the float either side of the boundary, so the
-substitution changes no value this paper reports. It made `evaluate()` **1.40× faster**, from 6.34
-to 4.54 µs, for zero change in arithmetic (`bench/clamp.py`, which restores the old clamp and measures
+substitution changes no value this paper reports. It made `evaluate()` **1.37× faster**, from 6.38
+to 4.66 µs, for zero change in arithmetic (`bench/clamp.py`, which restores the old clamp and measures
 both bodies side by side). Every latency figure in §3 reflects the substitution;
 every table of *values* — §B, §C, §3.2 — is unchanged by it, which is the check that the two
 forms really are equivalent.
@@ -1176,7 +1180,7 @@ forms really are equivalent.
 Proposition 3's decomposition is an exact identity, and rearranging it expresses \( d_{esc} \)
 purely in scalars already computed for \( \lambda \):
 \( d_{esc}^2 = \langle r,r \rangle - 2\lambda\langle r, v_{dipole} \rangle + \lambda^2\|v_{dipole}\|_2^2 \),
-which is 1.47× faster than evaluating \( \|r - \lambda v_{dipole}\|_2 \) directly. It is, however,
+which is 1.39× faster than evaluating \( \|r - \lambda v_{dipole}\|_2 \) directly. It is, however,
 not a usable substitute: it subtracts nearly equal quantities as \( d_{esc} \) shrinks relative to
 \( \|r\|_2 \). Against a construction whose exact residual is known analytically:
 
@@ -1216,12 +1220,13 @@ argument against the scalar form is therefore not that it is inaccurate near col
 its inaccuracy is undetectable from inside.
 
 The cost of refusing it is real, and it grew. Measured over 25,000 stimuli at \( d = 384 \), the
-vector form runs at 4.56 µs against the scalar form's 3.10 µs — the scalar rearrangement is
-**1.47× faster**, up from 1.24× under the old clamp: §A's clamp substitution removed nearly the
-same fixed overhead (1.8–2.0 µs) from both arms, so the residual computation is now a larger share
-of a leaner call. Refusing the scalar form costs about a third of the hot path rather than a fifth
-— the argument is unchanged, a third of the hot path is not worth a silently wrong answer, but the
-price is stated at its current value.
+vector form runs at 4.64 µs against the scalar form's 3.34 µs — the scalar rearrangement is
+**1.39× faster**, up from 1.18× under the old clamp: §A's clamp substitution removed nearly the
+same fixed overhead (1.7–2.0 µs) from both arms, so the residual computation is now a larger share
+of a leaner call. Both arms convert and check their input identically, so they differ only in how the
+residual is computed. Refusing the scalar form costs 28% of the hot path rather than 15% — the
+argument is unchanged, 28% of the hot path is not worth a silently wrong answer, but the price is
+stated at its current value.
 
 ### Appendix C — δ-Sweep Behavior
 
@@ -1239,8 +1244,9 @@ fallback direction:
 | 0.500 | 2.638e-3 | 6.954e-6 | 379.31 |
 
 Generated by `tools/generate_polar_delta_table.py` at \( N = 10{,}000 \) samples per
-row (2-sigma sampling bound ≈ 2.8% on the reported variances) — fully deterministic under the
-fixed seed, so any reader can regenerate this exact table. \( \sigma^2_{d_{esc}} \) saturates at a
+row — fully deterministic under its fixed seeds, so any reader can regenerate this exact table. The
+table is that exact sample, not a population estimate with an error bar: \( d_{esc} \) is heavy-tailed
+here, so a normal-theory bound on these variances would understate their sampling error. \( \sigma^2_{d_{esc}} \) saturates at a
 constant floor for \( \delta \geq 0.1 \): no trial saturates in that range, so \( d_{esc} \) equals
 \( r \)'s component orthogonal to \( u_\perp \) exactly — a concrete instance of §2.1's collapse of
 the orthogonal dimensions into a single radial distance. Below \( \delta = 0.1 \) an increasing

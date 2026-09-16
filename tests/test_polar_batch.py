@@ -9,10 +9,14 @@ d_esc is amplified by ||r||/d_esc, so a relative tolerance passes on generic
 vectors and fails in exactly the near-collinear regime section 3.2 exists to
 characterize.
 
-Tolerances carry headroom deliberately. Measured deviation on the publishing
-host is 2.00*eps for lambda and 1.40*eps*||r|| for d_esc; the constants below
-are 8*eps, because CI runs on a different BLAS whose reduction order differs
-again.
+The lambda bound is not a constant either. lambda divides <r, v_dipole> by
+||v_dipole||^2, so a reduction-order error of order eps*||r||*||v_dipole|| in the
+numerator becomes eps*||r||/||v_dipole|| in lambda, which grows without limit as
+the poles approach each other. A flat tolerance only held because the fixtures
+used well-separated random poles; the close-poles test below would fail it.
+
+Tolerances carry headroom deliberately: the constant is 8*eps, because CI runs
+on a different BLAS whose reduction order differs again.
 """
 import numpy as np
 import pytest
@@ -24,7 +28,6 @@ SEEDS = range(10)
 BATCHES = (1, 4, 64, 1024)
 
 EPS = float(np.finfo(np.float64).eps)
-ATOL_LAMBDA = 8 * EPS
 
 
 def _unit_rows(b: int, d: int, seed: int) -> np.ndarray:
@@ -45,6 +48,13 @@ def _residual_norms(projector: PolarProjector, V: np.ndarray, frame) -> np.ndarr
     return np.linalg.norm(r, axis=1)
 
 
+def _assert_agrees(batch, scalar, norms: np.ndarray, frame) -> None:
+    """|dlambda| <= 8 eps max(1, ||r||/||v_dipole||) and |dd_esc| <= 8 eps ||r||, per row."""
+    lambda_scale = np.maximum(1.0, norms / np.sqrt(frame.v_dipole_norm_sq))
+    assert np.all(np.abs(batch.lambdas - [s[1] for s in scalar]) <= 8 * EPS * lambda_scale)
+    assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+
+
 class TestBatchAgreesWithScalar:
     def setup_method(self):
         self.projector = PolarProjector()
@@ -59,10 +69,7 @@ class TestBatchAgreesWithScalar:
         scalar = [self.projector.evaluate(v, frame, i) for i, v in enumerate(V)]
 
         norms = _residual_norms(self.projector, V, frame)
-        np.testing.assert_allclose(
-            batch.lambdas, [s[1] for s in scalar], rtol=0, atol=ATOL_LAMBDA
-        )
-        assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+        _assert_agrees(batch, scalar, norms, frame)
 
     @pytest.mark.parametrize("b", BATCHES)
     def test_agreement_does_not_degrade_with_batch_size(self, b):
@@ -74,10 +81,7 @@ class TestBatchAgreesWithScalar:
         scalar = [self.projector.evaluate(v, frame, i) for i, v in enumerate(V)]
         norms = _residual_norms(self.projector, V, frame)
 
-        np.testing.assert_allclose(
-            batch.lambdas, [s[1] for s in scalar], rtol=0, atol=ATOL_LAMBDA
-        )
-        assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+        _assert_agrees(batch, scalar, norms, frame)
 
     @pytest.mark.parametrize("d", DIMS)
     def test_near_collinear_needs_absolute_not_relative_tolerance(self, d):
@@ -99,6 +103,25 @@ class TestBatchAgreesWithScalar:
         norms = _residual_norms(self.projector, V, frame)
 
         assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+
+    @pytest.mark.parametrize("d", (384, 768))
+    @pytest.mark.parametrize("gap", (1e-2, 1e-4))
+    @pytest.mark.parametrize("seed", range(10))
+    def test_close_poles_scale_the_lambda_bound(self, d, gap, seed):
+        """Nearly coincident poles amplify lambda's disagreement by ||r||/||v_dipole||.
+
+        Stimuli are scaled up and poles pulled together, so ||r||/||v_dipole|| reaches
+        the range where a flat 8*eps bound on lambda does not hold.
+        """
+        c_1, c_A, w = _unit_rows(3, d, seed + 311)
+        frame = self.projector.prepare(c_1, c_A, c_A + gap * w)
+        V = np.ascontiguousarray(_unit_rows(256, d, seed) * 10.0)
+
+        batch = self.projector.evaluate_batch(V, frame)
+        scalar = [self.projector.evaluate(v, frame, i) for i, v in enumerate(V)]
+        norms = _residual_norms(self.projector, V, frame)
+
+        _assert_agrees(batch, scalar, norms, frame)
 
     @pytest.mark.parametrize("d", DIMS)
     @pytest.mark.parametrize("sign", (1.0, -1.0))
@@ -123,10 +146,7 @@ class TestBatchAgreesWithScalar:
         scalar = [self.projector.evaluate(v, frame, i) for i, v in enumerate(V)]
         norms = _residual_norms(self.projector, V, frame)
 
-        np.testing.assert_allclose(
-            batch.lambdas, [s[1] for s in scalar], rtol=0, atol=ATOL_LAMBDA
-        )
-        assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+        _assert_agrees(batch, scalar, norms, frame)
 
 
 class TestBatchContract:
@@ -179,10 +199,7 @@ class TestBatchContract:
         upcast = np.ascontiguousarray(V.astype(np.float32).astype(np.float64))
         scalar = [self.projector.evaluate(v, frame, i) for i, v in enumerate(upcast)]
         norms = _residual_norms(self.projector, upcast, frame)
-        np.testing.assert_allclose(
-            batch.lambdas, [s[1] for s in scalar], rtol=0, atol=ATOL_LAMBDA
-        )
-        assert np.all(np.abs(batch.d_esc - [s[2] for s in scalar]) <= 8 * EPS * norms)
+        _assert_agrees(batch, scalar, norms, frame)
 
     @pytest.mark.parametrize("d", DIMS)
     def test_result_is_an_immutable_namedtuple(self, d):

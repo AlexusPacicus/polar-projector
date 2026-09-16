@@ -84,6 +84,9 @@ def scalar_form_np_clip(
     projector: PolarProjector, v_n: np.ndarray, frame: PolarFrame
 ) -> tuple[float, float, float]:
     """bench/conditioning.py's scalar_form with the pre-c3dfb0b clamp restored."""
+    v_n = np.asarray(v_n, dtype=np.float64)
+    if v_n.shape != frame.c_1.shape:
+        raise ValueError(f"v_n shape {v_n.shape} does not match frame dimension {frame.c_1.shape}")
     r = projector._project_perp(v_n - frame.c_1, frame.c1_hat)
     rv = float(np.dot(r, frame.v_dipole))
     lam = float(np.clip(rv / frame.v_dipole_norm_sq, -1.0, 1.0))

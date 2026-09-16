@@ -10,9 +10,11 @@ Timing protocol
 Latency is sampled per call, not amortized over a bulk loop. At the operation
 sizes this suite measures (single-digit microseconds) a bulk figure hides the
 tail, and the tail is where a hot-path operator is actually judged. The cost is
-one perf_counter_ns pair per sample, which is ~50-100 ns against operations of
-~6 us -- under 2%, and identical across arms, so it cancels in every ratio this
-suite reports.
+that every sample also includes the harness's own per-call work: the timer pair,
+the arm's Python call and fetching its input. That constant is the same for every
+arm, so it cancels in a *difference* between arms but not in a *ratio*: it pulls
+every ratio toward 1, most for the cheapest arms. bench/latency.py measures it
+directly as a `harness_null` arm that only fetches the input.
 
 Three controls, each for a specific noise source:
 
@@ -25,9 +27,10 @@ Three controls, each for a specific noise source:
               completion. The published host is a passively cooled M1 (see the
               manuscript, section 3), so sustained runs throttle; running arm A
               fully and then arm B charges B for a hotter machine. Round-robin
-              spreads any thermal ramp evenly across all arms, which is what
-              makes the *ratios* between arms trustworthy even when the
-              absolute microseconds drift.
+              spreads a thermal ramp across arms. It spreads it evenly only when
+              there are at least as many reps as arms: with fewer, the cyclic
+              rotation reaches only `reps` of the possible starting positions and
+              neighbouring arms keep their relative order in every rep.
 
 On CPU affinity
 ---------------
@@ -187,7 +190,8 @@ def interleave(
     """Run every arm once per repetition, round-robin, and aggregate.
 
     Arm order is rotated each repetition so that no arm is permanently first
-    (and therefore permanently measured on the coolest machine).
+    (and therefore permanently measured on the coolest machine). With fewer reps
+    than arms the rotation is partial; see the module docstring.
     """
     # Carriage-return progress is for a human watching a long run. Piped into a
     # file or a commit message it is just noise, so it is suppressed there.

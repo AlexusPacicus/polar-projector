@@ -110,6 +110,7 @@ K_RECALL = 15
 LOCAL_M = 100
 CODEBOOK_K = 16
 N_INITIAL = 500
+FRAME_CYCLES = 20
 
 
 def true_neighbours(vectors: np.ndarray, index: int, k: int) -> np.ndarray:
@@ -293,10 +294,10 @@ def measure_costs(
     codebook = build_codebook(vectors, CODEBOOK_K)
 
     def frame_pca_local(i: int) -> tuple[np.ndarray, np.ndarray]:
-        return pca_fit(vectors[true_neighbours(vectors, queries[i], LOCAL_M)])
+        return pca_fit(vectors[true_neighbours(vectors, queries[i % len(queries)], LOCAL_M)])
 
     def frame_reanchored(i: int) -> PolarFrame:
-        v = vectors[queries[i]]
+        v = vectors[queries[i % len(queries)]]
         order = np.argsort(((codebook - v) ** 2).sum(axis=1))
         return projector.prepare(v, codebook[order[0]], codebook[order[1]])
 
@@ -330,9 +331,13 @@ def measure_costs(
     )
 
     print("timing query_frame_us")
+    # Each query's frame is timed FRAME_CYCLES times per repetition. With one call per
+    # query, the tens-of-microseconds re-anchored frame is a 50-sample mean that a
+    # handful of scheduler spikes can inflate by half; the millisecond arms are not
+    # sensitive to that, so only this column needs the extra samples.
     framed = interleave(
         {"pca_local": frame_pca_local, "polar_reanchored": frame_reanchored},
-        len(queries), reps=reps, warmup=len(queries),
+        len(queries) * FRAME_CYCLES, reps=reps, warmup=len(queries),
     )
 
     print("timing per_stimulus_us")
@@ -509,6 +514,7 @@ def main() -> int:
             "codebook_k": CODEBOOK_K,
             "chance": K_RECALL / (n - 1),
             "timing_reps": args.reps,
+            "query_frame_cycles": FRAME_CYCLES,
             "structural_zero": {k: list(v) for k, v in STRUCTURAL_ZERO.items()},
         },
         results=results,

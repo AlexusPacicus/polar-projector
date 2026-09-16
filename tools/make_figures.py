@@ -151,39 +151,32 @@ def fig1_screen_mapping() -> None:
 
 
 def fig2_displacement() -> None:
-    """Aligned p95 displacement at each growth step: refits, fit-once, moving anchor, fixed maps."""
+    """Aligned p95 displacement at each growth step: refits, moving anchor, still maps."""
     drift = results("drift.json")
     sizes = [step["size"] for step in drift["polar_fixed"]["steps"]]
 
     def p95(arm: str) -> list[float]:
         return [step["aligned_p95"] for step in drift[arm]["steps"]]
 
-    fixed = np.max([p95(a) for a in ("random_fixed", "pca_fit_once", "polar_fixed")], axis=0)
+    still_arms = ("random_fixed", "pca_fit_once", "umap_fit_once", "polar_fixed")
+    fixed = np.max([p95(a) for a in still_arms], axis=0)
 
     fig, ax = plt.subplots(figsize=(6.5, 3.2), constrained_layout=True)
     recessive(ax)
     ax.plot(sizes, fixed, color=MUTED, linewidth=1.5, solid_capstyle="round", zorder=2,
-            label="fixed maps: random projection, PCA fit once, operator with fixed anchor")
+            label="still: random projection, PCA fit once, UMAP fit once, operator with fixed anchor")
     arms = [("tsne_refit", "t-SNE, refit per step"), ("umap_refit", "UMAP, refit per step"),
-            ("umap_fit_once", "UMAP, fit once + transform()"), ("polar_moving", "operator, moving anchor")]
+            ("polar_moving", "operator, moving anchor")]
     for color, (arm, label) in zip(SERIES, arms):
         ax.plot(sizes, p95(arm), color=color, linewidth=1.5, marker="o", markersize=5.5,
                 markeredgecolor=SURFACE, markeredgewidth=1.2, solid_joinstyle="round",
                 solid_capstyle="round", label=label, zorder=3)
 
-    fit_once = p95("umap_fit_once")
-    for size, value in zip(sizes, fit_once):
-        if value >= 1e-9:
-            above = value < 1.0
-            ax.annotate(f"{value:.2f}", xy=(size, value), xytext=(0, 7) if above else (9, -4),
-                        textcoords="offset points", ha="center" if above else "left",
-                        va="bottom" if above else "top", fontsize=7.5, color=INK_SECONDARY)
-
     ax.set_xticks(sizes)
     ax.set_xticklabels([f"{s:,}" for s in sizes])
     ax.set_xlabel("corpus size after the growth step (chunks)")
     ax.set_ylabel("aligned p95 displacement\n(× layout RMS radius)")
-    ax.set_ylim(-0.03, 1.45)
+    ax.set_ylim(-0.03, 1.7)
     fig.legend(loc="outside lower center", ncol=2, fontsize=7.5, handlelength=1.8, columnspacing=1.4)
     save(fig, "fig2_displacement")
 

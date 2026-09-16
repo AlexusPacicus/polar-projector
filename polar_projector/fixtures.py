@@ -33,8 +33,13 @@ def collinear_centroids(
 def simulate_drift_trajectory(
     steps: int, d: int, drift_rate: float, seed: int = 42
 ) -> list[NDArray[np.float64]]:
-    """Random walk on S^(d-1): additive noise renormalized back onto the sphere."""
-    rng = np.random.default_rng(seed)
+    """Random walk on S^(d-1): additive noise renormalized back onto the sphere.
+
+    The noise stream is seeded apart from the start vector. Seeding both with `seed`
+    made the first noise draw a multiple of the start direction, so renormalizing
+    cancelled it and the first step did not move.
+    """
+    rng = np.random.default_rng([seed, 1])
     trajectory = []
     v = random_unit_vector(d, seed)
     for _ in range(steps):

@@ -262,16 +262,17 @@ class TestPolarProjectorUnit:
     def test_lambda_clamp_matches_np_clip_exactly(self, value):
         """evaluate() clamps λ with min/max, not np.clip. They must not diverge.
 
-        np.clip costs 1.88 µs on a single scalar against 0.23 µs for min/max --
-        30% of the evaluate() call it used to sit in (bench/results/clamp.json) --
+        np.clip costs 1.86 µs on a single scalar against 0.23 µs for min/max --
+        29% of the evaluate() call it used to sit in (bench/results/clamp.json) --
         so the hot path uses the latter. That
         is only safe while the two agree on every input, and the interesting
         inputs are the ones nobody reaches for: NaN, signed zero, subnormals,
         infinities, and the float either side of the clip boundary.
 
         Argument order is load-bearing. min(max(x, -1.0), 1.0) propagates NaN;
-        min(max(-1.0, x), 1.0) silently returns -1.0 for it. This test fails if
-        anyone reorders them.
+        min(max(-1.0, x), 1.0) silently returns -1.0 for it. This test checks the
+        two expressions agree; the two tests after it check that evaluate() itself
+        clamps this way, which is what fails if anyone reorders the shipped call.
         """
         shipped = min(max(value, -1.0), 1.0)
         reference = float(np.clip(value, -1.0, 1.0))
@@ -281,6 +282,59 @@ class TestPolarProjectorUnit:
         else:
             assert shipped == reference
             assert math.copysign(1.0, shipped) == math.copysign(1.0, reference)
+
+    def test_evaluate_propagates_nan_through_the_clamp(self):
+        """A NaN projection coefficient must come out of evaluate() as NaN, not as -1.0."""
+        frame = self.projector.prepare(
+            np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), np.array([0.0, -1.0, 0.0])
+        )
+        _, lam, _ = self.projector.evaluate(np.array([math.nan, 0.0, 0.0]), frame, 0)
+        assert math.isnan(lam)
+
+    @pytest.mark.parametrize("d", [128, 384, 768])
+    def test_evaluate_lambda_matches_np_clip_bitwise(self, d):
+        """evaluate()'s lambda equals np.clip of the same raw coefficient, saturated rows included."""
+        frame = self.projector.prepare(random_unit_vector(d, 1), random_unit_vector(d, 2), random_unit_vector(d, 3))
+        stimuli = [random_unit_vector(d, 100 + i) * scale for i, scale in enumerate([0.5, 1.0, 3.0, 30.0] * 25)]
+        stimuli += [frame.c_1 + k * frame.v_dipole for k in (-5.0, -1.0, 0.0, 1.0, 5.0)]
+        for i, v in enumerate(stimuli):
+            r = self.projector._project_perp(np.asarray(v, dtype=np.float64) - frame.c_1, frame.c1_hat)
+            reference = float(np.clip(float(np.dot(r, frame.v_dipole)) / frame.v_dipole_norm_sq, -1.0, 1.0))
+            _, lam, _ = self.projector.evaluate(v, frame, i)
+            assert lam == reference
+            assert math.copysign(1.0, lam) == math.copysign(1.0, reference)
+
+    def test_frame_does_not_alias_the_callers_anchor(self):
+        """Mutating c_1 after prepare() must not change what the frame evaluates."""
+        c_1 = random_unit_vector(8, 1)
+        frame = self.projector.prepare(c_1, random_unit_vector(8, 2), random_unit_vector(8, 3))
+        v = random_unit_vector(8, 4)
+        before = self.projector.evaluate(v, frame, 0)
+        c_1[:] = random_unit_vector(8, 9)
+        assert self.projector.evaluate(v, frame, 0) == before
+
+    @pytest.mark.parametrize(
+        ("c_1", "c_A", "c_B"),
+        [
+            ([math.nan, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]),
+            ([math.inf, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]),
+            ([1e160, 1e160, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]),
+            ([1.0, 0.0, 0.0], [math.nan, 1.0, 0.0], [0.0, -1.0, 0.0]),
+            ([1.0, 0.0, 0.0], [0.0, math.inf, 0.0], [0.0, -1.0, 0.0]),
+            ([1.0, 0.0, 0.0], [0.0, 1e160, 0.0], [0.0, -1e160, 0.0]),
+        ],
+        ids=["nan-anchor", "inf-anchor", "overflowing-anchor", "nan-pole", "inf-pole", "overflowing-dipole"],
+    )
+    def test_prepare_rejects_non_finite_frames(self, c_1, c_A, c_B):
+        with pytest.raises(ValueError, match="not finite"):
+            self.projector.prepare(np.array(c_1), np.array(c_A), np.array(c_B))
+
+    def test_dipole_exactly_at_eps_collinear_keeps_the_natural_branch(self):
+        """Algorithm 1 step 5: a dipole norm equal to eps_collinear is not collinear."""
+        c_A = np.array([0.0, 1e-6, 0.0])
+        assert np.linalg.norm(c_A) == self.projector.eps_collinear
+        frame = self.projector.prepare(np.array([1.0, 0.0, 0.0]), c_A, np.zeros(3))
+        assert np.array_equal(frame.v_dipole, c_A)
 
     @pytest.mark.parametrize("d", [128, 384, 768])
     @pytest.mark.parametrize("sign", [1.0, -1.0])

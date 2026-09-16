@@ -87,9 +87,14 @@ def scalar_form(
 ) -> tuple[float, float, float]:
     """Proposition 3's scalar rearrangement, for the comparison only.
 
-    Uses the projector's own _project_perp so that this arm and evaluate()
-    differ in the final step and nowhere else.
+    Uses the projector's own _project_perp, and repeats evaluate()'s input
+    conversion and shape check, so that this arm and evaluate() differ in the
+    final step and nowhere else. An earlier version skipped the conversion and the
+    check (~0.2 us), which overstated the scalar form's speed advantage.
     """
+    v_n = np.asarray(v_n, dtype=np.float64)
+    if v_n.shape != frame.c_1.shape:
+        raise ValueError(f"v_n shape {v_n.shape} does not match frame dimension {frame.c_1.shape}")
     r = projector._project_perp(v_n - frame.c_1, frame.c1_hat)
     rv = float(np.dot(r, frame.v_dipole))
     lam = min(max(rv / frame.v_dipole_norm_sq, -1.0), 1.0)  # same clamp as evaluate()

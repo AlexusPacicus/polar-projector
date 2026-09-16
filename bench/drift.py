@@ -64,6 +64,7 @@ Usage:
 
 import argparse
 import time
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -101,18 +102,22 @@ def rms_radius(coords: np.ndarray) -> float:
 def align_similarity(source: np.ndarray, target: np.ndarray) -> np.ndarray:
     """Map `source` onto `target` by the best translation + rotation + scale.
 
-    Full Procrustes. Removes exactly the degrees of freedom a layout algorithm
-    leaves undetermined, so what remains is displacement the algorithm actually
-    chose rather than an arbitrary global reorientation.
+    Full Procrustes, restricted to proper rotations (Umeyama's determinant
+    correction). A camera can absorb a translation, a rotation or a zoom, but not a
+    mirror image, so a reflected layout is charged as displacement rather than
+    forgiven. An earlier version took rotation = u @ vt unconstrained, which picks a
+    reflection whenever it fits better.
     """
     src_c = source - source.mean(axis=0)
     tgt_c = target - target.mean(axis=0)
 
     u, s, vt = np.linalg.svd(src_c.T @ tgt_c)
-    rotation = u @ vt
+    signs = np.ones_like(s)
+    signs[-1] = np.sign(np.linalg.det(u @ vt)) or 1.0
+    rotation = (u * signs) @ vt
 
     src_norm = float(np.sum(src_c**2))
-    scale = float(np.sum(s)) / src_norm if src_norm > 0.0 else 1.0
+    scale = float(np.sum(s * signs)) / src_norm if src_norm > 0.0 else 1.0
 
     return scale * (src_c @ rotation) + target.mean(axis=0)
 
@@ -185,12 +190,19 @@ def arm_umap_fit_once(vectors: np.ndarray, sizes: list[int]) -> list[np.ndarray]
         n_components=2,
         random_state=SEED,
     )
-    base = reducer.fit_transform(vectors[: sizes[0]])
+    placed = np.asarray(reducer.fit_transform(vectors[: sizes[0]]), dtype=np.float64)
 
-    out = [np.asarray(base, dtype=np.float64)]
-    for size in sizes[1:]:
-        new = reducer.transform(vectors[sizes[0] : size])
-        out.append(np.vstack([base, np.asarray(new, dtype=np.float64)]))
+    # Only each step's new batch goes through transform(); points placed at earlier
+    # steps keep the coordinates they were given. transform() is not a pure function
+    # of each vector -- its optimization schedule depends on the batch it receives --
+    # so re-transforming earlier points with every batch moves them, and an earlier
+    # version of this arm measured that re-transformation rather than out-of-sample
+    # placement.
+    out = [placed]
+    for previous, size in pairwise(sizes):
+        new = np.asarray(reducer.transform(vectors[previous:size]), dtype=np.float64)
+        placed = np.vstack([placed, new])
+        out.append(placed)
     return out
 
 
@@ -350,9 +362,9 @@ def main() -> int:
             f"| final trustworthiness {_fmt_trust(fidelity, 6)}"
         )
 
-    # Aggregated ACROSS steps by median and worst case, never by mean: at least
-    # one arm is bimodal over steps (exactly still, then a large relocation),
-    # and a mean reports neither of the two things that actually happen.
+    # Aggregated ACROSS steps by median and worst case, never by mean: an arm that
+    # is still at most steps and relocates at one would be reported by a mean as
+    # neither of the two things that actually happen.
     print(
         f"\n{'arm':<16}{'median step':>13}{'worst step':>12}{'still steps':>13}{'trust':>9}"
     )

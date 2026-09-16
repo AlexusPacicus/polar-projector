@@ -27,6 +27,18 @@ Arms
 4. polar_project        project(), rebuilding the frame on every call.
 5. sliding_window_pca   SVD over the trailing W = 32 vectors, then project
                         onto the top 2 right singular vectors.
+6. harness_null         fetches the stimulus and returns it. Not a method: the
+                        harness's own per-call cost (timer pair, Python call,
+                        input fetch), which every other arm also pays. It
+                        cancels in differences between arms, not in ratios.
+
+Access order
+------------
+Stimuli are visited in a fixed random permutation of the corpus, not front to
+back. Sequential access lets the hardware prefetcher hide cache misses, so a
+front-to-back scan barely changes with N or with the working set -- which is
+exactly the property the flatness claims test. An earlier version scanned in
+order.
 
 Fairness notes, all of which cut against the operator
 -----------------------------------------------------
@@ -102,6 +114,11 @@ N_SWEEP = 1_000
 SWEEP_NS = (1_000, 2_221, 4_000, 25_000)
 
 
+def access_order(n: int) -> list[int]:
+    """Fixed random visiting order over n rows, as a Python list so a lookup costs the same for every arm."""
+    return np.random.default_rng(SEED + 7).permutation(n).tolist()
+
+
 def synthetic_corpus(n: int, d: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Random unit vectors and a frame, reproducing the section 3.1 setup."""
     vectors = np.asarray([random_unit_vector(d, SEED_BASE + i) for i in range(n)])
@@ -144,24 +161,29 @@ def build_arms(
     # Arm 5: a wrapped copy, so every call gets exactly W contiguous trailing
     # rows with no per-call index arithmetic or allocation to charge the arm for.
     padded = np.ascontiguousarray(np.vstack([vectors[-WINDOW:], vectors]))
+    order = access_order(vectors.shape[0])
 
     def random_projection(i: int) -> Any:
-        return rp @ vectors[i]
+        return rp @ vectors[order[i]]
 
     def multi_anchor_cosine(i: int) -> Any:
-        return anchors @ vectors[i]
+        return anchors @ vectors[order[i]]
 
     def polar_evaluate(i: int) -> Any:
-        return projector.evaluate(vectors[i], frame, i)
+        return projector.evaluate(vectors[order[i]], frame, i)
 
     def polar_project(i: int) -> Any:
-        return projector.project(vectors[i], c_1, c_A, c_B, i)
+        return projector.project(vectors[order[i]], c_1, c_A, c_B, i)
 
     def sliding_window_pca(i: int) -> Any:
-        window = padded[i : i + WINDOW]
+        j = order[i]
+        window = padded[j : j + WINDOW]
         centered = window - window.mean(axis=0)
         basis = np.linalg.svd(centered, full_matrices=False)[2][:2]
-        return basis @ vectors[i]
+        return basis @ vectors[j]
+
+    def harness_null(i: int) -> Any:
+        return vectors[order[i]]
 
     return {
         "random_projection": random_projection,
@@ -169,6 +191,7 @@ def build_arms(
         "polar_evaluate": polar_evaluate,
         "polar_project": polar_project,
         "sliding_window_pca": sliding_window_pca,
+        "harness_null": harness_null,
     }
 
 
@@ -230,34 +253,50 @@ def dimension_sweep(reps: int, warmup: int) -> dict[str, Any]:
     """
     rng = np.random.default_rng(SEED)
     out: dict[str, Any] = {}
-
     print("[sweep] cost vs dimension — where dispatch stops dominating\n")
-    rows = []
+
+    arms_by_d: dict[int, dict[str, Callable[[int], Any]]] = {}
     for d in SWEEP_DIMS:
         vectors = np.ascontiguousarray(rng.standard_normal((N_SWEEP, d)))
         vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
         c_1, c_A, c_B = (np.ascontiguousarray(rng.standard_normal(d)) for _ in range(3))
-
         projector = PolarProjector()
         frame = projector.prepare(c_1, c_A, c_B)
         rp = np.ascontiguousarray(rng.standard_normal((2, d)) / np.sqrt(d))
-
-        arms: dict[str, Callable[[int], Any]] = {
-            "polar_evaluate": lambda i, f=frame, v=vectors, p=projector: p.evaluate(v[i], f, i),
-            "random_projection": lambda i, m=rp, v=vectors: m @ v[i],
+        order = access_order(N_SWEEP)
+        arms_by_d[d] = {
+            "polar_evaluate": lambda i, f=frame, v=vectors, p=projector, o=order: p.evaluate(v[o[i]], f, i),
+            "random_projection": lambda i, m=rp, v=vectors, o=order: m @ v[o[i]],
         }
-        stats = interleave(arms, N_SWEEP, reps=reps, warmup=warmup)
 
-        ev = stats["polar_evaluate"]["mean"]
-        fl = stats["random_projection"]["mean"]
-        out[str(d)] = {"polar_evaluate": ev, "random_projection": fl, "ratio": ev / fl}
+    # Repetitions run over the whole sweep, with the order of dimensions rotated each
+    # time, so the "vs d=16" column is not measured on a machine that warms up as d
+    # grows. An earlier version ran each d to completion in ascending order and kept
+    # no spread.
+    per_rep: dict[int, dict[str, list[float]]] = {
+        d: {"polar_evaluate": [], "random_projection": []} for d in SWEEP_DIMS
+    }
+    dims = list(SWEEP_DIMS)
+    for rep in range(reps):
+        for d in dims[rep % len(dims) :] + dims[: rep % len(dims)]:
+            stats = interleave(arms_by_d[d], N_SWEEP, reps=1, warmup=warmup, progress=False)
+            for arm in per_rep[d]:
+                per_rep[d][arm].append(stats[arm]["mean"])
+
+    rows = []
+    for d in SWEEP_DIMS:
+        ev = float(np.median(per_rep[d]["polar_evaluate"]))
+        fl = float(np.median(per_rep[d]["random_projection"]))
+        spread = {arm: (max(v) - min(v)) / float(np.median(v)) for arm, v in per_rep[d].items()}
+        out[str(d)] = {"polar_evaluate": ev, "random_projection": fl, "ratio": ev / fl,
+                       "spread": spread, "per_rep": per_rep[d]}
         base = out[str(SWEEP_DIMS[0])]["polar_evaluate"]
-        rows.append([str(d), f"{ev:.2f}", f"{fl:.2f}", f"{ev / fl:.2f}x", f"{ev / base:.2f}x"])
-
+        rows.append([str(d), f"{ev:.2f}", f"{fl:.2f}", f"{ev / fl:.2f}x", f"{ev / base:.2f}x",
+                     f"{spread['polar_evaluate'] * 100:.1f}%"])
     print_table(
-        ["d", "evaluate us", "floor us", "evaluate/floor", "vs d=16"],
+        ["d", "evaluate us", "floor us", "evaluate/floor", "vs d=16", "spread"],
         rows,
-        [10, 14, 12, 17, 11],
+        [10, 14, 12, 17, 11, 9],
     )
     print("if cost were dispatch-bound, 'evaluate us' is flat in d; if arithmetic-bound, linear\n")
     return out
@@ -275,9 +314,10 @@ def corpus_size_sweep(reps: int, warmup: int) -> dict[str, Any]:
     print("[n-sweep] stateless cost vs corpus size\n")
     for n in SWEEP_NS:
         vectors, c_1, c_A, c_B = synthetic_corpus(n, D)
+        order = access_order(n)
         projector = PolarProjector()
         arms: dict[str, Callable[[int], Any]] = {
-            "polar_project": lambda i, v=vectors: projector.project(v[i], c_1, c_A, c_B, i),
+            "polar_project": lambda i, v=vectors, o=order: projector.project(v[o[i]], c_1, c_A, c_B, i),
         }
         stats = interleave(arms, n, reps=reps, warmup=warmup)["polar_project"]
         out[str(n)] = stats

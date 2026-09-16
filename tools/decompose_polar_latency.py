@@ -20,6 +20,7 @@ them, so the split measures the identical code paths that project() executes.
 Read-only, offline, deterministic (fixed seeds). numpy only — no substrate dependency.
 """
 
+import argparse
 import math
 import time
 from pathlib import Path
@@ -41,6 +42,9 @@ SEED_BASE = 1000
 
 def _eval_scalar_form(p, v_n, frame):
     """Prop-3 scalar form of d_esc, for the conditioning comparison only."""
+    v_n = np.asarray(v_n, dtype=np.float64)
+    if v_n.shape != frame.c_1.shape:
+        raise ValueError(f"v_n shape {v_n.shape} does not match frame dimension {frame.c_1.shape}")
     r = p._project_perp(v_n - frame.c_1, frame.c1_hat)
     rv = float(np.dot(r, frame.v_dipole))
     lam = min(max(rv / frame.v_dipole_norm_sq, -1.0), 1.0)  # same clamp as evaluate()
@@ -112,6 +116,12 @@ def _measure_once(p, vectors, c_1, c_A, c_B) -> dict:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=Path, default=Path("bench/results/decompose.json"),
+                        help="where to write the artifact; point it elsewhere to reproduce without "
+                             "overwriting the committed one")
+    args = parser.parse_args()
+
     c_1 = random_unit_vector(D, SEED_ANCHOR)
     c_A = random_unit_vector(D, SEED_POLE_A)
     c_B = random_unit_vector(D, SEED_POLE_B)
@@ -167,7 +177,7 @@ def main() -> int:
     # committed result like every other published figure, rather than only to this script's
     # stdout. verify_paper_tables.py checks the paper against it.
     write_result(
-        Path("bench/results/decompose.json"),
+        args.out,
         experiment="decompose",
         config={"d": D, "n_vectors": N_VECTORS, "repetitions": REPS,
                 "statistic": "median over repetitions", "dtype": "float64"},
@@ -182,7 +192,7 @@ def main() -> int:
             "evaluate_spread_pct": spread_pct,
         },
     )
-    print("\nwrote bench/results/decompose.json")
+    print(f"\nwrote {args.out}")
     return 0
 
 

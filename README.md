@@ -58,17 +58,20 @@ lambdas, d_escs = projector.evaluate_batch(V, frame)
 larger batches once its three `(B, d)` temporaries stop fitting in cache — at `B = 1` it is 2.6×
 slower than `evaluate()`. It is not bitwise identical to a loop over `evaluate()`: BLAS reorders
 the reduction at `B ≥ 2`, so a row's result is not a pure function of that row. Deviation is
-bounded at 0.19 ε in λ and 2.02 ε‖r‖ in `d_esc`. See §D.
+bounded, but not by a constant: the disagreement in λ scales with ‖r‖/‖v_dipole‖, so it grows as the
+poles approach each other (`tests/test_polar_batch.py`). `evaluate_batch()` is not used by any result
+in the manuscript.
 
 Anchor normalization, dipole-pole projection and dipole construction depend only on
 \( (c_1, c_A, c_B) \), so they are invariant across every stimulus evaluated under one active
-context. At \( d = 384 \), float64, frame construction is **59.7%** of a stateless call
-(`tools/decompose_polar_latency.py`: 11.51 µs stateless, `prepare` 6.87 µs), and with `evaluate` at
-4.57 µs against 11.75 µs for `project` (`bench/latency.py`) the prepared form does **2.57× less work
+context. At \( d = 384 \), float64, frame construction is **60.0%** of a stateless call
+(`tools/decompose_polar_latency.py`: 12.03 µs stateless, `prepare` 7.22 µs), and with `evaluate` at
+4.66 µs against 12.20 µs for `project` (`bench/latency.py`) the prepared form does **2.62× less work
 per interaction** whenever the context outlives a single stimulus. Manuscript §3.1.
 
 `prepare()` fails loudly rather than returning plausible garbage: non-1-D inputs, mismatched pole
-shapes, \( d < 2 \), and dipoles whose squared norm underflows in float64 all raise `ValueError`.
+shapes, \( d < 2 \), non-finite inputs or norms that overflow, and dipoles whose squared norm
+underflows in float64 all raise `ValueError`.
 The load-bearing case is the column vector — a `(d, 1)` input would otherwise broadcast into a
 `(d, d)` matrix and return a wrong answer silently.
 
@@ -93,7 +96,7 @@ pip install -e ".[test,repro]"
 | `bench/recall.py` | §3.3 same-part recall@k (baseline arms need the `[bench]` extra) |
 | `bench/frame_sensitivity.py` | §3.4 pole selection as a trade-off knob (baseline arms need the `[bench]` extra) |
 | `bench/reanchor.py` | §3.5 local fidelity under re-anchoring; `--ablation` for the units decomposition |
-| `bench/batched.py` | §D batched throughput, agreement and row-order sensitivity |
+| `bench/batched.py` | batched throughput, agreement and row-order sensitivity (not in the manuscript) |
 | `bench/scale.py` | §3.2–§3.4 under a declared screen scale (E8), unit and isometric |
 | `bench/poles.py` | P1: where the published frame's poles land on the λ axis |
 | `bench/clamp.py` | §A and §B: the λ clamp substitution, re-measured and exported (A9) |
