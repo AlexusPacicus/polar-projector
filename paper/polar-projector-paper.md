@@ -41,14 +41,12 @@
 
 ## Abstract
 
-Spatial interfaces place a personal knowledge corpus of embeddings on a canvas, commonly using
-global dimensionality reduction such as UMAP or t-SNE. Refitting these projections to keep the
-canvas current relocates placed points, even with a fixed seed, at a cost of seconds per refit, and
-stable or incremental projections soften that drift rather than remove it. Writing a note requires
-decoupling the interaction from the state of the corpus: new notes must not move placed ones, and
-placing one must not read what is stored.
-Navigating also requires re-centring the view on the note being consulted. Any fixed linear map
-meets the first requirement; the second is where methods differ. We present the Polar Projector, a
+A spatial interface over a personal corpus of embeddings has two requirements: writing a note must
+not move the ones already placed, and navigating must re-centre the view on the note being consulted.
+Global dimensionality reduction such as UMAP or t-SNE, the usual choice for such canvases, keeps a
+layout current by refitting, which relocates placed points even with a fixed seed and reads the whole
+corpus again. Any fixed linear map meets the first requirement without reading the corpus; the second
+is where methods differ. We present the Polar Projector, a
 local \( O(d) \) operator that places an incoming vector against an active frame, an anchor plus a
 contrast dipole, without reading the corpus, returning a clamped projection coefficient \( \lambda
 \in [-1, 1] \) and an orthogonal residual \( d_{esc} \geq 0 \). Its collinear configurations do not
