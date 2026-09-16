@@ -5,8 +5,8 @@ fixed linear map competes on equal terms: pca_fit_once matches or beats the
 operator there (bench/results/drift.json, frame_sensitivity.json). Neither
 instrument touches what separates them. A fixed map has exactly one view of the
 corpus, for every query, forever. The operator's coordinates are anchor-relative,
-so moving the active context yields a different view -- and re-anchoring costs one
-prepare(), O(d), with no corpus access.
+so moving the active context yields a different view -- and re-anchoring costs a
+K-way codebook scan and one prepare(), O(K*d), with no corpus access.
 
 This measures whether that buys fidelity where the user is standing.
 
@@ -51,7 +51,39 @@ Nothing here leaks at query time. The codebook of arm 3 is built once, like
 fitting PCA once, and per-query pole selection is the O(K*d) codebook scan
 Proposition 1 already accounts for.
 
-Deterministic, offline. numpy only; the PCA arms use numpy's SVD.
+Cost columns
+------------
+Each column times the same operation for every arm, and a structural zero is
+written as 0.0 only where the arm does no such work by construction:
+
+  build_us            once over the corpus, before any query: the global PCA's
+                      SVD, the published frame's window mean, part centroids and
+                      prepare(), the re-anchoring codebook's k-means. Zero for
+                      pca_local and radial_plain, which build nothing corpus-wide.
+  query_frame_us      once per query, before any point is placed: pca_local's
+                      nearest-neighbour scan plus its SVD, polar_reanchored's
+                      codebook scan plus prepare(). Zero for the single-view arms,
+                      whose view does not depend on the query, and for
+                      radial_plain, whose frame is the query vector itself.
+  per_stimulus_us     placing one vector in a view that already exists, through
+                      each arm's scalar path, returning two Python floats. The
+                      stimuli are every corpus vector, against the first query's
+                      view for the per-query arms.
+  view_vectorized_us  one full view refresh for one query: query_frame_us plus
+                      placing all N points as a single array operation
+                      (matrix product, evaluate_batch(), or a vectorized norm).
+  view_scalar_us      the same refresh placing the N points one at a time
+                      through the per_stimulus_us bodies, as the recall loop
+                      below does for the operator.
+
+An earlier version of this script mixed these in one frame_us column -- frame plus
+full view for the PCA arms and the published frame, frame alone for the
+re-anchored arm, the neighbour scan left out of pca_local, and a hand-written 0
+for radial_plain -- so ratios read off that column compared different operations.
+Timings follow bench/_harness.py: interleaved arms, rotated order, median across
+repetitions, peak-to-peak spread recorded.
+
+Deterministic recalls, offline. numpy only; the PCA arms use numpy's SVD.
 
 Usage:
     python bench/reanchor.py
@@ -59,13 +91,20 @@ Usage:
 """
 
 import argparse
-import time
 from pathlib import Path
 
 import numpy as np
-from _harness import RESULTS_DIR, SEED, dipole_poles, load_corpus, print_header, write_result
+from _harness import (
+    RESULTS_DIR,
+    SEED,
+    dipole_poles,
+    interleave,
+    load_corpus,
+    print_header,
+    write_result,
+)
 
-from polar_projector import PolarProjector
+from polar_projector import PolarFrame, PolarProjector
 
 K_RECALL = 15
 LOCAL_M = 100
@@ -87,10 +126,22 @@ def local_recall(coords: np.ndarray, index: int, truth: np.ndarray, k: int) -> f
     return len(set(got.tolist()) & set(truth.tolist())) / k
 
 
-def pca_project(fit_on: np.ndarray, apply_to: np.ndarray) -> np.ndarray:
+def pca_fit(fit_on: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Centre and the (d, 2) matrix of the first two principal directions."""
     centre = fit_on.mean(axis=0)
     _, _, vt = np.linalg.svd(fit_on - centre, full_matrices=False)
-    return (apply_to - centre) @ vt[:2].T
+    return centre, vt[:2].T
+
+
+def pca_project(fit_on: np.ndarray, apply_to: np.ndarray) -> np.ndarray:
+    centre, comps = pca_fit(fit_on)
+    return (apply_to - centre) @ comps
+
+
+def radial_direction(d: int) -> np.ndarray:
+    """The fixed arbitrary unit vector of radial_plain's horizontal axis."""
+    e = np.random.default_rng(SEED + 1).standard_normal(d)
+    return e / np.linalg.norm(e)
 
 
 def build_codebook(vectors: np.ndarray, k: int) -> np.ndarray:
@@ -219,9 +270,145 @@ def ablate(vectors: np.ndarray, queries: list[int], out: Path) -> int:
     return 0
 
 
+STRUCTURAL_ZERO = {
+    "build_us": ("pca_local", "radial_plain"),
+    "query_frame_us": ("pca_global", "polar_published", "radial_plain"),
+}
+ARMS = ("pca_global", "polar_published", "pca_local", "polar_reanchored", "radial_plain")
+COLUMNS = ("build_us", "query_frame_us", "per_stimulus_us", "view_vectorized_us", "view_scalar_us")
+
+
+def measure_costs(
+    vectors: np.ndarray, parts: list[str], queries: list[int], reps: int
+) -> dict[str, dict[str, dict[str, float]]]:
+    """Every cost column of the module docstring, per arm: {column: aggregate}."""
+    n = vectors.shape[0]
+    projector = PolarProjector()
+    window, window_parts = vectors[:N_INITIAL], parts[:N_INITIAL]
+    e = radial_direction(vectors.shape[1])
+
+    # --- what each arm holds once built ------------------------------------
+    centre_g, comps_g = pca_fit(vectors)
+    frame_pub = projector.prepare(window.mean(axis=0), *dipole_poles(window, window_parts))
+    codebook = build_codebook(vectors, CODEBOOK_K)
+
+    def frame_pca_local(i: int) -> tuple[np.ndarray, np.ndarray]:
+        return pca_fit(vectors[true_neighbours(vectors, queries[i], LOCAL_M)])
+
+    def frame_reanchored(i: int) -> PolarFrame:
+        v = vectors[queries[i]]
+        order = np.argsort(((codebook - v) ** 2).sum(axis=1))
+        return projector.prepare(v, codebook[order[0]], codebook[order[1]])
+
+    # --- per-stimulus bodies, shared by per_stimulus_us and view_scalar_us --
+    def place_pca(v: np.ndarray, centre: np.ndarray, comps: np.ndarray) -> tuple[float, float]:
+        x = (v - centre) @ comps
+        return float(x[0]), float(x[1])
+
+    def place_polar(v: np.ndarray, frame: PolarFrame) -> tuple[float, float]:
+        _, lam, d_esc = projector.evaluate(v, frame, 0)
+        return lam, d_esc
+
+    def place_radial(v: np.ndarray, q: np.ndarray) -> tuple[float, float]:
+        delta = v - q
+        return float(delta @ e), float(np.linalg.norm(delta))
+
+    costs: dict[str, dict[str, dict[str, float]]] = {arm: {} for arm in ARMS}
+    zero = {"mean": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "min": 0.0, "spread": 0.0,
+            "reps": 0.0}
+
+    print("timing build_us")
+    built = interleave(
+        {
+            "pca_global": lambda _i: pca_fit(vectors),
+            "polar_published": lambda _i: projector.prepare(
+                window.mean(axis=0), *dipole_poles(window, window_parts)
+            ),
+            "polar_reanchored": lambda _i: build_codebook(vectors, CODEBOOK_K),
+        },
+        1, reps=reps, warmup=1,
+    )
+
+    print("timing query_frame_us")
+    framed = interleave(
+        {"pca_local": frame_pca_local, "polar_reanchored": frame_reanchored},
+        len(queries), reps=reps, warmup=len(queries),
+    )
+
+    print("timing per_stimulus_us")
+    q0 = vectors[queries[0]]
+    centre_l0, comps_l0 = frame_pca_local(0)
+    frame_re0 = frame_reanchored(0)
+    placed = interleave(
+        {
+            "pca_global": lambda i: place_pca(vectors[i], centre_g, comps_g),
+            "polar_published": lambda i: place_polar(vectors[i], frame_pub),
+            "pca_local": lambda i: place_pca(vectors[i], centre_l0, comps_l0),
+            "polar_reanchored": lambda i: place_polar(vectors[i], frame_re0),
+            "radial_plain": lambda i: place_radial(vectors[i], q0),
+        },
+        n, reps=reps, warmup=1000,
+    )
+
+    print("timing view_vectorized_us")
+
+    def view_pca_local(i: int) -> np.ndarray:
+        centre, comps = frame_pca_local(i)
+        return (vectors - centre) @ comps
+
+    def view_radial(i: int) -> np.ndarray:
+        delta = vectors - vectors[queries[i]]
+        return np.stack([delta @ e, np.linalg.norm(delta, axis=1)], axis=1)
+
+    vectorized = interleave(
+        {
+            "pca_global": lambda _i: (vectors - centre_g) @ comps_g,
+            "polar_published": lambda _i: projector.evaluate_batch(vectors, frame_pub),
+            "pca_local": view_pca_local,
+            "polar_reanchored": lambda i: projector.evaluate_batch(vectors, frame_reanchored(i)),
+            "radial_plain": view_radial,
+        },
+        len(queries), reps=reps, warmup=len(queries),
+    )
+
+    print("timing view_scalar_us")
+
+    def scalar_pca_local(i: int) -> list[tuple[float, float]]:
+        centre, comps = frame_pca_local(i)
+        return [place_pca(v, centre, comps) for v in vectors]
+
+    def scalar_reanchored(i: int) -> list[tuple[float, float]]:
+        frame = frame_reanchored(i)
+        return [place_polar(v, frame) for v in vectors]
+
+    def scalar_radial(i: int) -> list[tuple[float, float]]:
+        q = vectors[queries[i]]
+        return [place_radial(v, q) for v in vectors]
+
+    scalar = interleave(
+        {
+            "pca_global": lambda _i: [place_pca(v, centre_g, comps_g) for v in vectors],
+            "polar_published": lambda _i: [place_polar(v, frame_pub) for v in vectors],
+            "pca_local": scalar_pca_local,
+            "polar_reanchored": scalar_reanchored,
+            "radial_plain": scalar_radial,
+        },
+        len(queries), reps=reps, warmup=5,
+    )
+
+    for arm in ARMS:
+        costs[arm]["build_us"] = built.get(arm, zero)
+        costs[arm]["query_frame_us"] = framed.get(arm, zero)
+        costs[arm]["per_stimulus_us"] = placed[arm]
+        costs[arm]["view_vectorized_us"] = vectorized[arm]
+        costs[arm]["view_scalar_us"] = scalar[arm]
+    return costs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queries", type=int, default=50)
+    parser.add_argument("--reps", type=int, default=5)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument(
         "--ablation", action="store_true",
@@ -245,36 +432,25 @@ def main() -> int:
     projector = PolarProjector()
     truths = {q: true_neighbours(vectors, q, K_RECALL) for q in queries}
 
-    # --- single-view arms: one layout serves every query -------------------
-    t0 = time.perf_counter()
+    # --- recalls: single-view arms, one layout serves every query ----------
     coords_pca_global = pca_project(vectors, vectors)
-    cost_pca_global = time.perf_counter() - t0
-
     pole_a, pole_b = dipole_poles(vectors[:N_INITIAL], parts[:N_INITIAL])
-    t0 = time.perf_counter()
     coords_polar_pub = polar_view(
         projector, vectors, vectors[:N_INITIAL].mean(axis=0), pole_a, pole_b
     )
-    cost_polar_pub = time.perf_counter() - t0
-
     scores: dict[str, list[float]] = {
         "pca_global": [local_recall(coords_pca_global, q, truths[q], K_RECALL) for q in queries],
         "polar_published": [local_recall(coords_polar_pub, q, truths[q], K_RECALL) for q in queries],
     }
 
-    # --- per-query arms ----------------------------------------------------
+    # --- recalls: per-query arms --------------------------------------------
     codebook = build_codebook(vectors, CODEBOOK_K)
+    radial_dir = radial_direction(vectors.shape[1])
     reanchored, pca_local_scores, radial_scores = [], [], []
-    setup_polar, setup_pca, setup_radial = [], [], []
-    radial_dir = np.random.default_rng(SEED + 1).standard_normal(vectors.shape[1])
-    radial_dir /= np.linalg.norm(radial_dir)
     for q in queries:
         # arm 3: anchor on the note itself, poles from the bounded codebook
-        t0 = time.perf_counter()
         order = np.argsort(((codebook - vectors[q]) ** 2).sum(axis=1))
         frame_poles = (codebook[order[0]], codebook[order[1]])
-        projector.prepare(vectors[q], *frame_poles)
-        setup_polar.append(time.perf_counter() - t0)
         reanchored.append(
             local_recall(
                 polar_view(projector, vectors, vectors[q], *frame_poles), q, truths[q], K_RECALL
@@ -282,22 +458,17 @@ def main() -> int:
         )
         # arm 4: a linear map refit on the query's own neighbourhood
         nb = true_neighbours(vectors, q, LOCAL_M)
-        t0 = time.perf_counter()
-        coords = pca_project(vectors[nb], vectors)
-        setup_pca.append(time.perf_counter() - t0)
-        pca_local_scores.append(local_recall(coords, q, truths[q], K_RECALL))
+        pca_local_scores.append(local_recall(pca_project(vectors[nb], vectors), q, truths[q], K_RECALL))
         # arm 5: radial distance from the query plus one arbitrary angle
-        t0 = time.perf_counter()
         delta = vectors - vectors[q]
         radial = np.stack([delta @ radial_dir, np.linalg.norm(delta, axis=1)], axis=1)
-        setup_radial.append(time.perf_counter() - t0)
         radial_scores.append(local_recall(radial, q, truths[q], K_RECALL))
 
     scores["polar_reanchored"] = reanchored
     scores["pca_local"] = pca_local_scores
     scores["radial_plain"] = radial_scores
 
-    results = {
+    results: dict[str, dict[str, object]] = {
         name: {
             "mean_recall": float(np.mean(v)),
             "median_recall": float(np.median(v)),
@@ -306,62 +477,26 @@ def main() -> int:
         }
         for name, v in scores.items()
     }
-    results["polar_reanchored"]["frame_us"] = float(np.median(setup_polar)) * 1e6
-    results["pca_local"]["frame_us"] = float(np.median(setup_pca)) * 1e6
-    results["radial_plain"]["frame_us"] = 0.0  # no frame to build
-    results["pca_global"]["frame_us"] = cost_pca_global * 1e6
-    results["polar_published"]["frame_us"] = cost_polar_pub * 1e6
 
-    # Per-stimulus cost, measured identically for every arm: place one further
-    # vector given a frame that already exists. Comparing frame-construction
-    # times would compare different operations -- a one-off global fit against a
-    # per-query re-prepare -- and would flatter whichever arm was asked to do less.
-    q0 = queries[0]
-    probe = vectors[q0]
-    frame_pub = projector.prepare(vectors[:N_INITIAL].mean(axis=0), pole_a, pole_b)
-    book_order = np.argsort(((codebook - probe) ** 2).sum(axis=1))
-    frame_re = projector.prepare(probe, codebook[book_order[0]], codebook[book_order[1]])
-    centre_g = vectors.mean(axis=0)
-    _, _, vt_g = np.linalg.svd(vectors - centre_g, full_matrices=False)
-    comps = vt_g[:2].T
+    # --- costs: one operation per column, identical across arms -------------
+    costs = measure_costs(vectors, parts, queries, args.reps)
+    for arm in ARMS:
+        for column in COLUMNS:
+            results[arm][column] = costs[arm][column]["mean"]
+        results[arm]["timing"] = costs[arm]
 
-    def _time(fn, reps: int = 2000) -> float:
-        fn()
-        t_start = time.perf_counter()
-        for _ in range(reps):
-            fn()
-        return (time.perf_counter() - t_start) / reps * 1e6
-
-    per_stimulus = {
-        "pca_global": _time(lambda: (probe - centre_g) @ comps),
-        "polar_published": _time(lambda: projector.evaluate(probe, frame_pub, 0)),
-        "polar_reanchored": _time(lambda: projector.evaluate(probe, frame_re, 0)),
-        "pca_local": _time(lambda: (probe - centre_g) @ comps),
-        "radial_plain": _time(
-            lambda: (float(np.dot(probe - probe, radial_dir)), float(np.linalg.norm(probe - probe)))
-        ),
-    }
-    for name, us in per_stimulus.items():
-        results[name]["per_stimulus_us"] = us
-
-    print(f"{'arm':<20}{'mean':>8}{'median':>9}{'min':>8}{'max':>8}"
-          f"{'frame us':>11}{'per-stim us':>13}")
-    print("-" * 79)
-    for name in ("pca_global", "polar_published", "pca_local", "polar_reanchored",
-                 "radial_plain"):
+    print(f"\n{'arm':<18}{'mean':>7}{'build us':>11}{'query us':>10}{'stim us':>9}"
+          f"{'view vec us':>13}{'view scalar us':>16}")
+    print("-" * 84)
+    for name in ARMS:
         r = results[name]
         print(
-            f"{name:<20}{r['mean_recall']:>8.3f}{r['median_recall']:>9.3f}"
-            f"{r['min_recall']:>8.3f}{r['max_recall']:>8.3f}"
-            f"{r['frame_us']:>11.1f}{r['per_stimulus_us']:>13.2f}"
+            f"{name:<18}{r['mean_recall']:>7.3f}{r['build_us']:>11.1f}{r['query_frame_us']:>10.1f}"
+            f"{r['per_stimulus_us']:>9.2f}{r['view_vectorized_us']:>13.1f}{r['view_scalar_us']:>16.1f}"
         )
-    print("-" * 79)
+    print("-" * 84)
     print(f"local recall@{K_RECALL} of the source-space neighbourhood; chance "
-          f"{K_RECALL / (n - 1):.4f}")
-    print("frame us: building one view. per-stim us: placing one further vector in a view that")
-    print("already exists -- the same operation for every arm, which is the comparison the")
-    print("paper's O(d) claim is about. pca_local additionally needs the query's neighbourhood")
-    print("materialized, a corpus query none of the other arms makes.")
+          f"{K_RECALL / (n - 1):.4f}. Columns: see the module docstring.")
 
     write_result(
         args.out,
@@ -373,6 +508,8 @@ def main() -> int:
             "local_m": LOCAL_M,
             "codebook_k": CODEBOOK_K,
             "chance": K_RECALL / (n - 1),
+            "timing_reps": args.reps,
+            "structural_zero": {k: list(v) for k, v in STRUCTURAL_ZERO.items()},
         },
         results=results,
     )

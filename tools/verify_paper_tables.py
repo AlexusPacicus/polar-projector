@@ -476,15 +476,39 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
     out.append(("§3.5 chance", "0.0068", reanchor_config["chance"]))
     out.append(("§3.5 re-anchoring factor", "29",
                 ra["polar_reanchored"]["mean_recall"] / ra["polar_published"]["mean_recall"]))
-    out.append(("§3.5 frame cost ratio, local PCA", "121",
-                ra["pca_local"]["frame_us"] / ra["polar_reanchored"]["frame_us"]))
-    out.append(("§3.5 frame cost ratio, global PCA", "1618",
-                ra["pca_global"]["frame_us"] / ra["polar_reanchored"]["frame_us"]))
-    for arm, frame_us, stimulus_us in [("pca_global", "69178", "1.34"), ("polar_published", "10690", "4.51"),
-                                       ("pca_local", "5156", "1.23"), ("polar_reanchored", "42.8", "4.53"),
-                                       ("radial_plain", "0", "1.98")]:
-        out.append((f"§3.5 frame us {arm}", frame_us, ra[arm]["frame_us"]))
-        out.append((f"§3.5 per-stimulus us {arm}", stimulus_us, ra[arm]["per_stimulus_us"]))
+    # §3.5 costs. Each column times one operation for every arm (bench/reanchor.py,
+    # "Cost columns"); the artifact stores microseconds, and the strings below are in
+    # the unit named in each label. Structural zeros are not checked: they are
+    # written by construction, not measured.
+    ms, us = 1e-3, 1.0
+    for arm, column, unit, published in [
+        ("pca_global", "build_us", ms, "63.7"),
+        ("polar_published", "build_us", ms, "0.24"),
+        ("polar_reanchored", "build_us", ms, "581"),
+        ("pca_local", "query_frame_us", us, "3889"),
+        ("polar_reanchored", "query_frame_us", us, "16.3"),
+        ("pca_global", "per_stimulus_us", us, "1.56"),
+        ("polar_published", "per_stimulus_us", us, "4.58"),
+        ("pca_local", "per_stimulus_us", us, "1.52"),
+        ("polar_reanchored", "per_stimulus_us", us, "4.64"),
+        ("radial_plain", "per_stimulus_us", us, "1.97"),
+        ("pca_global", "view_vectorized_us", ms, "1.75"),
+        ("polar_published", "view_vectorized_us", ms, "3.71"),
+        ("pca_local", "view_vectorized_us", ms, "5.81"),
+        ("polar_reanchored", "view_vectorized_us", ms, "3.67"),
+        ("radial_plain", "view_vectorized_us", ms, "1.99"),
+        ("pca_global", "view_scalar_us", ms, "3.2"),
+        ("polar_published", "view_scalar_us", ms, "10.1"),
+        ("pca_local", "view_scalar_us", ms, "7.2"),
+        ("polar_reanchored", "view_scalar_us", ms, "10.4"),
+        ("radial_plain", "view_scalar_us", ms, "4.3"),
+    ]:
+        unit_name = "ms" if unit == ms else "us"
+        out.append((f"§3.5 cost {column} {arm} ({unit_name})", published, ra[arm][column] * unit))
+    out.append(("§3.5 cost query-frame ratio, local PCA over re-anchored", "238",
+                ra["pca_local"]["query_frame_us"] / ra["polar_reanchored"]["query_frame_us"]))
+    out.append(("§3.5 cost build ratio, codebook over global PCA", "9.1",
+                ra["polar_reanchored"]["build_us"] / ra["pca_global"]["build_us"]))
     return out
 
 

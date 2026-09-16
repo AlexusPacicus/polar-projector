@@ -56,11 +56,12 @@ degenerate (Proposition 2), its residual decomposition is exact when \( \lambda 
 (Proposition 3), and an algebraically equivalent scalar form of \( d_{esc} \) loses all precision
 below \( d_{esc}/\|r\|_2 \approx 10^{-6} \), at two points undetectably. Re-anchoring the frame on
 the query re-centres the view without re-coupling it, beyond a codebook built once. Per-stimulus
-cost is 4.57 µs with a prepared frame, flat to 1.4% across corpora of 1,000 to 25,000 vectors. On
-2,221 chunks of Spinoza's *Ethics*, re-anchoring raises local neighbourhood recovery 29×, from 0.019
-to 0.543, while a local PCA refit reads the corpus again and recovers 0.023. A radial coordinate
-centred on the query bounds the operator at 0.981; rendering \( \lambda \) in length units lifts it
-to 0.925 in an exploratory ablation. No user took part, so whether any of this helps a person
+cost is 4.57 µs with a prepared frame, and a stateless call stays flat to 1.4% across corpora of
+1,000 to 25,000 vectors. On 2,221 chunks of Spinoza's *Ethics*, re-anchoring raises the recall of a
+query's 15 nearest neighbours 29×, from 0.019 to 0.543, while a local PCA refit reads the corpus again
+and recovers 0.023. A radial coordinate centred on the query bounds the operator at 0.981 on this
+instrument, which rewards any view ordered by distance from the query; rendering \( \lambda \) in
+length units lifts the operator to 0.925 in an exploratory ablation. No user took part, so whether any of this helps a person
 navigate remains open.
 
 ## 1. Introduction
@@ -80,7 +81,8 @@ Introducing a vector imposes two constraints:
    semantic proximity, and the user's own act of writing invalidates the map they built.
 2. **Placing a note must not depend on what is stored.** The position is computed while the user
    works, so its cost cannot scale with how much the user has written, and computing it should not
-   require reading the stored corpus.
+   require reading the stored corpus. The constraint concerns placing one vector: refreshing a whole
+   view still touches every placed point, for every method measured in §3.5.
 
 *The premise, and its standing.* Both constraints are **assumptions this paper inherits, not
 results it establishes**, and the first one carries the weight. Boechler (2001) measures navigation
@@ -122,7 +124,7 @@ organized around the note being consulted, which means re-centring the view on i
 one view of the corpus for every query, and on a local neighbourhood-recovery instrument it scores
 0.056 (§3.5). Refitting a projection on the consulted note's neighbourhood does re-centre the view,
 but by construction it reads the corpus again for every view — re-coupling what the constraints
-decoupled — and it still scores only 0.023, for a frame 121× more expensive than the operator's.
+decoupled — and it still scores only 0.023, at 238× the operator's cost per query.
 What is missing is a way to **re-centre the view on the query without re-coupling it to the
 corpus**.
 
@@ -132,8 +134,8 @@ arithmetic and memory, returning a projection coefficient \( \lambda \in [-1, 1]
 residual \( d_{esc} \geq 0 \) without reading the stored corpus: 4.57 µs per stimulus with a prepared
 frame and 11.75 µs stateless, with correctness guarantees proven in §2. Re-anchoring the frame on the
 consulted note re-centres the view without re-coupling it — the poles come from a codebook built once
-over the corpus (§3.5, §4.3) — and raises local neighbourhood recovery 29×, from 0.019 to 0.543, for a
-frame construction of 42.8 µs. The result is bounded from the start: a two-line radial coordinate
+over the corpus (§3.5, §4.3) — and raises local neighbourhood recovery 29×, from 0.019 to 0.543, for
+16.3 µs per query. The result is bounded from the start: a two-line radial coordinate
 centred on the query reaches 0.981 on the same instrument, under the same constraints, and most of
 the operator's remaining gap is the units of its screen mapping — with \( \lambda \) rendered in length
 units it reaches 0.925, in an exploratory ablation (§3.5).
@@ -289,7 +291,6 @@ computed by squaring the numerically stable vector-form residual of §B
 expansion is exactly the *scalar form* §B measured losing all precision below
 \( d_{esc}/\|r\|_2 \approx 10^{-6} \), which is precisely the near-collinear regime where an energy
 reading would most need to be trustworthy.
-
 
 *Algorithm 1* states the two halves separately, because the split is what the implementation and
 §3.1's measurement both turn on: steps 1–12 depend only on the frame \( (c_1, c_A, c_B) \) and run
@@ -468,9 +469,8 @@ documented in §A; no table of *values* anywhere in this paper is affected by it
 
 ### 3.2 Positional Stability Under Incremental Growth
 
-§1 claims that stochastic global projections inherit spatial drift under incremental updates and
-that a local deterministic operator does not. That claim was an assertion resting on a citation;
-this section measures it, against a corpus with real semantic structure rather than synthetic
+§1 states that refitting a global projection relocates placed points as the corpus grows, and that a
+fixed map does not. This section measures both, against a corpus with real semantic structure rather than synthetic
 blobs: 2,221 sentence-chunks of Spinoza's *Ethics* embedded at \( d = 384 \) with
 `all-MiniLM-L6-v2` (Reimers & Gurevych, 2019) at a pinned revision and L2-normalized; the
 embeddings, labels and their SHA-256 digests are committed in `bench/data/`. The corpus grows in reading order from 500 chunks in batches of 250, and at each of
@@ -567,8 +567,8 @@ the trustworthiness column is where it shows.
 
 ### 3.3 Task-Level Neighborhood Preservation: Same-Part Retrieval
 
-§3.2's trustworthiness column leaves an open question stated directly in §4.3: whether that
-instrument is even the right one for a per-interaction signal. This section gives a second,
+§3.2's trustworthiness column leaves open whether that instrument is even the right one for a
+per-interaction signal. This section gives a second,
 task-shaped instrument on the same corpus and the same growth schedule, and lets a reader judge the
 fidelity gap against something more concrete than a manifold-preservation score: if a reader asked
 "what else is like this point," what fraction of the answer would come from the same part of the
@@ -609,8 +609,11 @@ provide, and it is why this instrument carries more of the paper's weight than t
 decimals — 1.57× median lift for both, 1.59× against 1.57× at the final step; no significance test
 was run. It also leads the once-fitted PCA that beat it on trustworthiness — 1.57× against 1.47×
 (1.59× with \( \lambda \) in length units), and 1.17× against 1.01× at the smallest corpus, where the
-PCA finds no more signal than chance. The two instruments disagree about that pair, which §3.4
-resolves into a property of pole selection rather than of either method. It is also a closer race
+PCA finds no more signal than chance. That lead has a caveat: the published frame's contrast axis is
+built from the `part` labels of the initial window, the same labels this instrument scores, while the
+PCA sees no labels; §3.4 shows the label-free rules landing level with the PCA. The two instruments
+disagree about that pair, which §3.4 resolves into a property of pole selection rather than of either
+method. It is also a closer race
 with fit-once UMAP than §3.2's trustworthiness column shows (0.6639 against 0.7681): the two arms
 that never fully re-account for new data land in the same place on a task a reader can interpret
 directly.
@@ -633,8 +636,7 @@ are reported alongside it for that reason.
 *Scope.* This instrument answers a narrower question than trustworthiness — same-part agreement
 among 15 neighbours, not preservation of the full 384-dimensional neighborhood structure — and
 `part` is a coarse five-way proxy for semantic relevance, not a ground truth of what a reader would
-actually judge relevant. §4.3 revisits what agreement between the two instruments does and does not
-settle about the fidelity gap.
+actually judge relevant (§4.3).
 
 ### 3.4 Pole Selection as a Trade-off Knob
 
@@ -647,7 +649,8 @@ range beside it understates how much of the result is the operator and how much 
 The first varies the contrast axis over all ten unordered pairs of the corpus's five part centroids,
 which bounds how far the figures move when the axis moves. Those centroids use whole-corpus labels
 the production rule does not have, so the second sweep evaluates four rules that see only the
-initial window — the information a system would actually hold at step 0. The anchor is unchanged
+initial window — the information a system would actually hold at step 0. Three of them use no labels;
+the published rule uses the window's `part` labels, which are also what same-part lift scores. The anchor is unchanged
 throughout. Drift is not reported per rule: a fixed frame cannot drift, and every frame here is
 still at every step to float64 resolution, which confirms the construction rather than
 discriminating between choices.
@@ -692,11 +695,12 @@ result confirms it in the least flattering way available: pointing the dipole do
 maximum variance makes the operator behave like the fixed linear map it was supposed to improve on.
 Pole selection is a position on a trade-off, and a fixed PCA occupies one end of it.
 
-*Where the operator is not interchangeable with a PCA* is the other end. The part-based rule is the
-only one in the table holding 1.17× on the 500-chunk corpus; the other three rules and the PCA all
-sit at 1.01–1.03×, which is chance. Whatever the contrast axis is doing when it is built from
-semantic groups rather than from variance, it is the only configuration measured here that finds
-signal when there is least of it.
+*Where the operator appears not interchangeable with a PCA* is the other end, and this sweep cannot
+settle it. The part-based rule is the only one in the table holding 1.17× on the 500-chunk corpus;
+the other three rules and the PCA all sit at 1.01–1.03×, which is chance. But it is also the only rule
+that reads labels, and at 500 chunks the labels it reads are exactly the ones lift is scored against.
+Whether that 1.17× comes from building the axis out of semantic groups or from supervision on the
+evaluated labels is not separable here; no label-free rule measured beats the PCA on lift.
 
 ### 3.5 Re-anchoring: A Movable Origin
 
@@ -705,10 +709,10 @@ linear map competes on equal terms — §3.4 ends with the operator and a once-f
 interchangeable. Neither instrument touches the property that distinguishes them. A fixed map has
 one view of the corpus, for every query, permanently. The operator's coordinates are
 anchor-relative, so moving the active context yields a different view, and §2.1 shows that moving
-it re-places every point by construction. Re-anchoring costs one `prepare()` — \( O(d) \), no
-corpus access. In the terms of the question this paper answers, it re-centres the view on the query
-without re-coupling the view to the corpus; the refit below re-centres only by reading the corpus
-again.
+it re-places every point by construction. Re-anchoring costs a codebook scan and one `prepare()` —
+\( O(K \cdot d) \), no corpus access at query time. In the terms of the question this paper answers,
+it re-centres the view on the query without re-coupling the view to the corpus; the refit below
+re-centres only by reading the corpus again.
 
 *Method.* 50 query chunks sampled under a fixed seed. For each query \( q \), local recall@15: of
 \( q \)'s 15 true nearest neighbours in the source 384-dimensional space, how many are among its 15
@@ -716,40 +720,69 @@ nearest in the arm's two-dimensional view, with all 2,221 points placed in that 
 \( 15/2220 \approx 0.0068 \), so these are raw recalls — *of the fifteen notes really closest to
 this one, how many land next to it on screen*. `bench/reanchor.py`.
 
-| Arm | Mean | Median | Min | Max | Frame (µs) | Per stimulus (µs) |
-|---|---:|---:|---:|---:|---:|---:|
-| PCA fit on the whole corpus, one view | 0.056 | 0.033 | 0.000 | 0.267 | 69,178 | 1.34 |
-| Polar, the frame §3.2 publishes, one view | 0.019 | 0.000 | 0.000 | 0.133 | 10,690 | 4.51 |
-| PCA refit per query on its 100 neighbours | 0.023 | 0.000 | 0.000 | 0.533 | 5,156 | 1.23 |
-| **Polar, re-anchored on the query** | **0.543** | **0.567** | 0.133 | 0.867 | **42.8** | 4.53 |
-| Radial \( (\langle v-q, e\rangle, \|v-q\|) \) | **0.981** | **1.000** | 0.933 | 1.000 | 0 | **1.98** |
+| Arm | Mean | Median | Min | Max |
+|---|---:|---:|---:|---:|
+| PCA fit on the whole corpus, one view | 0.056 | 0.033 | 0.000 | 0.267 |
+| Polar, the frame §3.2 publishes, one view | 0.019 | 0.000 | 0.000 | 0.133 |
+| PCA refit per query on its 100 neighbours | 0.023 | 0.000 | 0.000 | 0.533 |
+| **Polar, re-anchored on the query** | **0.543** | **0.567** | 0.133 | 0.867 |
+| Radial \( (\langle v-q, e\rangle, \|v-q\|) \) | **0.981** | **1.000** | 0.933 | 1.000 |
 
-Per-stimulus cost is the same operation for every arm — placing one further vector in a view that
-already exists — because comparing frame-construction times would compare a one-off global fit
-against a per-query re-prepare. Poles for the re-anchored arm come from a 16-entry codebook built
-once over the corpus by k-means; per-query selection is the \( O(K \cdot d) \) codebook scan
-Proposition 1 already accounts for, so nothing here consults the corpus at query time — though a
-growing corpus would require rebuilding that codebook (§4.3).
+The arms do different work at different moments, so cost is reported per operation rather than as
+one figure, with each column timing the same operation for every arm:
+
+| Arm | Once (ms) | Query (µs) | Stimulus (µs) | View (ms) | Loop (ms) |
+|---|---:|---:|---:|---:|---:|
+| PCA, whole corpus | 63.7 | — | 1.56 | 1.75 | 3.2 |
+| Polar, published frame | 0.24 | — | 4.58 | 3.71 | 10.1 |
+| PCA, local refit | — | 3,889 | 1.52 | 5.81 | 7.2 |
+| **Polar, re-anchored** | 581 | **16.3** | 4.64 | 3.67 | 10.4 |
+| Radial | — | — | 1.97 | **1.99** | **4.3** |
+
+*Once* is paid over the whole corpus before any query: the global PCA's fit, the published frame's
+centroids and `prepare()`, the re-anchoring codebook. *Query* is paid each time the view re-centres,
+before any point is placed: the local PCA's neighbour scan and refit, the re-anchored arm's codebook
+scan and `prepare()`. *Stimulus* places one further vector in a view that already exists, through each
+arm's scalar path. *View* and *Loop* are one full refresh for one query — the per-query step plus all
+2,221 points, placed as a single array operation or one at a time. A dash marks a step the arm does
+not have by construction. Timings are medians of five interleaved repetitions on the host of §3; the
+artifact records each column's spread.
+
+Poles for the re-anchored arm come from a 16-entry codebook built once over the corpus by k-means;
+per-query selection is the \( O(K \cdot d) \) codebook scan Proposition 1 already accounts for, so
+nothing here consults the corpus at query time. The build is not free: at 581 ms it is the most
+expensive single step in the table, 9.1× the global PCA's fit, and a growing corpus would require
+repeating it (§4.3).
+
+*Re-centring is cheap; refreshing the view is not specific to it.* The per-query column isolates the
+step that re-centring adds, and there the operator's 16.3 µs is 238× less than the local PCA's scan
+and refit. A full refresh still places every stored point, which is \( O(N \cdot d) \) for every arm
+in the table. Vectorized, the re-anchored view costs 3.67 ms against 5.81 ms for the local PCA and
+1.99 ms for the radial coordinate. One point at a time the operator is the most expensive of the
+three — 10.4 ms against 7.2 and 4.3 ms — because its per-stimulus path (4.64 µs) outweighs its cheaper
+frame. At this corpus size every refresh in the table is shorter than one frame of a 60 Hz display,
+so cost does not separate the arms here; the ordering that holds at both granularities is that the
+radial coordinate is cheaper than the operator.
 
 *The movable origin is the lever, and it is large.* The same operator goes from 0.019 to 0.543
-purely by moving the anchor to the query — a factor of 29 — for a frame construction 121× cheaper
-than the local PCA fit and 1,618× cheaper than the global one. This is the first measurement in this paper where a property
-specific to a local frame produces a difference of that size.
+purely by moving the anchor to the query — a factor of 29. This is the first measurement in this
+paper where a property specific to a local frame produces a difference of that size.
 
 *Better directions are not the lever, and they re-couple the view.* The refitted PCA scores 0.023,
 *below* the global fit's 0.056, and the reason is visible in the construction. Moving a linear
 projection's origin changes none of the distances in its view, and its two locally fitted components
 discard all but two of the 384 dimensions, so points far from \( q \) in the discarded ones land on
-top of it. Refitting the directions on the query's own neighbourhood — paying 121× the frame cost and,
-by construction, scanning the corpus for that neighbourhood before every view — buys less than not
-refitting at all. Whatever value the local frame has here comes
-from where it measures *from*, not from which directions it measures *along*.
+top of it. Refitting the directions on the query's own neighbourhood — paying 238× the re-anchored
+arm's per-query cost and, by construction, scanning the corpus for that neighbourhood before every
+view — buys less than not refitting at all. Whatever value the local frame has here comes from where
+it measures *from*, not from which directions it measures *along*.
 
 *The radial baseline leads, but most of the gap is the screen mapping's units.* A coordinate system
 whose vertical axis is simply \( \|v - q\| \) and whose horizontal axis is the projection onto an
-arbitrary fixed unit vector reaches 0.981 — median 1.000, minimum 0.933 — at 1.98 µs per stimulus,
-faster than the operator's 4.53. It satisfies every constraint §1 states: \( O(d) \) per stimulus,
-no frame to build, no corpus access, exactly stable for a fixed \( q \), fully deterministic.
+arbitrary fixed unit vector reaches 0.981 — median 1.000, minimum 0.933 — at 1.97 µs per stimulus
+against the operator's 4.64, and with nothing to build once or per query. It satisfies every
+constraint §1 states: \( O(d) \) per stimulus, no corpus access, exactly stable for a fixed \( q \),
+fully deterministic.
 Decomposing the operator's view on the same queries and frames locates its 0.543
 (`bench/reanchor.py --ablation`; exploratory, specified after the table above existed):
 
@@ -780,9 +813,11 @@ gap to the radial baseline's 0.981 is not established to have the same cause.
 *What that leaves the instrument able to settle.* Local recall@15 rewards any view whose distance
 from the query is monotone in true distance. The radial baseline's vertical axis is exactly that, for
 every stimulus. The operator's is not: with \( c_1 = q \), \( \|r\|_2 = \sin\theta \) is monotone only
-up to \( \theta = 90° \) and folds back toward the anchor beyond it (§2.1). Recall@15 cannot see the
-fold because every one of a query's 15 true nearest neighbours falls inside that range, which is why
-the two views are close on this instrument — 0.981 against 0.925 — rather than separated by the
+up to \( \theta = 90° \) and folds back toward the anchor beyond it (§2.1). The fold costs recall only
+if some chunk lies far enough past 90° to land among a query's nearest on screen, and on this corpus
+none does for the queries measured: \( \|r\|_2 \) alone scores 1.000. That is a property of this
+corpus, not of the instrument — a corpus holding near-opposite notes would expose the fold — and it is
+why the two views are close on this instrument — 0.981 against 0.925 — rather than separated by the
 factor the unscaled row suggests. The defensible conclusions are the two above —
 re-anchoring matters, refitting directions does not — plus a design rule for §2.1: the scale ratio
 is not a free viewport constant, and \( S_x = \|v_{dipole}\|_2\, S_y \) is the ratio that preserves
@@ -828,15 +863,15 @@ translation changes no pairwise distance in a linear view, so a two-axis refit s
 measured from the query, but not the radial baseline's norm — removing \( \hat{c}_1 \) discards
 exactly the component that would disambiguate near from far, so \( \|r\|_2 = \sin\theta \) folds
 back past \( \theta = 90° \) while the radial baseline's \( \|v - q\|_2 = 2\sin(\theta/2) \) does not
-(§2.1), a fold recall@15 cannot see since every query's true neighbours fall inside that range. What
+(§2.1), a fold recall@15 does not register on this corpus, where \( \|r\|_2 \) alone scores 1.000 (§3.5). What
 local exploration needs is an origin that moves with the query; whether a bounded contrast axis adds
 anything beyond that is a separate, open question (§4.3).
 
 *The operator's remaining gap to the radial baseline was mostly a unit mismatch.* Rendering
 \( \lambda \) under the isometric rule (\( S_x = \|v_{dipole}\|_2 \cdot S_y \)) makes the screen
 distance to the query equal \( \|r\|_2 \) for unsaturated stimuli (Proposition 3), raising recall
-from 0.543 to 0.925 (§3.5); what is left between that and the radial baseline's 0.981 is saturation
-at the boundaries. The fix is free everywhere else: on the global evaluations of §3.2–§3.4 it moves
+from 0.543 to 0.925 (§3.5). What separates 0.925 from \( \|r\|_2 \) alone can only come from saturated
+stimuli; the gap to the radial baseline's 0.981 is not established to have the same cause. The fix is free everywhere else: on the global evaluations of §3.2–§3.4 it moves
 trustworthiness by at most 0.003 and lift by at most 0.02, changing no ordering.
 
 ### 4.2 Relation to Prior Work
@@ -865,6 +900,15 @@ human-computer interaction:
   projection reduces to an inner product — but LSH is stochastic and targets approximate retrieval
   over a global corpus, while the Polar Projector is deterministic, uses chosen rather than random
   references, and evaluates direction against a local active state.
+- **Anchor-based placement in visualization.** Positioning items relative to a small set of
+  reference points is established practice in information visualization: VIBE (Olsen et al., 1993)
+  places documents by similarity to user-chosen points of interest, Dust & Magnet (Yi et al., 2005)
+  uses reference points that pull items by attribute value, and Landmark Isomap (de Silva &
+  Tenenbaum, 2002) fits a small landmark subset once and triangulates the rest of the corpus from
+  it. LAMP (Joia et al., 2011) is closest in spirit — a local affine mapping from control points,
+  chosen for the same reasons this paper chooses a local operator: accuracy and a cost low enough
+  for interactive use. None of the four states a non-degeneracy guarantee comparable to
+  Proposition 2, or accounts for what clamping does to a residual as Proposition 3 does.
 
 ### 4.3 Limitations and Open Questions
 
@@ -970,8 +1014,8 @@ For whoever implements this primitive, the results mark explicit design decision
   rearrangement is 1.47× faster but loses all precision in near-collinear regimes, at two points of the
   sweep without any detectable sign.
 - **Choose the pole-selection rule deliberately.** It is a knob between manifold preservation and
-  task-level agreement: rules aligned with variance match the fidelity of a fixed PCA, while the rule
-  built from labelled parts is the only one that keeps signal (1.17×) on the 500-chunk corpus.
+  task-level agreement: rules aligned with variance match the fidelity of a fixed PCA, and no
+  label-free rule measured beats that PCA on task-level agreement.
 - **Check the frame's saturation.** \( \lambda = \pm 1 \) is the clamp's domain boundary, not the
   location of the poles; check what share of points saturates for the frames in use.
 
@@ -985,11 +1029,23 @@ The question this numerical analysis cannot answer, and the one that will ultima
 operator's practical usefulness, is behavioural rather than numerical (§4.3) — a contact with reality
 this work does not make.
 
-## References
+## Code and Data Availability
 
-> Status: each entry is cited at least once above, and each was verified against its publisher or
-> preprint record rather than reconstructed from memory. None is a claim of prior art over this
-> work — §4 states how the closest ones relate to and differ from the Polar Projector.
+The operator, every benchmark script, the frozen corpus embeddings with their SHA-256 digests and
+encoder revision, the committed result artifacts and the figure scripts are available at
+<https://github.com/AlexusPacicus/polar-projector> under the GNU AGPL v3. The tables of Appendices B
+and C are recomputed, and every other figure in this manuscript is checked against the committed
+artifacts, by `tools/verify_paper_tables.py`.
+
+## Use of Generative AI
+
+AI assistants were used throughout this work. Claude (Anthropic) drafted parts of the text, including
+the abstract and several sections, translated sections the author wrote in Spanish, reviewed the
+analysis, and wrote and corrected benchmark and verification code. Free versions of other AI
+assistants were used to audit earlier drafts. The author decided the scope of the work and what it
+claims, reviewed every passage, and takes full responsibility for the content.
+
+## References
 
 1. An, J., Kwak, H., & Ahn, Y.-Y. (2018). SemAxis: A Lightweight Framework to Characterize
    Domain-Specific Word Semantics Beyond Sentiment. *Proceedings of the 56th Annual Meeting of the
@@ -1008,49 +1064,59 @@ this work does not make.
    Processing Systems 29 (NeurIPS 2016)*. arXiv:1607.06520.
 6. Charikar, M. S. (2002). Similarity Estimation Techniques from Rounding Algorithms. *Proceedings
    of the 34th Annual ACM Symposium on Theory of Computing (STOC 2002)*, 380–388.
-7. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
+7. de Silva, V., & Tenenbaum, J. B. (2002). Global Versus Local Methods in Nonlinear Dimensionality
+   Reduction. *Advances in Neural Information Processing Systems 15 (NeurIPS 2002)*, 721–728.
+8. Duff, T., Burgess, J., Christensen, P., Hery, C., Kensler, A., Liani, M., & Villemin, R. (2017).
    Building an Orthonormal Basis, Revisited. *Journal of Computer Graphics Techniques*, 6(1), 1–8.
-8. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
+9. Edelsbrunner, H., & Mücke, E. P. (1990). Simulation of Simplicity: A Technique to Cope with
    Degenerate Cases in Geometric Algorithms. *ACM Transactions on Graphics*, 9(1), 66–104.
    DOI:10.1145/77635.77639.
-9. Espadoto, M., Martins, R. M., Kerren, A., Hirata, N. S. T., & Telea, A. C. (2021). Toward a
-   Quantitative Survey of Dimension Reduction Techniques. *IEEE Transactions on Visualization and
-   Computer Graphics*, 27(3), 2153–2173.
-10. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
+10. Espadoto, M., Martins, R. M., Kerren, A., Hirata, N. S. T., & Telea, A. C. (2021). Toward a
+    Quantitative Survey of Dimension Reduction Techniques. *IEEE Transactions on Visualization and
+    Computer Graphics*, 27(3), 2153–2173.
+11. Gower, J. C. (1975). Generalized Procrustes Analysis. *Psychometrika*, 40(1), 33–51.
     DOI:10.1007/BF02291478.
-11. Grand, G., Blank, I. A., Pereira, F., & Fedorenko, E. (2022). Semantic projection recovers rich
+12. Grand, G., Blank, I. A., Pereira, F., & Fedorenko, E. (2022). Semantic projection recovers rich
     human knowledge of multiple object features from word embeddings. *Nature Human Behaviour*, 6(7),
     975–987. DOI:10.1038/s41562-022-01316-8.
-12. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
+13. Joia, P., Paulovich, F. V., Coimbra, D., Cuminato, J. A., & Nonato, L. G. (2011). Local Affine
+    Multidimensional Projection. *IEEE Transactions on Visualization and Computer Graphics*, 17(12),
+    2563–2571. DOI:10.1109/TVCG.2011.220.
+14. Liu, S., Bremer, P.-T., Thiagarajan, J. J., Srikumar, V., Wang, B., Livnat, Y., & Pascucci, V.
     (2018). Visual Exploration of Semantic Relationships in Neural Word Embeddings. *IEEE
     Transactions on Visualization and Computer Graphics*, 24(1), 553–562.
     DOI:10.1109/TVCG.2017.2745141.
-13. Marshall, C. C., & Shipman, F. M. (1995). Spatial Hypertext: Designing for Change.
+15. Marshall, C. C., & Shipman, F. M. (1995). Spatial Hypertext: Designing for Change.
     *Communications of the ACM*, 38(8), 88–97. DOI:10.1145/208344.208350.
-14. McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and
+16. McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and
     Projection for Dimension Reduction. arXiv:1802.03426.
-15. Neves, T. T. A. T., Martins, R. M., Coimbra, D. B., Kucher, K., Kerren, A., & Paulovich, F. V.
+17. Neves, T. T. A. T., Martins, R. M., Coimbra, D. B., Kucher, K., Kerren, A., & Paulovich, F. V.
     (2020). Xtreaming: An Incremental Multidimensional Projection Technique and Its Application to
     Streaming Data. arXiv:2003.09017.
-16. Rauber, P. E., Falcão, A. X., & Telea, A. C. (2016). Visualizing Time-Dependent Data Using
+18. Olsen, K. A., Korfhage, R. R., Sochats, K. M., Spring, M. B., & Williams, J. G. (1993).
+    Visualization of a Document Collection: The VIBE System. *Information Processing & Management*,
+    29(1), 69–81.
+19. Rauber, P. E., Falcão, A. X., & Telea, A. C. (2016). Visualizing Time-Dependent Data Using
     Dynamic t-SNE. *EuroVis 2016 — Short Papers*. DOI:10.2312/eurovisshort.20161164.
-17. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese
+20. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese
     BERT-Networks. *Proceedings of EMNLP-IJCNLP 2019*, 3982–3992.
-18. Sainburg, T., McInnes, L., & Gentner, T. Q. (2021). Parametric UMAP Embeddings for
+21. Sainburg, T., McInnes, L., & Gentner, T. Q. (2021). Parametric UMAP Embeddings for
     Representation and Semisupervised Learning. *Neural Computation*, 33(11), 2881–2907.
-19. van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. *Journal of Machine
+22. van der Maaten, L., & Hinton, G. (2008). Visualizing Data using t-SNE. *Journal of Machine
     Learning Research*, 9, 2579–2605.
-20. Venna, J., & Kaski, S. (2001). Neighborhood Preservation in Nonlinear Projection Methods: An
+23. Venna, J., & Kaski, S. (2001). Neighborhood Preservation in Nonlinear Projection Methods: An
     Experimental Study. *Artificial Neural Networks — ICANN 2001*, 485–491.
     DOI:10.1007/3-540-44668-0_68.
-21. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
+24. Vernier, E. F., Comba, J. L. D., & Telea, A. C. (2021). Guided Stable Dynamic Projections.
     *Computer Graphics Forum*, 40(3), 87–98. DOI:10.1111/cgf.14291.
+25. Yi, J. S., Melton, R., Stasko, J., & Jacko, J. A. (2005). Dust & Magnet: Multivariate
+    Information Visualization Using a Magnet Metaphor. *Information Visualization*, 4(4), 239–256.
+    DOI:10.1057/palgrave.ivs.9500099.
 
 ## Appendix
 
-The three appendices below are retained in full — every figure still reproduces, and
-`tools/verify_paper_tables.py` still covers their tables — but each answers a narrower question than
-§3 does: whether the implementation is numerically sound, rather than whether the operator works as
+The three appendices below answer a narrower question than §3 does, and
+`tools/verify_paper_tables.py` covers their tables as well: whether the implementation is numerically sound, rather than whether the operator works as
 a navigation substrate.
 
 ### Appendix A — Dimension Sweep and Where Dispatch Stops Dominating
@@ -1132,8 +1198,9 @@ recover a quantity of order \( d_{esc}^2 \), so float64's rounding noise
 \( \sqrt{\varepsilon} \approx 1.49 \times 10^{-8} \) — matching where the table's failure sits.
 The identity of Proposition 3 therefore stands as a theorem but not as an algorithm: the residual is
 computed in vector space before the norm is taken. This regime — a stimulus lying almost entirely
-along the dipole axis — is precisely the one where \( \lambda \) saturates, so precision there is
-not incidental.
+along the dipole axis — is not a saturation regime: the fixture pins \( \lambda \) at 0.5
+specifically to isolate conditioning from saturation as a confound. Precision failing here is a
+property of the ratio \( d_{esc}/\|r\|_2 \) alone, not of clipping, so it is not incidental.
 
 Continuing the sweep past the published window, to \( d_{esc}/\|r\|_2 = 10^{-14} \), shows the
 failure is worse than a loss of accuracy — it is a loss of accuracy that does not announce itself.
