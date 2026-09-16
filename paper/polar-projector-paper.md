@@ -1039,11 +1039,13 @@ artifacts, by `tools/verify_paper_tables.py`.
 
 ## Use of Generative AI
 
-AI assistants were used throughout this work. Claude (Anthropic) drafted parts of the text, including
-the abstract and several sections, translated sections the author wrote in Spanish, reviewed the
-analysis, and wrote and corrected benchmark and verification code. Free versions of other AI
-assistants were used to audit earlier drafts. The author decided the scope of the work and what it
-claims, reviewed every passage, and takes full responsibility for the content.
+AI assistants were used in this work to translate sections the author wrote in Spanish; to produce
+initial drafts of sections from the code and its results, within a structure the author set; to search
+for references, each then verified against its publisher or preprint record; to detect inconsistencies
+between the manuscript, the code and the committed results, in audits run with Claude (Anthropic) and
+with free versions of other assistants; and to shorten the text. Claude also wrote and corrected parts
+of the benchmark and verification code. The author set the scope of the work and what it claims,
+reviewed every passage, and takes full responsibility for the content.
 
 ## References
 
