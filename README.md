@@ -141,5 +141,3 @@ lifts.
 - **Manuscript and figures** (`paper/`): [CC BY 4.0](paper/LICENSE.md).
 - **Frozen corpus data** (`bench/data/`): [CC BY 4.0](bench/data/LICENSE.md). The embeddings encode
   R. H. M. Elwes' public-domain translation of Spinoza's *Ethics*; the text is not included.
-
-Releases up to and including `v1.0-paper` were published under AGPL-3.0-or-later.
