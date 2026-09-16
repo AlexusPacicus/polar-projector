@@ -32,6 +32,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -311,7 +312,21 @@ def main() -> int:
     for problem in problems:
         print(f"  ERROR: {problem}")
     print("  not compiled: this checks the conversion, not the typesetting (needs pdfLaTeX)")
-    return 1 if problems else 0
+    if problems:
+        return 1
+
+    # The upload bundle (Overleaf, arXiv): main.tex plus the vector figures it includes,
+    # rebuilt on every run so it can never lag the manuscript. Fixed timestamps keep the
+    # archive byte-identical for identical inputs.
+    bundle = out / "arxiv-source.zip"
+    included = sorted(set(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex)))
+    with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name in ["main.tex", *included]:
+            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(info, (out / name).read_bytes())
+    print(f"wrote {bundle} (main.tex + {len(included)} figure(s))")
+    return 0
 
 
 if __name__ == "__main__":
