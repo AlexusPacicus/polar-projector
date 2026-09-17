@@ -127,13 +127,6 @@ measures something other than what the paper says it measures.
 CI also runs 800 tests on Python 3.11–3.13, ruff, mypy, and a 100% line-coverage gate over the
 operator.
 
-## Relationship to Traianus
-
-The operator was extracted, with git history, from [Traianus](https://github.com/AlexusPacicus/Traianus),
-a local-first engine on which a personal knowledge management application is being built. This
-repository is canonical: Traianus keeps a vendored copy during its v1.0.0 release freeze, changes
-land here first and are ported by hand, and the copy is replaced by a dependency when the freeze
-lifts.
 
 ## License
 
