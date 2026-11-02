@@ -14,9 +14,9 @@ refutation criteria · 4 Registry history · 5 Corrections and re-measurements �
   brief places outside the governed channel and asks the paper to declare as such (`method-paper/BRIEF.md:30-32`).
   The agent read files and git history and ran the existing verifier on snapshots extracted outside the repository.
   It modified no existing file.
-- **Where.** The brief puts Phase 0 output in `method-paper/prep/` (`method-paper/BRIEF.md:23`, `:31`, `:42`,
-  `:52`). The session's request named `notes/method-paper-prep/`, so the three files are here. If the brief's path
-  should win, `git mv notes/method-paper-prep method-paper/prep` moves them.
+- **Where.** In `method-paper/prep/`, where the brief puts Phase 0 output (`method-paper/BRIEF.md:23`, `:31`,
+  `:42`, `:52`). The files were first committed under `notes/method-paper-prep/`, as the session had asked, and
+  moved here in the next commit on this branch (`git log --follow`).
 - **Citations.** `path:line` is that line at commit `501c67f`, the head of `main` when the session started.
   `abc1234:path:line` is a line of the file as it stood at commit `abc1234`. A bare 7-character hash is a commit;
   §10 gives each one's full hash, date and subject. "Message" means the commit message.

@@ -272,13 +272,11 @@ Candidate rows for `method-paper/claims.md`. Each needs the author's approval (`
 
 ## Decisions for the author
 
-1. **Folder.** These notes are in `notes/method-paper-prep/`, as the session asked; the brief says
-   `method-paper/prep/` (`method-paper/BRIEF.md:23`, `:31`, `:42`, `:52`).
-2. **Whether to use `case-data.md` §9, item 1** (the manuscript's pre-registration sentence) as the example of
+1. **Whether to use `case-data.md` §9, item 1** (the manuscript's pre-registration sentence) as the example of
    what the verifier cannot see. Confirm it first; the case paper itself stays unmodified
    (`method-paper/BRIEF.md:93`).
-3. **The cut column above,** which reads the cut rule together with the "done" criteria.
-4. **Table 2's coding:** confirm or recode the 37 commits, and choose the coarse or fine grouping.
-5. **Which run to cite "at release":** the verifier gives identical counts at `f59430a` and `501c67f`
+2. **The cut column above,** which reads the cut rule together with the "done" criteria.
+3. **Table 2's coding:** confirm or recode the 37 commits, and choose the coarse or fine grouping.
+4. **Which run to cite "at release":** the verifier gives identical counts at `f59430a` and `501c67f`
    (`case-data.md` §7).
-6. **References:** finish the link check in `related-work.md` before citing anything.
+5. **References:** finish the link check in `related-work.md` before citing anything.
