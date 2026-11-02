@@ -2,8 +2,8 @@
 
 Phase 0 preparation (`method-paper/BRIEF.md:50`). A proposal for the author to cut, reorder or reject: the author
 decides what goes in (`method-paper/BRIEF.md:60`). Written on 2026-11-02 by an AI agent (Claude) in a cloud session,
-outside the governed channel (`method-paper/BRIEF.md:30-32`). The data it draws on is in `case-data.md`; the
-references are in `related-work.md`.
+outside the governed channel (`method-paper/BRIEF.md:30-32`), and revised the same day to record the framing agreed
+with the author. The data it draws on is in `case-data.md` and `matrix/`; the references are in `related-work.md`.
 
 ## Constraints taken from the brief
 
@@ -23,6 +23,87 @@ references are in `related-work.md`.
 - **Numbers:** every number in the paper gets a row in `method-paper/claims.md` and passes the verifier
   (`method-paper/BRIEF.md:25`, `:100-101`).
 
+## Framing agreed on 2026-11-02
+
+Agreed with the author in the Phase 0 session and recorded here so that a protocol can be committed on day 1. The
+wording of the problem and of the contribution stays the author's (`method-paper/BRIEF.md:60`).
+
+**The problem, in one sentence.** The author chooses one of these or writes another:
+
+- *A, general:* a revised paper's numbers drift away from the evidence that produced them. What mechanism, small
+  enough to live in the paper's own repository, keeps the link, and what escapes it?
+- *B, case report:* describe one concrete mechanism and document, on one case, which errors it caught and which it
+  did not.
+- *Out of scope:* whether the Polar Projector results are right; generalising beyond one case; changing the case
+  paper or its registry; whether Actuarii's receipts are faithful (`method-paper/BRIEF.md:93-95`).
+
+**Principles.**
+
+1. **Where a number comes from is untouchable.** The only evidence is code output: the artifacts in `bench/results/`
+   written by committed scripts, and the values the verifier recomputes.
+2. **Anything an LLM wrote is a claim to verify, not evidence.** That covers the manuscript, the registry, the commit
+   messages, and the agent's own notes and scripts.
+3. **Each number is judged by its logical category,** together with its structure: where it is printed and what it
+   depends on. Each category requires its own kind of evidence (`matrix/README.md`).
+
+**H1, coverage.** Every result figure printed in the manuscript is tied to code output, in one of two ways:
+
+- *Directly:* a check compares it with an artifact value or a recomputation.
+- *By derivation:* a declared formula over code output, recomputed from the artifacts, gives it at the printed
+  precision. A derivable figure counts as tied only once that recomputation runs (the author's rule, 2026-11-02).
+
+The rest of H1's specification:
+
+- *Refuter:* a result figure tied in neither way.
+- *Instrument:* the traceability matrix and its self-tests (`matrix/README.md`).
+- *Why it is an open question:* the verifier checks one direction only, from registry to text
+  (`tools/verify_paper_tables.py:599-627`). It reads the text the other way only for the Appendix B and C tables
+  (`tools/verify_paper_tables.py:165-201`).
+
+**H2, what consistency cannot see.** Consistency checks catch figures that are unbacked or mistranscribed. They do not
+catch instrument errors, where the code output itself is wrong.
+
+H1 is what makes H2 decidable. With each figure linked to its data, its code and its checks, every historical
+correction can be classified from code output alone:
+
+- *transcription:* the printed figure changed and its artifact did not;
+- *instrument:* the artifact changed because the script that writes it changed;
+- *object:* the operator, `polar_projector/`, changed.
+
+The rest of H2's specification:
+
+- *Refuter:* an instrument change where the verifier, run on the state before the fix, fails because of that figure.
+- *A nuance the paper must state:* in `34b44b3`, exporting a missing artifact so that a figure could be checked
+  exposed a protocol error. The check did not see it; preparing the figure for the check did (`case-data.md` §5.1,
+  item 5).
+
+**Status of today's results.** The matrix rules were tuned while looking at their output on the real manuscript. So
+every H1 number from 2026-11-02 (`matrix/summary.md`) is exploratory: post hoc, in the registry's own vocabulary
+(`paper/claims.md:56`). None of it tests H1.
+
+**Protocol to commit on day 1, before the definitive run.** A proposal for the author:
+
+1. *Definitions:* result figure (the categories of `matrix/README.md`); tied (directly, or by a recomputed
+   derivation); the refuters of H1 and H2 given above.
+2. *Rule fixes found on 2026-11-02, applied before the run:*
+   - mathematics written in prose ("rising to 1", "toward 0", "toward 1") goes to derivation;
+   - a new "external assumption" category takes figures no code produces ("60 Hz");
+   - definitions printed with a × sign ("1×", the reference row's "1.00×") leave the result category.
+3. *Derivation checks:* for each derivable figure, a declared formula over artifact values, recomputed and compared
+   at the printed precision. The formula is an LLM claim; the recomputation is the evidence.
+4. *Frozen code:* the matrix code is frozen in the commit that registers the protocol. Any later change is recorded
+   as post hoc.
+
+**What only the author can change.** Agents do not modify the brief (`method-paper/BRIEF.md:4-5`). On day 1
+(`method-paper/BRIEF.md:36`) the author would:
+
+- add H1 and H2 to the goal, if they stay (`method-paper/BRIEF.md:9-11`);
+- add the matrix to the governed paths, as agreed (`method-paper/BRIEF.md:66-71`);
+- confirm the measurement section in that light.
+
+The paper declares that the framing, the matrix and today's exploratory numbers came from Phase 0, outside the
+governed channel (`method-paper/BRIEF.md:32`).
+
 ## About the numbers in this file
 
 - **Word budgets are planning targets set here,** not repository facts. The full budget sums to 2,500, the brief's
@@ -31,12 +112,14 @@ references are in `related-work.md`.
 - **Budgets count prose,** abstract included. Tables, captions and references fall outside them. If the template
   counts those against five pages, trim §4's prose first.
 - **Case numbers cite their source** where they appear, and are collected under "Numbers the paper would print",
-  each a candidate row for `method-paper/claims.md`.
+  each a candidate row for `method-paper/claims.md`. Numbers from `matrix/summary.md` are exploratory until the
+  day-1 run.
 
 ## Working title (options)
 
-1. *Every number has a row: tying a paper's figures to their evidence with a claims registry and a CI verifier*
-2. *What a claims registry caught, and what it could not: one paper's record*
+1. *Tied to code output: what a claims registry and a CI verifier caught in one paper, and what they could not*
+2. *Every number has a row? Checking one paper's figures against the code that produced them*
+3. *What a claims registry caught, and what it could not: one paper's record*
 
 ## Word budget
 
@@ -44,20 +127,20 @@ references are in `related-work.md`.
 |---|---|---|---:|---:|---|
 | — | Abstract | Not assigned by the brief; suggested: author | 150 | 100 | |
 | 1 | Introduction and contribution | Author (`method-paper/BRIEF.md:60`) | 300 | 0 | |
-| 2 | The case | Agent drafts, author reviews | 200 | 150 | |
-| 3 | The method | Agent drafts (`method-paper/BRIEF.md:56-58`), author reviews | 650 | 500 | |
-| 4 | What the record shows | Agent drafts, author approves every number (`method-paper/BRIEF.md:61`) | 550 | 350 | 1 and 2 |
+| 2 | The case | Agent drafts, author reviews | 150 | 100 | |
+| 3 | The method | Agent drafts (`method-paper/BRIEF.md:56-58`), author reviews | 550 | 400 | |
+| 4 | H1 and H2: what the record shows | Agent drafts, author approves every number (`method-paper/BRIEF.md:61`) | 650 | 450 | 1 and 2 |
 | 5 | Pilot: this paper written under Actuarii | Agent counts, author interprets | 200 | 100 | |
-| 6 | Limits | Author (`method-paper/BRIEF.md:60`) | 300 | 250 | |
+| 6 | Limits | Author (`method-paper/BRIEF.md:60`) | 300 | 300 | |
 | 7 | Who did what | Author | 100 | 50 | |
-| 8 | Conclusion | Author (`method-paper/BRIEF.md:61`) | 50 | 0 | |
+| 8 | Conclusion | Author (`method-paper/BRIEF.md:61`) | 100 | 0 | |
 | | **Total** | | **2,500** | **1,500** | |
 
 **The cut rule and the "done" criteria pull in different directions.** The rule keeps "the method, the case and the
 limits" (`method-paper/BRIEF.md:91-92`). "Done" still requires the measurement to be reported
-(`method-paper/BRIEF.md:101-102`), and the paper must state who did what (`method-paper/BRIEF.md:64`). The cut
-column therefore keeps §5 and §7 at minimum length and drops §1 and §8, leaving the abstract to frame the paper. The
-author should confirm that reading.
+(`method-paper/BRIEF.md:101-102`), and the paper must state who did what (`method-paper/BRIEF.md:64`). The cut column
+therefore keeps §5 and §7 at minimum length, counts the H1 and H2 results as part of "the case", and drops §1 and §8,
+leaving the abstract to frame the paper. The author should confirm that reading.
 
 ## Section by section
 
@@ -68,9 +151,8 @@ One sentence each:
 - The problem: a revised paper's printed numbers drift away from their evidence.
 - The case and its scale: 42 registry rows (`paper/claims.md:68-124`), 281 figures checked against committed
   artifacts (verifier at `501c67f`, `case-data.md` §7).
-- The four components.
-- What the record shows: the CI-side checks caught some errors; experiments, review and outside sources caught more,
-  including figures that had passed CI (`case-data.md` §5.3).
+- The four components, and the instrument added to test how far they reach.
+- The H1 and H2 results, from the day-1 run.
 - The main limit: consistency is not validity (`README.md:124-125`).
 
 ### 1. Introduction and contribution (300 words; cut: 0). Author.
@@ -85,11 +167,12 @@ One sentence each:
   - artifact badges (ACM 2020);
   - executable papers (Nowakowski et al. 2011).
 - **The gap:** a per-claim record that links each printed number in an ordinary static manuscript to a script, an
-  artifact, a pre-registration label and a check that CI runs.
-- **Contribution (author's words):** a description of the four components and a full account of one case,
-  including what they missed. Say what this is not: not a tool, not an evaluation across papers (one case).
+  artifact, a pre-registration label and a check that CI runs. And a test of whether every printed figure, not just
+  every registered one, is tied to code output.
+- **Contribution (author's words):** the four components, a full account of one case, and a test of how far they
+  reach (H1) and of what they cannot see (H2). Say what this is not: not a tool, not an evaluation across papers.
 
-### 2. The case (200 words; cut: 150). Agent drafts.
+### 2. The case (150 words; cut: 100). Agent drafts.
 
 - **What it is:** the paper's title (`CITATION.cff:20`), the release `v1.0-paper` at `f59430a` (`git show-ref
   --tags`), and its measured-report stance: "a baseline simple enough to write in a few lines matches or beats the
@@ -103,20 +186,23 @@ One sentence each:
 - **Suggestion:** no pipeline figure. The brief allows tables only (`method-paper/BRIEF.md:9`), and the five stages
   fit in one sentence (`docs/ARCHITECTURE.md:9-17`).
 
-### 3. The method (650 words; cut: 500). Agent drafts, author reviews.
+### 3. The method (550 words; cut: 400). Agent drafts, author reviews.
 
-**3.1 Claims registry (200; cut 150).**
+**3.1 Claims registry (150; cut 100).**
 
 - One row per claim, with an ID, the claim, a status, a pre-registration label, a source and the CI checks
   (`paper/claims.md:66`).
 - The rule: "Nothing enters the manuscript without a row here" (`paper/claims.md:3`).
 - Seven statuses (`paper/claims.md:40-50`). One of them, `construction`, was added for facts read from code rather
-  than measured (`8359755`).
+  than measured (`8359755`). An open claim was closed by reading a library's source instead of measuring (R5 became
+  C21, `57c5200`).
+- At release: 31 checked, 4 construction, 7 remove (`tools/verify_paper_tables.py:670`; `case-data.md` §1). By
+  pre-registration label: 13 yes, 7 no, 4 post hoc, 6 mixed, 8 n/a, 4 with no label (`case-data.md` §2).
 - A "must not appear" table (`paper/claims.md:117-124`), and an exploration notebook of figures with no script,
   none of them admissible (`paper/claims.md:126-135`).
 - Cite Sandve et al. (2013), Rule 9.
 
-**3.2 Pre-registration labels (150; cut 125).**
+**3.2 Pre-registration labels (125; cut 100).**
 
 - Three labels (`paper/claims.md:52-56`). "Registered" means the protocol commit precedes the results commit; one
   worked example is E8 (`498d0ab` → `dd9e5b5`).
@@ -124,7 +210,7 @@ One sentence each:
   labelled exploratory in the text (`paper/claims.md:56`).
 - Cite Nosek et al. (2018).
 
-**3.3 Registered question and refutation criteria (100; cut 75).**
+**3.3 Registered question and refutation criteria (75; cut 50).**
 
 - F1, F2 and the Bound, each with its measured outcome (`paper/claims.md:14-21`).
 - The revision is kept beside the superseded question (`paper/claims.md:30-36`), and it added no experiment
@@ -140,51 +226,67 @@ One sentence each:
 - When it runs: on pushes to `main` and on pull requests (`.github/workflows/ci.yml:3-6`, `:50-51`).
 - How the checked surface grew: 112 figures (`34b44b3`) to 281 (`65c3ebf`), re-run at each step (`case-data.md`
   §7).
+- What it does not do, which motivates H1: it never reads a printed number back to the registry, except in the
+  Appendix B and C tables (`tools/verify_paper_tables.py:165-201`).
 - Cite Jimenez et al. (2017) and Nuijten et al. (2016).
 
-### 4. What the record shows (550 words; cut: 350). Agent drafts, author approves every number.
+### 4. H1 and H2: what the record shows (650 words; cut: 450). Agent drafts, author approves every number.
 
-**4.1 The registry at release (Table 1; prose 100, cut 75).**
+**4.1 The instrument (150; cut 100).**
 
-- 31 checked, 4 construction, 7 remove (`paper/claims.md:68-124`; the verifier's tally at
-  `tools/verify_paper_tables.py:670`).
-- By label: 13 yes, 7 no, 4 post hoc, 6 mixed, 8 n/a, 4 with no label (`case-data.md` §2).
-- One sentence on the two labels the vocabulary does not define (`paper/claims.md:52-56`).
+- The matrix: one row per printed number, with its logical category and the evidence that category requires
+  (`matrix/README.md`).
+- Evidence comes only from code output. The checks come from running the verifier, and the artifact behind each
+  check is found by perturbing one artifact at a time.
+- Self-tests: errors planted in copies of the repository, three of which the verifier lets through
+  (`matrix/test_matrix.py`; `matrix/README.md`).
 
-**4.2 Corrections and how they were found (Table 2; prose 350, cut 225).**
+**4.2 H1 (250; cut 175). Table 1.**
 
-- 37 commits corrected something already committed (`case-data.md` §5.3).
-- The strongest single datum: the code review changed the figures of 9 rows that were `checked` and passing CI
-  (`97e9306` → `65c3ebf`; verifier 277/277 at `97e9306`).
-- The clearest case is C16, a CI-green figure that was wrong because the arm was wrong (`paper/claims.md:103`).
-- The two failures the method notes single out, a cost column that mixed operations and a label used both as input
-  and as reference, were found by an audit, not by CI (`docs/METHODOLOGY.md:39-43`; `97e9306`).
+- The result comes from the day-1 run.
+- Exploratory figures from 2026-11-02, for orientation only: 478 result figures. Of these, 454 are tied directly (420
+  by presence, 26 located, 8 single-character), 10 are matched only by short strings from another section, and 14
+  are untied (`matrix/summary.md:17`).
+- The clearest case is Appendix A's "vs. d = 16" column (`paper/polar-projector-paper.md:1095-1103`). Of its seven
+  figures one has a check, and three others pass only because their string matches a different figure
+  (`matrix/summary.md:41-46`).
+- Derivable figures become tied once their recomputation runs (protocol, item 3). Whatever is still untied after
+  that refutes H1.
+- How blind presence is: 31 check strings are shared by several checks, and 86 checked strings are printed in more
+  than one place (`matrix/summary.md:9-10`).
 
-**4.3 Claims removed (100; cut 50).**
+**4.3 H2 (250; cut 175). Table 2.**
 
-- Seven `remove` rows and their reasons (`paper/claims.md:77-79`, `:121-124`).
-- One open claim closed by reading a library's source instead of measuring (R5 to C21, `57c5200`).
-- Removals that never got a row (`case-data.md` §6.2).
+- The result is the code-only classification of historical changes, computed on day 1 or later.
+- Data already in hand:
+  - the code review changed the figures of 9 rows that were `checked`, while the verifier passed (`97e9306` →
+    `65c3ebf`; 277/277 at `97e9306`; `case-data.md` §5.1, §7);
+  - C16 is the clearest instrument case (`paper/claims.md:103`);
+  - the method notes single out two failures, a cost column that mixed operations and a label used both as input
+    and as reference (`docs/METHODOLOGY.md:39-43`; `97e9306`).
+- The `34b44b3` nuance (see the framing above).
 
 ### 5. Pilot: this paper written under Actuarii (200 words; cut: 100)
 
 - **Report the five counts the brief fixes** (`method-paper/BRIEF.md:77-81`), over Phase 1 only
   (`method-paper/BRIEF.md:75`), as an observation of one author over one week (`method-paper/BRIEF.md:83`).
 - **State the brief's own limits on those counts** (`method-paper/BRIEF.md:85-87`).
-- **Say that Phase 0 ran outside the channel** (`method-paper/BRIEF.md:30-32`), **and that Actuarii did not govern
-  the Polar Projector paper** (`method-paper/BRIEF.md:96`).
+- **Say that Phase 0 ran outside the channel** (`method-paper/BRIEF.md:30-32`), and that it included the framing
+  and the first version of the matrix. **Say that Actuarii did not govern the Polar Projector paper**
+  (`method-paper/BRIEF.md:96`).
 - No hypothesis and no interpretation beyond what escaped and why, when known (`method-paper/BRIEF.md:81`). The
   counts do not exist yet; this section is a placeholder until day 5 (`method-paper/BRIEF.md:38`).
 
-### 6. Limits (300 words; cut: 250). Author.
+### 6. Limits (300 words; cut: 300). Author.
 
 Candidate points, each with its evidence; the author chooses and words them.
 
 1. **Consistency, not validity.** The verifier "cannot catch a benchmark that measures something other than what the
    paper says it measures" (`README.md:124-125`). C16's figures passed until a code review found the arm wrong
-   (`65c3ebf`).
+   (`65c3ebf`). H2 measures how far this goes.
 2. **Presence, not location** (`paper/claims.md:61-62`). Single-character figures are counted, not located: 20 at
-   `501c67f` (`case-data.md` §7).
+   `501c67f` (`case-data.md` §7). The matrix does not fully solve this either: a string matching a string is not
+   the same figure, so it flags these cases and leaves them for reading (`matrix/README.md`).
 3. **Prose about provenance is unchecked.** The manuscript's pre-registration sentence appears to disagree with the
    registry (`paper/polar-projector-paper.md:902-908`; `case-data.md` §9, item 1). Use it only once the author has
    confirmed it.
@@ -194,8 +296,9 @@ Candidate points, each with its evidence; the author chooses and words them.
    no outside timestamp (`case-data.md` §8). One registered protocol changed its aggregation after the first run
    (`1e9d217`).
 6. **The label vocabulary is incomplete:** `n/a` and `—` are used but undefined (`paper/claims.md:52-56`).
-7. **One case and one author.** The correction routes in Table 2 were coded by the agent from commit messages, and 9
-   of the 37 commits name no route (`case-data.md` §5.3).
+7. **One case, one author, and an instrument an LLM wrote.** The matrix's categories are rules written by the
+   agent. Its self-tests show what it detects, not that its categories are right, and the 2026-11-02 numbers are
+   exploratory.
 8. **AI involvement is recorded by declaration.** 64 of 89 commits carry a co-author trailer
    (`git log --grep='^Co-Authored-By:'`), and the manuscript states what assistants did
    (`paper/polar-projector-paper.md:1003-1011`). Neither says who wrote which line.
@@ -204,50 +307,53 @@ Candidate points, each with its evidence; the author chooses and words them.
 
 - **The original paper:** its AI statement (`paper/polar-projector-paper.md:1003-1011`) and the trailer count
   (`case-data.md` §7).
-- **This paper:** the roles in `method-paper/BRIEF.md:54-64`. Phase 0, this preparation, was done by the agent
-  outside the governed channel (`method-paper/BRIEF.md:30-32`); Phase 1 runs under Actuarii
-  (`method-paper/BRIEF.md:34-38`), with `Human-Record` trailers on the author's commits
-  (`method-paper/BRIEF.md:61-62`).
+- **This paper:** the roles in `method-paper/BRIEF.md:54-64`. Phase 0 was done by the agent outside the governed
+  channel (`method-paper/BRIEF.md:30-32`): this preparation, the first matrix, and the framing, agreed with the
+  author in conversation. Phase 1 runs under Actuarii (`method-paper/BRIEF.md:34-38`), with `Human-Record`
+  trailers on the author's commits (`method-paper/BRIEF.md:61-62`).
 
-### 8. Conclusion (50 words; cut: 0). Author.
+### 8. Conclusion (100 words; cut: 0). Author.
 
 - What a reader can reuse as is: the status vocabulary, the label split, and the verifier's pattern of recomputing,
   comparing cell by cell and requiring presence (`docs/ARCHITECTURE.md:55-63`).
+- What H1 and H2 add: the direction the verifier does not check, and the class of error no consistency check sees.
 
 ## Proposed tables
 
-**Table 1. The registry at release: rows by status and pre-registration label.** Source: `paper/claims.md:68-124`,
-grouped by the rule in `case-data.md` §2. The registry at `v1.0-paper` is the registry at `501c67f`
-(`case-data.md` §4).
+**Table 1. H1: result figures by status.** Source: the matrix at the day-1 run, regenerated into
+`matrix/summary.md`. The exploratory column comes from 2026-11-02 (`matrix/summary.md:17`); the other categories
+(parameter, derivation, environment, excluded, unclassified) are in `matrix/summary.md:17-25`.
 
-| Status | yes | no | post hoc | mixed | n/a | — | Total |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| checked | 10 | 7 | 4 | 6 | 4 | 0 | 31 |
-| construction | 0 | 0 | 0 | 0 | 4 | 0 | 4 |
-| remove | 3 | 0 | 0 | 0 | 0 | 4 | 7 |
-| **Total** | **13** | **7** | **4** | **6** | **8** | **4** | **42** |
+| Status | Exploratory, 2026-11-02 | Day-1 run |
+|---|---:|---:|
+| Tied, located (Appendices B and C) | 26 | |
+| Tied by presence | 420 | |
+| Tied by value, single character | 8 | |
+| Presence matched only by a short string of another section | 10 | |
+| Tied by derivation, recomputed | — | |
+| Untied | 14 | |
+| **Result figures** | **478** | |
 
-**Table 2. Correction commits by how they were found.** Source: `case-data.md` §5.3: 37 commits, coded by the agent
-from their messages, for the author to confirm. Shown at a coarser grain than `case-data.md`: "CI-side work" groups
-registry or verifier (5), artifact export (1) and cross-host CI (1); "Review" groups manual review (10) and code
-review (1). **Not evidence as it stands:** commit messages are largely LLM output (`case-data.md` §5.3), so this
-table needs replacing by the code-only classification planned in `matrix/README.md`.
+**Table 2. H2: corrections by what changed, and whether the verifier caught them.** Layout only. What changed is read
+from code output, not commit messages: whether the commit changed the text, the artifact, the script or the
+operator. Whether the verifier caught it comes from running it on the state before the fix. Values come from the
+day-1 run or later; the examples are candidates to classify.
 
-| How it was found | Commits | Example |
-|---|---:|---|
-| Review (full read, audit, integration of author drafts, code review) | 11 | `65c3ebf`: 9 checked rows' figures changed |
-| CI-side work (presence check, verifier rows, artifact export, second host) | 7 | `2f8e532`: refit costs no artifact contained |
-| Experiment (new or pre-registered measurement) | 7 | `c560801`: any fixed linear map is exactly stable |
-| Outside source (library code, another repository, reference databases) | 3 | `57c5200`: R5 closed by reading `transform()` |
-| Not stated in the message | 9 | `a773513`: two errors in Proposition 1 |
-| **Total** | **37** | |
+| What changed | Verifier passed before the fix | Verifier failed before the fix | Candidate example |
+|---|---:|---:|---|
+| Transcription: text changed, artifact did not | | | `0b90772`, A5's 1.3% → 1.4% |
+| Instrument: artifact changed with its script | | | `65c3ebf`, C16 |
+| Object: the operator changed | | | `c3dfb0b`, the clamp |
+| **Total** | | | |
 
-Alternative Table 2, if the author prefers growth to routes: the number of figures under check at each commit, 112
-to 281 (`case-data.md` §7).
+The earlier Table 1, the registry by status and pre-registration label, now fits in a sentence in §3.1; the counts
+are in `case-data.md` §1–2. The earlier Table 2, corrections by route, rested on commit messages and is not evidence
+(`case-data.md` §5.3).
 
 ## Numbers the paper would print
 
-Candidate rows for `method-paper/claims.md`. Each needs the author's approval (`method-paper/BRIEF.md:61`).
+Candidate rows for `method-paper/claims.md`. Each needs the author's approval (`method-paper/BRIEF.md:61`). Those
+marked *exploratory* come from the matrix and are replaced by the day-1 run.
 
 | Number | What it is | Source |
 |---|---|---|
@@ -262,22 +368,28 @@ Candidate rows for `method-paper/claims.md`. Each needs the author's approval (`
 | 12; 6; 14 | Artifacts; commits that rewrote them; file rewrites | `git log --name-status -- bench/results/`; `case-data.md` §5.2 |
 | 6 | Protocol commits labelled `yes` | `case-data.md` §8 |
 | 49–384 s | Protocol-to-results gaps | `21e8e45`→`c265abb`, `1c363bb`→`1e9d217`; `case-data.md` §8 |
-| 37 | Correction commits | `case-data.md` §5.3 (agent coding) |
-| 11 / 7 / 7 / 3 / 9 | Routes, coarse (Table 2) | `case-data.md` §5.3 |
 | 9 | Checked rows whose figures the code review changed | `97e9306` → `65c3ebf`, `paper/claims.md`; `case-data.md` §5.1 |
 | 78; 54 | Commits from manuscript to release; those touching it | `git rev-list --count e5d134d^..f59430a`; `case-data.md` §7 |
 | 5 days | Manuscript to release, 2026-09-11 to 2026-09-16 | `e5d134d`, `f59430a` |
 | 800 | Tests collected | `pytest --collect-only` at `501c67f`; `README.md:127` |
 | 735 / 432 | Verifier / operator lines | `wc -l` at `501c67f`; `docs/ARCHITECTURE.md:35` |
 | 64 of 89 | Commits with a co-author trailer | `git log --grep='^Co-Authored-By:'`; `case-data.md` §7 |
+| 1,344 / 478 | Printed numbers / result figures (*exploratory*) | `matrix/summary.md:5`, `:17` |
+| 454 / 10 / 14 | Result figures tied directly / matched only across sections / untied (*exploratory*) | `matrix/summary.md:17` |
+| 7, 1 | Figures in Appendix A's "vs. d = 16" column, and those with a check (*exploratory*) | `paper/polar-projector-paper.md:1095-1103`; `matrix/summary.md:41-46` |
+| 31; 86 | Check strings shared by several checks; checked strings printed in several places | `matrix/summary.md:9-10` |
+| 0; 0 | Checks matching no printed number; checks with no artifact found | `matrix/summary.md:7-8` |
 
 ## Decisions for the author
 
-1. **Whether to use `case-data.md` §9, item 1** (the manuscript's pre-registration sentence) as the example of
+1. **The problem statement:** A, B, or the author's own (framing above).
+2. **The brief on day 1:** the goal (H1 and H2), the governed paths (the matrix) and the measurement section.
+3. **The H1 and H2 protocol** proposed above: confirm or change it before it is committed.
+4. **Whether to use `case-data.md` §9, item 1** (the manuscript's pre-registration sentence) as the example of
    what the verifier cannot see. Confirm it first; the case paper itself stays unmodified
    (`method-paper/BRIEF.md:93`).
-2. **The cut column above,** which reads the cut rule together with the "done" criteria.
-3. **Table 2's coding:** confirm or recode the 37 commits, and choose the coarse or fine grouping.
-4. **Which run to cite "at release":** the verifier gives identical counts at `f59430a` and `501c67f`
+5. **The cut column above,** which reads the cut rule together with the "done" criteria.
+6. **Which run to cite "at release":** the verifier gives identical counts at `f59430a` and `501c67f`
    (`case-data.md` §7).
-5. **References:** finish the link check in `related-work.md` before citing anything.
+7. **References:** finish the link check in `related-work.md` before citing anything. It needs `doi.org`,
+   `api.crossref.org` and `www.acm.org` allowed in the environment, or a manual check.

@@ -135,11 +135,32 @@ podrá clasificar solo con salida de código:
 Eso sustituye la clasificación por rutas de `case-data.md` §5.3, que sale de mensajes de commit, es decir, de
 salida de LLM.
 
-## Decisiones pendientes
+## Decisiones del 2026-11-02 y lo que queda
 
-1. Revisar las cifras sin atar y las dudosas de `summary.md`: ¿cuáles cuentan como refutación de H1?
-2. ¿Cuenta como atada una cifra derivable de cifras atadas? Por ejemplo, la columna "vs. d = 16" del Apéndice A
-   (`paper/polar-projector-paper.md:1095-1103`) se obtiene dividiendo la columna `evaluate()`, que sí está
-   comprobada.
-3. Las cifras sin clasificar.
-4. Si esta carpeta debe entrar en las rutas gobernadas el día 1 (`method-paper/BRIEF.md:36`, `:66-71`).
+Decisiones del autor:
+
+1. **Las derivables cuentan como atadas, pero solo si se comprueban:** una fórmula declarada sobre salida del
+   código, recalculada desde los artefactos y comparada a la precisión impresa. Está en el protocolo propuesto en
+   `../outline.md`, sección "Framing agreed on 2026-11-02".
+2. **Esta carpeta entra en las rutas gobernadas.** La añade el autor al brief el día 1 (`method-paper/BRIEF.md:36`,
+   `:66-71`), porque los agentes no modifican el brief (`method-paper/BRIEF.md:4-5`).
+
+Por qué quedan sin atar o sin clasificar cifras en esta versión. Es una lectura del agente apoyada en un recálculo
+exploratorio hecho en la sesión, todavía no en un chequeo:
+
+- **Sin atar** (`summary.md:27-46`):
+  - Las derivables de salida del código: la columna "vs. d = 16" del Apéndice A, "25×", "10³–10⁵" del §1 y el umbral
+    "2×".
+  - Dos definiciones que la regla del signo × tomó por resultados: "1×" y el "1.00×" de la fila de referencia del
+    §3.1.
+- **Sin clasificar** (`summary.md:94-99`):
+  - Matemáticas escritas en prosa (líneas 349, 350 y 419 del manuscrito).
+  - Un supuesto externo que ningún código produce: "60 Hz", línea 731.
+
+Las correcciones de reglas y las comprobaciones de derivables se aplican el día 1, con el protocolo ya registrado y
+antes de la ejecución definitiva. Aplicarlas hoy sería seguir ajustando el instrumento a la vista de sus resultados.
+
+Queda por hacer:
+
+1. Revisar las cifras dudosas de `summary.md`.
+2. Confirmar el protocolo o cambiarlo antes de registrarlo.
