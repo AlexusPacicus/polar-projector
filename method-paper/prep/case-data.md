@@ -331,6 +331,12 @@ rule gives 37.
 **Routes.** Each commit is coded from the words of its own message. The agent did the coding; the author should
 confirm both the list and the routes before any of these counts is used.
 
+**Not evidence (added after the framing discussion).** The agreed rule is that only code output is evidence and
+anything an LLM wrote is a claim to verify. These routes rest on commit messages, and 64 of the 89 commits carry a
+co-author trailer naming a Claude model (§7), so the route counts below are unverified claims. The replacement is a
+code-only classification of each change (manuscript, artifact, script or operator), planned on top of the matrix in
+`matrix/` (`matrix/README.md`).
+
 - **Experiment:** a new or pre-registered measurement contradicted or narrowed the text.
 - **Registry or verifier:** the presence check, new verifier rows, or a registry row (`remove` or "unregistered").
 - **Manual review:** a full read, an audit, an editing pass, or review on integrating an author-written section.

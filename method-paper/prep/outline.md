@@ -230,7 +230,8 @@ grouped by the rule in `case-data.md` §2. The registry at `v1.0-paper` is the r
 **Table 2. Correction commits by how they were found.** Source: `case-data.md` §5.3: 37 commits, coded by the agent
 from their messages, for the author to confirm. Shown at a coarser grain than `case-data.md`: "CI-side work" groups
 registry or verifier (5), artifact export (1) and cross-host CI (1); "Review" groups manual review (10) and code
-review (1).
+review (1). **Not evidence as it stands:** commit messages are largely LLM output (`case-data.md` §5.3), so this
+table needs replacing by the code-only classification planned in `matrix/README.md`.
 
 | How it was found | Commits | Example |
 |---|---:|---|
