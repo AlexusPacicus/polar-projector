@@ -96,9 +96,11 @@ Qué significa cada estado de un resultado:
 | `test_artifact_changed` | El valor de `reanchor.json` detrás de 0.981 | prueba-falla en todas sus apariciones | Falla |
 | `test_reference_number` | Un año dentro de una referencia | Excluida por categoría | No aplica |
 
-Las tres primeras son lo que el verificador no puede ver: comprueba en una dirección, del registro al texto
-(`tools/verify_paper_tables.py:599-627`). Solo lee el manuscrito en sentido inverso para las tablas de los
-Apéndices B y C (`tools/verify_paper_tables.py:165-201`).
+Las tres primeras son lo que el verificador no puede ver. Comprueba del código al texto: toma la cifra de cada
+chequeo y la busca en el manuscrito (`tools/verify_paper_tables.py:599-627`). Solo lee el manuscrito en sentido
+inverso para las tablas de los Apéndices B y C (`tools/verify_paper_tables.py:165-201`), y ninguna comprobación
+parte del texto ni del código para buscar una fila del registro. Corregido el 2026-11-03: antes decía «del registro al
+texto» (`../outline.md`, "Decisions taken on 2026-11-03", decisión 9).
 
 **La segunda prueba encontró un defecto del propio diseño.** La categoría "resultado" se asignaba sobre todo porque
 la cifra coincidía con un chequeo, y una cifra equivocada deja de coincidir: se salía de la categoría y H1 la habría

@@ -159,17 +159,18 @@ prize appears on two independent pages
   Engineering* 23(3), 82–91, <https://doi.org/10.1109/MCSE.2021.3072860> (title, venue and DOI found in search
   results, for example <https://arxiv.org/abs/2006.03018v3>). Its Maneage template might be the closest mechanism to
   this case, if it writes the paper's numbers from the pipeline, but search could not confirm that. Worth reading
-  before Phase 1.
+  before Phase 1, because it bears on the day-1 decision on references (`outline.md`, decision 10).
 
 ## Where each could go in the outline
 
 | Reference | Outline section (`outline.md`) |
 |---|---|
 | Buckheit & Donoho (1995); Peng (2011) | §1 Introduction: the problem and the standard |
-| Sandve et al. (2013) | §1.1 The case (the registry); §2.2 The matrix: Rule 9 connects text to results, the direction from text to code |
+| Sandve et al. (2013) | §1.1 The case (the registry); §2.2 The edges the case lacked: Rule 9 connects text to results, the edges from text to code and from text to the registry |
 | Nosek et al. (2018) | §1.1 The case (the pre-registration labels); §4 Limits (self-registration) |
 | Jimenez et al. (2017); Nuijten et al. (2016) | §2.1 The verifier; §2.3 or §4 (consistency, not validity) |
 | ACM (2020) | §4 Limits (no outside evaluation) |
-| Nowakowski et al. (2011) | §1 or §4: detecting drift versus preventing it by generating numbers |
+| Nowakowski et al. (2011) | §2.2 (figures as references, if adopted on day 1) or §4: detecting drift versus preventing it by generating numbers |
 
-Section numbers follow the outline as rebuilt with the author on 2026-11-03.
+Section numbers follow the outline as rebuilt with the author on 2026-11-03 and revised the same day for the
+triangle.
