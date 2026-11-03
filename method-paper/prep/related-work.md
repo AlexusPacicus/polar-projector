@@ -166,8 +166,10 @@ prize appears on two independent pages
 | Reference | Outline section (`outline.md`) |
 |---|---|
 | Buckheit & Donoho (1995); Peng (2011) | §1 Introduction: the problem and the standard |
-| Sandve et al. (2013) | §3.1 Claims registry |
-| Nosek et al. (2018) | §3.2 Pre-registration labels; §6 Limits (self-registration) |
-| Jimenez et al. (2017); Nuijten et al. (2016) | §3.4 Verifier; §6 Limits (consistency, not validity) |
-| ACM (2020) | §6 Limits (no outside evaluation) |
-| Nowakowski et al. (2011) | §1 or §6: detecting drift versus preventing it by generating numbers |
+| Sandve et al. (2013) | §1.1 The case (the registry); §2.2 The matrix: Rule 9 connects text to results, the direction from text to code |
+| Nosek et al. (2018) | §1.1 The case (the pre-registration labels); §4 Limits (self-registration) |
+| Jimenez et al. (2017); Nuijten et al. (2016) | §2.1 The verifier; §2.3 or §4 (consistency, not validity) |
+| ACM (2020) | §4 Limits (no outside evaluation) |
+| Nowakowski et al. (2011) | §1 or §4: detecting drift versus preventing it by generating numbers |
+
+Section numbers follow the outline as rebuilt with the author on 2026-11-03.

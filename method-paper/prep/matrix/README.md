@@ -140,8 +140,8 @@ salida de LLM.
 Decisiones del autor:
 
 1. **Las derivables cuentan como atadas, pero solo si se comprueban:** una fórmula declarada sobre salida del
-   código, recalculada desde los artefactos y comparada a la precisión impresa. Está en el protocolo propuesto en
-   `../outline.md`, sección "Framing agreed on 2026-11-02".
+   código, recalculada desde los artefactos y comparada a la precisión impresa. El 2026-11-03 se precisó como columna
+   de raíz e interacción (`../outline.md`, "Decisions taken on 2026-11-03", decisión 7).
 2. **Esta carpeta entra en las rutas gobernadas.** La añade el autor al brief el día 1 (`method-paper/BRIEF.md:36`,
    `:66-71`), porque los agentes no modifican el brief (`method-paper/BRIEF.md:4-5`).
 
