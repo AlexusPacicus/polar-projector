@@ -110,6 +110,11 @@ candidates are in `related-work.md`; how references work is in `references-spec.
     probabilistic answer with no established meaning. It is kept but read by nothing: no check, count, classification,
     label or figure, not even as a count of trailers. The paper states the quarantine as a hypothesis, not a result
     (`references-spec.md` §10, item 8).
+19. **The matrix specification's decisions** (`matrix-spec.md` §10):
+    - the release `f59430a` is measured;
+    - the sample's allocation and seed, and the closed list of interactions, are approved;
+    - the unclassified occurrences are not classified by hand: H1 is evaluated with and without them;
+    - the author does not remember having read the v0 output in full, and the paper treats it as seen.
 
 ## The central sentence
 
@@ -414,7 +419,7 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 ## Still open
 
 1. The English wording of the central sentence (the author).
-2. The matrix specification: drafted (`matrix-spec.md`). Its decisions for the author are in §10 there.
+2. The matrix specification: drafted, and its decisions taken (decision 19).
 3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write:
    drafted (`references-spec.md` §4).
 4. **References are adopted (decisions 11 and 13 to 17).** Nothing in `references-spec.md` §10 is open. Its rules are

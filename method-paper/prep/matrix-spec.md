@@ -7,6 +7,7 @@ Phase 1 code is then written to it.
 - The exploratory v0 in `matrix/` stays as it is; the paper declares that it was run.
 - Line numbers of the form `:N` refer to `matrix/build_matrix.py`.
 - Counts marked *exploratory* were made in this session while drafting. They are planning facts, not results.
+- The author's decisions of 2026-11-04 are recorded in §10.
 
 ## 1. What the matrix answers
 
@@ -75,7 +76,7 @@ Its tests call it in process, on temporary copies, through `pytest`.
   - Of the 105 numbers the formula rule takes, 36 are decimals or in scientific notation. Those can be results
     (`λ = +0.182`) or mathematics (`1.49 × 10⁻⁸`).
 - **Hence one new rule.** Inside math, a decimal or a number in scientific notation is unclassified; an integer stays
-  math. That leaves about 80 unclassified occurrences, and the author decides each one before the run (§5).
+  math. That leaves about 80 unclassified occurrences. Nobody classifies them by hand: H1 is evaluated both ways (§6).
 
 | Category | v0 name | What it is | What its status needs |
 |---|---|---|---|
@@ -86,7 +87,7 @@ Its tests call it in process, on temporary copies, through `pytest`.
 | citation | `referencia` | Years and volumes, in the text or the References section | None; outside H1 |
 | structure | `texto` | Numbering: sections, propositions, steps, list items, headings, the front matter | None |
 | notation | `notacion` | Digits inside names and notation: `c_1`, ‖·‖₂, `float64`, `P1_GOD` | None |
-| unclassified | `sin-clasificar` | No rule applies | The author decides, before the run |
+| unclassified | `sin-clasificar` | No rule applies | None: H1 is evaluated with and without them (§6) |
 
 "Math" replaces v0's `derivacion`, so that "derivation" means only the interaction column of decision 7.
 
@@ -107,8 +108,6 @@ Its tests call it in process, on temporary copies, through `pytest`.
 - **A declaration** in `method-paper/producers/matrix_declarations.toml`. It gives the occurrence's key, its roots
   (artifact fields or check labels), its interaction and its printed format. The matrix recomputes the value and
   compares it at the printed precision.
-
-The same file records the author's category for each unclassified occurrence.
 
 **Interactions** form a closed list. A new kind is added to the list before the run, never after.
 
@@ -143,7 +142,14 @@ The same file records the author's category for each unclassified occurrence.
 ## 6. H1's verdict
 
 - **H1 holds on the case** if no result occurrence is string-elsewhere, check-fails or untied.
-- **Reported:** Table 2's counts, every occurrence that refutes H1, and the calibration of §8 next to them.
+- **The unclassified occurrences are counted both ways.**
+  - H1 is evaluated twice: once with them left out, and once with them counted as results, where each is matched and
+    given a status like any other result.
+  - Nobody assigns them a category by hand. A rule written after v0 was seen would add a bias, and so would choosing
+    them by hand (the author's remark, 2026-11-04).
+  - If the two verdicts agree, the choice does not matter. If they disagree, the paper reports both, with the
+    occurrences that make the difference.
+- **Reported:** Table 2's counts under both, every occurrence that refutes H1, and the calibration of §8 next to them.
 - **The verdict is not revised** after the blind sample is compared.
 
 ## 7. Validating the instrument
@@ -233,10 +239,17 @@ calibration next to it.
 - `method-paper/case-history/f59430a/`, under `case-history/`, already governed.
 - `method-paper/blind-sample/`, new.
 
-## 10. Decisions for the author
+## 10. Decisions
 
-1. **Which version to measure:** the release `f59430a` (recommended, §1) or `main`.
-2. **The sample's allocation and seed** (§8). They are fixed in `draw.py`, and the sheet is already drawn.
-3. **The closed list of interactions** (§5).
-4. **The unclassified occurrences, about 80** (§4). *Recommendation:* the author decides them, rather than adding a
-   rule for them before the run. A rule written after v0 was seen is the riskier path.
+Taken by the author on 2026-11-04.
+
+1. **The release, `f59430a`,** is the version measured (§1).
+2. **The sample's allocation and seed** are approved (§8).
+3. **The closed list of interactions** is approved (§5).
+4. **The unclassified occurrences are not classified by anyone.** H1 is evaluated with and without them (§6).
+   - The author's words: "elegirlas a mano sigue metiendo sesgo", and the choice of how to proceed was left to the
+     agent.
+   - An earlier draft recommended that the author decide them by hand. That draft was dropped because it moves the
+     bias without removing it.
+5. **Exposure to v0.** The author does not remember having read the v0 output in full. The paper treats it as seen,
+   which is the conservative reading: the H1 keys keep their weakened label (`references-spec.md` §10, item 5).
