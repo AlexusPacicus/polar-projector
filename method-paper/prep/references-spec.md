@@ -5,6 +5,9 @@ governed channel. It records decision 11 of `outline.md` and specifies how it is
 implemented. The rule of decision 3 applies: the author approves this specification first, and the code is then written
 to it, never the other way round.
 
+Revised the same day after the author's review: artifacts are governed (R7; section 10, item 2), and section 10, item 3
+specifies how the measurement handles mechanical writes.
+
 ## 1. The decision
 
 The author's words, 2026-11-04:
@@ -29,7 +32,8 @@ already declares that the exploratory run was seen (`outline.md`, H1, *Status*).
 
 ## 2. Requirements
 
-What the references have to achieve. Each one rules out an alternative, named in section 3.
+What the references have to achieve. R1 to R6 each rule out an alternative named in section 3; R7 rules out the first
+draft's ungoverned artifacts (section 10, item 2).
 
 - **R1. Located.** For every figure, the check knows which characters in `paper.md` are the figure and which key they
   claim to be. This is the opposite of the case's presence check (`tools/verify_paper_tables.py:599-627`), which finds a
@@ -39,11 +43,18 @@ What the references have to achieve. Each one rules out an alternative, named in
   receipt, and the author sees the new number in the diff. A figure must never change in the PDF without a change to
   `paper.md`.
 - **R4. Readable.** `paper.md` reads correctly as it is, on GitHub and in a diff, with no build step.
-- **R5. Tools read, print and fail. They never write a governed path.** Every write to `paper.md` and
-  `method-paper/claims.md` stays a write by the agent or the author, so Actuarii's counts
-  (`method-paper/BRIEF.md:73-87`) keep meaning what the brief says.
+- **R5. Tools read, print and fail. They never write a governed path.**
+  - Every write to `paper.md`, `method-paper/claims.md` and the artifacts in `method-paper/results/` stays a write by
+    the agent or the author. Actuarii's counts (`method-paper/BRIEF.md:73-87`) therefore keep meaning what the brief
+    says.
+  - Producers and `refs.py registry` print to stdout, and the agent writes the file through the channel.
 - **R6. Built by the existing toolchain.** The syntax goes through pandoc to LaTeX unchanged, as `tools/build_arxiv.py`
   does for the case.
+- **R7. Traced at the root.** A change to an artifact is a governed write with a receipt, like a change to the text.
+  - The artifact is the root and the only evidence (decision 10), so its changes need the same trail as the text's.
+  - Otherwise the receipt lands on the consequence and not the cause. The artifact changes without a receipt, C4
+    fails, and the only receipt is the agent's later write to `paper.md`, which records that a figure followed an
+    artifact. Why the artifact changed stays outside the channel.
 
 ## 3. Syntax
 
@@ -74,16 +85,18 @@ What the references have to achieve. Each one rules out an alternative, named in
   without any write to `paper.md`, which puts it outside Actuarii's governance of that path and outside the author's
   review of the diff. The source would also show keys where numbers should be.
 - **A pandoc span, `[29×]{ref=KEY}`.** It fails R4, because GitHub prints the braces.
-- **A key after a bare value, `29×<!--KEY-->`.** The check would have to guess where the value starts, which fails R1 for
-  ranges and arrows.
+- **A key after a bare value, `29×<!--KEY-->`.** The check would have to guess where the value starts, which fails R1
+  for ranges and arrows.
 
 ## 4. Where values come from
 
 Code output is the root (`outline.md`, decision 10). There are three layers:
 
-1. **Producers,** under `method-paper/producers/`. These are versioned scripts. Each one writes one JSON artifact to
-   `method-paper/results/`, using the envelope the case already uses (`README.md`: `{experiment, config, host,
-   thread_env, results}`). Two fields are added: the commit the producer ran from, and the commit it measured.
+1. **Producers,** under `method-paper/producers/`. These are versioned scripts.
+   - Each one prints one JSON artifact to stdout, and the agent writes it to `method-paper/results/` through the
+     channel (R5, R7).
+   - The artifact uses the envelope the case already uses (`README.md`: `{experiment, config, host, thread_env,
+     results}`), with two added fields: the commit the producer ran from, and the commit it measured.
 2. **The manifest,** `method-paper/figures.toml` (read with `tomllib`). It has one entry per key:
    - `claim`: the wording. This is prose, which the author approves.
    - `artifact` and `field`: where the value is.
@@ -110,8 +123,12 @@ Code output is the root (`outline.md`, decision 10). There are three layers:
 - **Resolving does not re-derive.** The check reads artifacts and never runs a producer, in the same way the case
   verifier "compares reported figures against the stored artifacts; does NOT re-derive them"
   (`tools/verify_paper_tables.py:677`).
-- **Freshness is checked separately.** CI re-runs the deterministic producers and requires an identical `results`
-  block. This closes a gap the case had: an artifact older than its script.
+- **Freshness is checked separately, and it covers the value only.** CI re-runs the deterministic producers and
+  requires an identical `results` block. This closes a gap the case had: an artifact older than its script.
+  - Freshness shows that an artifact equals what its producer produces now. It does not show who changed the artifact,
+    when, or through which channel. Only governance records that (R7).
+  - A producer that cannot run in CI has no freshness check, so governance is its only trail. The Actuarii counts are
+    such a case if the receipts live only on the author's machine (section 10, item 4).
 
 ## 5. The check
 
@@ -211,20 +228,53 @@ is run.
 
 ## 9. Governed paths to add when the brief is updated (day 1)
 
-The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This specification adds:
+The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This specification proposes adding:
 
 - `method-paper/figures.toml`. The manifest holds author-approved content: the wording and the printed formats.
-- `method-paper/tools/refs.py`.
-- *For the author to decide:* `method-paper/producers/` and `method-paper/results/` (see section 10).
+- `method-paper/tools/`: `refs.py`, and the classifier of section 10, item 3, if the author adopts it.
+- `method-paper/producers/`.
+- `method-paper/results/`. The artifacts are the root (R7). Counts 3 and 5 of the measurement only see changes to
+  governed paths (`method-paper/BRIEF.md:79`, `:81`), so an ungoverned artifact would not even show up as an escape.
 
 ## 10. Open decisions for the author
 
 1. **Scope** (section 1): every figure, the agent's reading, or only the before/after table.
-2. **Are producers and artifacts governed paths?** *Recommendation:* govern the producers, not the artifacts. An
-   artifact is the output of a governed script, and CI's freshness step catches one edited by hand.
-3. **Mechanical writes in the measurement.** With references, every change of a figure and every regeneration of
-   `claims.md` is a governed write. The brief has to say whether these are counted apart from writing. The
-   measurement is pre-registered (`method-paper/BRIEF.md:73-87`), so only the author can decide this, on day 1.
+2. **Producers and artifacts are both governed** (section 9; revised 2026-11-04).
+   - *What the first draft said, and why it was dropped.* It recommended governing producers but not artifacts,
+     relying on CI's freshness step. That traded change traceability for a cleaner count. Freshness covers the value
+     only, and not for producers that cannot run in CI (R7, section 4).
+   - *Left to decide:* how a producer's output reaches `results/`. The default here is that the producer prints it and
+     the agent writes it through the channel (R5). If Actuarii lets a script write through the channel, that is
+     equivalent. The agent does not know Actuarii's interface; the author does.
+3. **Mechanical writes in the measurement.** With references, one decision triggers a cascade of governed writes.
+   - *Example: a fix to the case-verifier producer that changes one figure printed in two places.*
+     - The producer changes: authoring.
+     - The artifact is regenerated: mechanical.
+     - The two strings in `paper.md` follow, because C4 requires them to: mechanical.
+     - `claims.md` is regenerated, because C6 requires it to be identical: mechanical.
+   - *Example: adding a figure.* The manifest entry and the span are authoring. The regenerated registry, the self
+     producer's artifact (the count of spans changes) and the Table 1 cells that print it are mechanical.
+   - *The problem.* Count 1, governed writes by the agent with a receipt (`method-paper/BRIEF.md:77`), was
+     pre-registered before references existed. It would now mix writing the paper with propagating figures. Governing
+     artifacts (item 2) adds to the mix, so the two decisions go together.
+   - **Recommendation.** It is registered on day 1, before Phase 1 counting starts. The measurement is pre-registered,
+     so a split added after seeing the counts would be post hoc in the case's own vocabulary (`paper/claims.md:56`).
+     - Keep the five pre-registered counts unchanged, as totals.
+     - Split each count into authoring and mechanical writes, decided by the diff alone. A governed write is mechanical
+       if and only if its result is exactly what code requires:
+       - `claims.md` equal to the output of `refs.py registry` at that commit;
+       - an artifact equal to its producer's output at that commit;
+       - a diff to `paper.md` that only changes strings inside existing spans, each to the value C4 requires.
+
+       Every other write is authoring. The rule is code, with one test per clause, frozen with the rest of the code.
+     - Never classify by a receipt's rationale. It is text written by the model (`method-paper/BRIEF.md:85-86`), which
+       is the residue of this paper's own thesis.
+     - Do not exclude mechanical writes from the counts. Excluding them would open a door: label a write mechanical to
+       remove it from the count.
+   - *What it needs from Actuarii.* Classifying write by write needs the diff of each write, from the receipt or the
+     commit. If receipts keep only the rationale, the classification goes commit by commit, which is coarser.
+   - *Optional, also the author's call on day 1.* Report the cascade itself, as mechanical writes per authoring write.
+     It is an observation of what governance costs.
 4. **Actuarii counts in CI.** Whether the Actuarii producer can run in CI or only locally depends on where the receipts
    live.
 5. **Pre-registration labels as a manifest field,** checked against the order of commits. This would mechanize what the
@@ -242,7 +292,9 @@ The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This spe
 
 1. The author approves this specification and decides the open points of section 10.
 2. A manifest skeleton for the numbers listed in `outline.md` ("Numbers the paper would print").
-3. The case-registry, case-verifier and git-history producers.
+3. The case-registry, case-verifier and git-history producers. Each prints its artifact, and the agent writes it
+   through the channel.
 4. `refs.py check` and `refs.py registry`, with one test per rule.
-5. The hook in the verifier. Freeze the code.
-6. Writing. The self producer runs on the final `paper.md`.
+5. If the author adopts the split of section 10, item 3: the classifier, with one test per clause.
+6. The hook in the verifier. Freeze the code.
+7. Writing. The self producer runs on the final `paper.md`.

@@ -379,10 +379,10 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
   - approve `references-spec.md` and decide its open points (§10 there);
   - the author updates the brief:
     - the goal: the brief plus the matrix, with H1 the core and H2 conditional;
-    - the governed paths: the matrix folder, `method-paper/figures.toml`, `method-paper/tools/refs.py`, and whatever
-      §10 of `references-spec.md` settles for producers;
-    - the measurement, including how the mechanical writes that references cause are counted
-      (`method-paper/BRIEF.md:36`, `:66-87`);
+    - the governed paths: the matrix folder, `method-paper/figures.toml`, `method-paper/tools/`,
+      `method-paper/producers/` and `method-paper/results/` (`references-spec.md` §9);
+    - the measurement, with the split into authoring and mechanical writes (`references-spec.md` §10, item 3)
+      registered before counting starts (`method-paper/BRIEF.md:36`, `:66-87`);
   - register the protocol, adapt the code to it, and freeze it.
 - **Days 2 and 3:**
   - the producers and `refs.py`, with one test per rule, before any writing (`references-spec.md` §12);
@@ -402,8 +402,8 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
    (2026-11-04).
 4. **References are adopted (decision 11).** What remains is in `references-spec.md` §10:
    - the scope: every figure, or only Table 1's cells;
-   - whether producers and artifacts are governed paths;
-   - how mechanical writes count in the measurement;
+   - how a producer's output reaches `results/` (producers and artifacts are both governed);
+   - the split of the measurement into authoring and mechanical writes;
    - whether the Actuarii counts run in CI;
    - pre-registration labels as a manifest field.
 5. Whether to use the manuscript's sentence on pre-registration as the example of drift (confirm it first).
