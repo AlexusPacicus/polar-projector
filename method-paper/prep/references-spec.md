@@ -5,8 +5,12 @@ governed channel. It records decision 11 of `outline.md` and specifies how it is
 implemented. The rule of decision 3 applies: the author approves this specification first, and the code is then written
 to it, never the other way round.
 
-Revised the same day after the author's review: artifacts are governed (R7; section 10, item 2), and section 10, item 3
-specifies how the measurement handles mechanical writes.
+Revised twice the same day:
+
+- after the author's review, artifacts are governed (R7; section 10, item 2), and section 10, item 3 specifies how the
+  measurement handles mechanical writes;
+- after the author's answers on the open points and a reading of Actuarii at `73eaf2b`, the decisions are recorded in
+  section 10. Section 4 adds what Actuarii imposes on producers.
 
 ## 1. The decision
 
@@ -18,14 +22,12 @@ The author's words, 2026-11-04:
 A working translation by the agent: "adopt the references; for point 2 it does not matter that I have seen them. We
 adopt the references for a table with the before and after."
 
-**The agent's reading. The author has to confirm it.**
+**The agent's reading, confirmed by the author on 2026-11-04 ("todas"):**
 
 - **(a) Scope.** Every figure printed in `method-paper/paper.md` is written as a reference that code resolves. This
   settles the open question in `outline.md` ("decided on day 1").
 - **(b) The table.** The paper carries a before/after table. *Before* is the case: bare figures checked by the verifier.
   *After* is this paper: figures written as references. Section 7 gives its layout.
-- **If the author meant references only for that table,** the scope in (a) shrinks to that table's cells. Every other
-  section still holds.
 
 "Point 2" is the blind sample. It does not exclude the figures the author already saw in `matrix/summary.md`. The paper
 already declares that the exploratory run was seen (`outline.md`, H1, *Status*).
@@ -48,6 +50,8 @@ draft's ungoverned artifacts (section 10, item 2).
     the agent or the author. Actuarii's counts (`method-paper/BRIEF.md:73-87`) therefore keep meaning what the brief
     says.
   - Producers and `refs.py registry` print to stdout, and the agent writes the file through the channel.
+  - Actuarii enforces this for `Bash`: the operating system's sandbox denies it any write to a governed path
+    (Actuarii at `73eaf2b`, `README.md:82`).
 - **R6. Built by the existing toolchain.** The syntax goes through pandoc to LaTeX unchanged, as `tools/build_arxiv.py`
   does for the case.
 - **R7. Traced at the root.** A change to an artifact is a governed write with a receipt, like a change to the text.
@@ -111,12 +115,28 @@ Code output is the root (`outline.md`, decision 10). There are three layers:
 
 | Family | Source | Feeds |
 |---|---|---|
-| Case registry | `paper/claims.md` at a named commit, parsed by the verifier's own rule (`tools/verify_paper_tables.py:640-672`) | Case facts (§1.1) |
-| Case verifier | `tools/verify_paper_tables.py` run at a named commit in a temporary worktree. Its summary lines are parsed with anchored patterns that fail when they do not match | Before column |
-| Git history | Commits, dates, intervals | Case facts |
+| Case registry | `paper/claims.md` in the working tree, parsed by the verifier's own rule (`tools/verify_paper_tables.py:640-672`) | Case facts (§1.1) |
+| Case verifier | `tools/verify_paper_tables.py`, imported and called on the working tree. The brief keeps the case unmodified (`method-paper/BRIEF.md:93`), so the working tree is the case; the artifact records the commit. `case-data.md` §7 found the same counts at `f59430a` and `501c67f` | Before column |
+| Git history | Commits, dates, intervals, read from `git log` on stdin | Case facts |
 | Matrix | The definitive H1 run (decision 3) | Before column, text → code; Table 2 |
 | Self | The check's own report on `paper.md` (section 5) | After column |
-| Actuarii | The five pre-registered counts (`method-paper/BRIEF.md:73-87`) | §3 of the paper |
+| Actuarii | The five pre-registered counts (`method-paper/BRIEF.md:73-87`), split as section 10, item 3 decides | §3 of the paper |
+
+**What Actuarii imposes on producers** (Actuarii at `73eaf2b`):
+
+- **Python runs only scripts committed in `HEAD`,** from the kit's directory and the `python_script_dirs` of
+  `.actuarii.json` (`README.md:83`; `tools/hooks/deny_python_escapes.py:1-3`).
+  - The configuration lists `method-paper/producers` and `method-paper/tools`.
+  - A producer runs only once it is committed, so changing a producer and regenerating its artifact take two commits
+    (section 10, item 3).
+- **A governed Python file cannot introduce a process, network or loader primitive:** `subprocess`, `importlib` and
+  `os.system`, among others (`tools/boundary_validator/primitives.py:22`). No producer runs git or any other process.
+  - Git data reaches a producer on stdin, from a read-only command of the kit's list. `git log` and `git show` are
+    in it (`.claude/settings.json:14-15`).
+  - Each producer names its exact command in its docstring and rejects input without the expected header. CI writes
+    the same command in the workflow.
+- **No producer can run code from an older commit.** That needs a checkout and a process. Section 10, item 6 deals
+  with the figures this affects.
 
 **Two stances, as in the case:**
 
@@ -155,7 +175,8 @@ stdout, and the agent writes it to `claims.md` through the channel (R5).
 
 **The verifier's minimal change** (`method-paper/BRIEF.md:94-95`): `main()` runs the method paper's check and adds its
 failures to the total. That is a few lines in `tools/verify_paper_tables.py`. All the logic stays in `refs.py`, so CI
-keeps one entry point and the verifier is not rewritten.
+keeps one entry point and the verifier is not rewritten. The verifier imports `refs.py` after adding
+`method-paper/tools` to `sys.path`. `importlib` is a primitive, so the gate would deny it in a governed file.
 
 **Tests.** Before the code is frozen, there is one test per rule, C1 to C7. Each test plants an error on a copy of the
 files and requires the check to fail for that rule's reason. This is the same discipline as `matrix/test_matrix.py`.
@@ -231,55 +252,86 @@ is run.
 The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This specification proposes adding:
 
 - `method-paper/figures.toml`. The manifest holds author-approved content: the wording and the printed formats.
-- `method-paper/tools/`: `refs.py`, and the classifier of section 10, item 3, if the author adopts it.
+- `method-paper/tools/`: `refs.py` and the classifier of section 10, item 3.
 - `method-paper/producers/`.
 - `method-paper/results/`. The artifacts are the root (R7). Counts 3 and 5 of the measurement only see changes to
   governed paths (`method-paper/BRIEF.md:79`, `:81`), so an ungoverned artifact would not even show up as an escape.
 
-## 10. Open decisions for the author
+**In `.actuarii.json`.** The paths above go in `governed_paths`. `method-paper/producers` and `method-paper/tools` go in
+`python_script_dirs`.
 
-1. **Scope** (section 1): every figure, the agent's reading, or only the before/after table.
-2. **Producers and artifacts are both governed** (section 9; revised 2026-11-04).
+**What the installer brings with it** (Actuarii at `73eaf2b`, `INSTALL.md:3-5`, `:66-70`):
+
+- It copies the kit into this repository's `tools/`, next to the verifier, and always governs `tools/**`. That already
+  covers `tools/verify_paper_tables.py`. No file name collides; this was checked in this session.
+- **The kit breaks CI as it stands.** CI runs `ruff check` over `tools/` (`.github/workflows/ci.yml`). With this
+  repository's configuration and ruff 0.16.5, ruff finds 87 errors in the kit's code, checked in this session.
+- *On day 1:* exclude the kit's directories from ruff in `pyproject.toml` before the first push.
+
+## 10. Decisions
+
+Recorded on 2026-11-04 from the author's answers, and checked against Actuarii at `73eaf2b`.
+
+**Decided**
+
+1. **Scope: every figure** (section 1). The author's answer: "todas".
+2. **Producers and artifacts are both governed** (section 9).
    - *What the first draft said, and why it was dropped.* It recommended governing producers but not artifacts,
      relying on CI's freshness step. That traded change traceability for a cleaner count. Freshness covers the value
      only, and not for producers that cannot run in CI (R7, section 4).
-   - *Left to decide:* how a producer's output reaches `results/`. The default here is that the producer prints it and
-     the agent writes it through the channel (R5). If Actuarii lets a script write through the channel, that is
-     equivalent. The agent does not know Actuarii's interface; the author does.
-3. **Mechanical writes in the measurement.** With references, one decision triggers a cascade of governed writes.
-   - *Example: a fix to the case-verifier producer that changes one figure printed in two places.*
-     - The producer changes: authoring.
-     - The artifact is regenerated: mechanical.
-     - The two strings in `paper.md` follow, because C4 requires them to: mechanical.
-     - `claims.md` is regenerated, because C6 requires it to be identical: mechanical.
-   - *Example: adding a figure.* The manifest entry and the span are authoring. The regenerated registry, the self
-     producer's artifact (the count of spans changes) and the Table 1 cells that print it are mechanical.
-   - *The problem.* Count 1, governed writes by the agent with a receipt (`method-paper/BRIEF.md:77`), was
-     pre-registered before references existed. It would now mix writing the paper with propagating figures. Governing
-     artifacts (item 2) adds to the mix, so the two decisions go together.
-   - **Recommendation.** It is registered on day 1, before Phase 1 counting starts. The measurement is pre-registered,
-     so a split added after seeing the counts would be post hoc in the case's own vocabulary (`paper/claims.md:56`).
-     - Keep the five pre-registered counts unchanged, as totals.
-     - Split each count into authoring and mechanical writes, decided by the diff alone. A governed write is mechanical
-       if and only if its result is exactly what code requires:
-       - `claims.md` equal to the output of `refs.py registry` at that commit;
-       - an artifact equal to its producer's output at that commit;
+   - *How a producer's output reaches `results/`:* the agent writes it with a file tool and a receipt. In Actuarii
+     v0.1 this is the only way: `Bash` cannot write a governed path (R5).
+3. **The measurement is split into authoring and mechanical writes.** The author's answer: "sí, separar".
+   - *Why.* With references, one decision triggers a cascade of governed writes.
+     - *A fix to the case-verifier producer that changes one figure printed in two places:* the producer changes
+       (authoring); the artifact is regenerated, the two strings in `paper.md` follow because C4 requires them to,
+       and `claims.md` is regenerated because C6 requires it (all mechanical).
+     - *Adding a figure:* the manifest entry and the span are authoring. The regenerated registry, the self producer's
+       artifact and the Table 1 cells that print it are mechanical.
+     - Count 1, governed writes by the agent with a receipt (`method-paper/BRIEF.md:77`), was pre-registered before
+       references existed. Without the split it would mix writing the paper with propagating figures.
+   - *The rule.* It is registered on day 1, before Phase 1 counting starts. A split added after seeing the counts would
+     be post hoc in the case's own vocabulary (`paper/claims.md:56`).
+     - The five pre-registered counts stay unchanged, as totals.
+     - A governed change is mechanical if and only if its result is exactly what code requires:
+       - `claims.md` equal to the output of `refs.py registry`;
+       - an artifact equal to its producer's output;
        - a diff to `paper.md` that only changes strings inside existing spans, each to the value C4 requires.
 
-       Every other write is authoring. The rule is code, with one test per clause, frozen with the rest of the code.
-     - Never classify by a receipt's rationale. It is text written by the model (`method-paper/BRIEF.md:85-86`), which
-       is the residue of this paper's own thesis.
-     - Do not exclude mechanical writes from the counts. Excluding them would open a door: label a write mechanical to
-       remove it from the count.
-   - *What it needs from Actuarii.* Classifying write by write needs the diff of each write, from the receipt or the
-     commit. If receipts keep only the rationale, the classification goes commit by commit, which is coarser.
-   - *Optional, also the author's call on day 1.* Report the cascade itself, as mechanical writes per authoring write.
-     It is an observation of what governance costs.
-4. **Actuarii counts in CI.** Whether the Actuarii producer can run in CI or only locally depends on where the receipts
-   live.
+       Everything else is authoring. The rule is code, with one test per clause, frozen with the rest of the code.
+     - Nothing is classified by a receipt's rationale. It is text written by the model (`method-paper/BRIEF.md:85-86`).
+     - Mechanical writes are not excluded from the counts.
+   - *Two commits per cascade.* The author's answer: "sí, es en 2 commits".
+     - The authoring commit comes first, the mechanical commit after it.
+     - Actuarii forces this for a changed producer anyway, because a producer runs only once committed (section 4).
+   - *What Actuarii records, and why the commit is the unit.* Its `writes` table holds, for each write, the file, the
+     tool, the SHA-256 before and after, and the receipts. The rationale is in `audit_log`. No content is stored
+     (`tools/boundary_validator/hook_gate.py:57`, `tools/boundary_validator/validator.py:31`, `:90`).
+     - Hashes are enough for the first two clauses: compare `after_sha256` with the hash of the generator's output.
+     - The third clause needs content, which only commits keep.
+     - So the rule is applied per commit, from git. A commit is mechanical if every governed change in it meets a
+       clause, and a mixed commit counts as authoring. Each write in the database belongs to the commit that records
+       it.
+4. **The Actuarii counts run locally, not in CI.** The database sits under `.data/`, which git ignores (`README.md:69`).
+   - The Actuarii producer therefore has no freshness check, and governance is its only trail (R7).
+   - Counts 2, 3 and 5 can be recomputed from git by anyone, because they come from commit trailers. Counts 1 and 4
+     come only from the local database.
+
+**Still open**
+
 5. **Pre-registration labels as a manifest field,** checked against the order of commits. This would mechanize what the
    case left as prose (`case-data.md` §9, item 1). *Recommendation:* leave it out of the five days and list it as
    future work.
+6. **Figures that need an older commit.** Two of the candidates in `outline.md` need the verifier run at an older
+   commit: the growth from 112 to 281 checked figures, and the 9 rows the code review changed while the verifier
+   passed (`case-data.md` §5.1, §7). Under Actuarii v0.1 no governed producer can compute them (section 4).
+   - *Option A:* a CI job checks out each named commit, runs the producer there, and checks the committed artifact on
+     every push. The author writes the first artifact, with a `Human-Record` trailer.
+   - *Option B:* leave them out.
+   - *Recommendation:* A for the 9. It is direct evidence that a consistency check does not see instrument errors, which
+     is H2's ground. B for the growth figure, which is case history.
+7. **Report the cascade itself,** as mechanical writes per authoring write: an observation of what governance costs.
+   It adds to a pre-registered measurement, so it is the author's call on day 1.
 
 ## 11. What this does not do
 
@@ -290,11 +342,14 @@ The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This spe
 
 ## 12. Order of work after approval (Phase 1)
 
-1. The author approves this specification and decides the open points of section 10.
+1. The author approves this specification and decides the points still open in section 10.
+   - Install Actuarii.
+   - Exclude the kit from ruff (section 9).
+   - Set `governed_paths` and `python_script_dirs`.
 2. A manifest skeleton for the numbers listed in `outline.md` ("Numbers the paper would print").
 3. The case-registry, case-verifier and git-history producers. Each prints its artifact, and the agent writes it
    through the channel.
 4. `refs.py check` and `refs.py registry`, with one test per rule.
-5. If the author adopts the split of section 10, item 3: the classifier, with one test per clause.
+5. The classifier of section 10, item 3, with one test per clause.
 6. The hook in the verifier. Freeze the code.
 7. Writing. The self producer runs on the final `paper.md`.

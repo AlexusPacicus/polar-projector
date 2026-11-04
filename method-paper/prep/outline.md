@@ -3,8 +3,9 @@
 Phase 0 preparation (`method-paper/BRIEF.md:50`). Built with the author in the session of 2026-11-03, section by
 section, and revised the same day for the triangle (decisions 9 and 10). It replaces the version of 2026-11-02, which
 the agent wrote alone and which carried decisions the author had not taken. Revised on 2026-11-04 for the author's
-decisions 11 and 12: references are adopted, and Table 1 becomes the before/after. Written by an AI agent (Claude) in a
-cloud session, outside the governed channel by design (`method-paper/BRIEF.md:30-32`).
+decisions 11 to 14: references are adopted, Table 1 becomes the before/after, and the measurement is split into
+authoring and mechanical writes. Written by an AI agent (Claude) in a cloud session, outside the governed channel by
+design (`method-paper/BRIEF.md:30-32`).
 
 The data comes from `case-data.md` and from `matrix/`, which is exploratory (see decision 3); the bibliography
 candidates are in `related-work.md`; how references work is in `references-spec.md`.
@@ -90,11 +91,16 @@ candidates are in `related-work.md`; how references work is in `references-spec.
     - *The table:* Table 1 becomes the before/after. *Before* is the case, with bare figures checked by the verifier.
       *After* is this paper, with figures written as references. "Before" and "after" now mean only that, so Table 2's
       columns are renamed after the verifier and the matrix.
-    - *To confirm:* the agent reads the scope as every figure in `paper.md`. If the author meant only the table's cells,
-      the scope shrinks to them (`references-spec.md` §1, §10).
+    - *Scope:* every figure in `paper.md`. Confirmed by the author: "todas" (`references-spec.md` §10, item 1).
 12. **The blind sample does not exclude what the author has seen.** The author's words: "da igual que yo las haya
     visto". The figures listed in `matrix/summary.md` stay eligible for the sample of about 50. The paper already
     declares that the exploratory run was seen (H1, *Status*).
+13. **The measurement is split into authoring and mechanical writes.** The author's words: "sí, separar". The five
+    pre-registered counts stay as totals. The rule decides from the diff, never from a receipt's rationale, and is
+    registered on day 1 (`references-spec.md` §10, item 3).
+14. **Each cascade goes in two commits, authoring then mechanical.** The author's words: "sí, es en 2 commits".
+    Actuarii stores per write only hashes, not content, so the rule is applied commit by commit
+    (`references-spec.md` §10, item 3).
 
 ## The central sentence
 
@@ -376,7 +382,9 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
     exclude the figures the author has seen (decision 12);
   - references: the specification is drafted (`references-spec.md`), for the author's approval.
 - **Day 1, 2026-11-05:**
-  - approve `references-spec.md` and decide its open points (§10 there);
+  - approve `references-spec.md` and decide its points still open (§10 there);
+  - install Actuarii, and exclude the kit's code from ruff before the first push: CI would fail on 87 errors
+    (`references-spec.md` §9);
   - the author updates the brief:
     - the goal: the brief plus the matrix, with H1 the core and H2 conditional;
     - the governed paths: the matrix folder, `method-paper/figures.toml`, `method-paper/tools/`,
@@ -400,12 +408,10 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 2. The matrix specification, edge by edge (2026-11-04).
 3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write
    (2026-11-04).
-4. **References are adopted (decision 11).** What remains is in `references-spec.md` §10:
-   - the scope: every figure, or only Table 1's cells;
-   - how a producer's output reaches `results/` (producers and artifacts are both governed);
-   - the split of the measurement into authoring and mechanical writes;
-   - whether the Actuarii counts run in CI;
-   - pre-registration labels as a manifest field.
+4. **References are adopted (decisions 11, 13 and 14).** Still open, in `references-spec.md` §10:
+   - pre-registration labels as a manifest field (item 5);
+   - figures that need the verifier at an older commit: the growth from 112 to 281, and the 9 rows (item 6);
+   - whether to report the cascade itself (item 7).
 5. Whether to use the manuscript's sentence on pre-registration as the example of drift (confirm it first).
 6. Related work for the "dressing up" of findings, the reporting literature on spin. It is not yet searched, and
    nothing is cited without verification.
