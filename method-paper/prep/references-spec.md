@@ -115,8 +115,8 @@ Code output is the root (`outline.md`, decision 10). There are three layers:
 
 | Family | Source | Feeds |
 |---|---|---|
-| Case registry | `paper/claims.md` in the working tree, parsed by the verifier's own rule (`tools/verify_paper_tables.py:640-672`) | Case facts (§1.1) |
-| Case verifier | `tools/verify_paper_tables.py`, imported and called on the working tree. The brief keeps the case unmodified (`method-paper/BRIEF.md:93`), so the working tree is the case; the artifact records the commit. `case-data.md` §7 found the same counts at `f59430a` and `501c67f` | Before column |
+| Case registry | `paper/claims.md` in the `f59430a` snapshot (`matrix-spec.md` §1), parsed by the verifier's own rule (`tools/verify_paper_tables.py:640-672`) | Case facts (§1.1) |
+| Case verifier | `tools/verify_paper_tables.py` of the `f59430a` snapshot, imported and called there. The whole case is read at the release (`matrix-spec.md` §1) | Before column |
 | Git history | Commits, dates, intervals, read from `git log` on stdin | Case facts |
 | Matrix | The definitive H1 run (decision 3) | Before column, text → code; Table 2 |
 | Self | The check's own report on `paper.md` (section 5) | After column |
@@ -361,7 +361,8 @@ with the rest of this specification.
      their agreement with artifacts do not depend on it; the recomputed §B and §C do. No figure is taken from those.
    - *What it covers.* Three snapshots cover both figures: the 9 rows the code review changed while the verifier
      passed (`97e9306` → `65c3ebf`), and the growth from 112 to 281 checked figures (`34b44b3` → `65c3ebf`)
-     (`case-data.md` §5.1, §7).
+     (`case-data.md` §5.1, §7). A fourth, `f59430a`, is the case as released, which the matrix and the case
+     producers read (`matrix-spec.md` §1).
 7. **The cascade is not reported for now.** The author's call. The split of item 3 is still counted.
 8. **The rationale is quarantined.** The author's decision, on the working hypothesis that a rationale is a
    probabilistic answer with no established meaning. This includes the `audit_log.rationale` column and the

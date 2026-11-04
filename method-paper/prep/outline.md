@@ -385,10 +385,9 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 ## Plan from here
 
 - **2026-11-04, still Phase 0:**
-  - draft the matrix specification together, edge by edge (Table 1), with the root, interaction and checked columns
-    and the registry columns that code fills;
-  - prepare the blind sample of about 50 figures for the author, chosen by code with a fixed seed. It does not
-    exclude the figures the author has seen (decision 12);
+  - the matrix specification is drafted (`matrix-spec.md`), for the author's approval;
+  - the blind sample of 50 figures is drawn by code with a fixed seed (`blind-sample/`; `matrix-spec.md` §8). It does
+    not exclude the figures the author has seen (decision 12);
   - references: the specification is drafted (`references-spec.md`), for the author's approval.
 - **Day 1, 2026-11-05:**
   - approve `references-spec.md` and decide its points still open (§10 there);
@@ -396,8 +395,9 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
     (`references-spec.md` §9);
   - the author updates the brief:
     - the goal: the brief plus the matrix, with H1 the core and H2 conditional;
-    - the governed paths: the matrix folder, `method-paper/figures.toml`, `method-paper/tools/`,
-      `method-paper/producers/` and `method-paper/results/` (`references-spec.md` §9);
+    - the governed paths: `method-paper/figures.toml`, `method-paper/tools/`, `method-paper/producers/`,
+      `method-paper/results/`, `method-paper/case-history/` and `method-paper/blind-sample/` (`references-spec.md`
+      §9, `matrix-spec.md` §9). The definitive matrix lives in `producers/`; the v0 folder stays as exploration;
     - the measurement, with the split into authoring and mechanical writes (`references-spec.md` §10, item 3)
       registered before counting starts (`method-paper/BRIEF.md:36`, `:66-87`);
   - register the protocol, adapt the code to it, and freeze it.
@@ -414,9 +414,9 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 ## Still open
 
 1. The English wording of the central sentence (the author).
-2. The matrix specification, edge by edge (2026-11-04).
-3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write
-   (2026-11-04).
+2. The matrix specification: drafted (`matrix-spec.md`). Its decisions for the author are in §10 there.
+3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write:
+   drafted (`references-spec.md` §4).
 4. **References are adopted (decisions 11 and 13 to 17).** Nothing in `references-spec.md` §10 is open. Its rules are
    approved with the specification on day 1.
 5. Whether to use the manuscript's sentence on pre-registration as the example of drift (confirm it first).
