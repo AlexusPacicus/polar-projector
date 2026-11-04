@@ -301,7 +301,7 @@ Recorded on 2026-11-04 from the author's answers, and checked against Actuarii a
        - a file under `method-paper/case-history/<sha>/` equal to `git show <sha>:<path>` (item 6).
 
        Everything else is authoring. The rule is code, with one test per clause, frozen with the rest of the code.
-     - Nothing is classified by a receipt's rationale. It is text written by the model (`method-paper/BRIEF.md:85-86`).
+     - Nothing is classified by a receipt's rationale, which is quarantined (item 8).
      - Mechanical writes are not excluded from the counts.
    - *Two commits per cascade.* The author's answer: "sí, es en 2 commits".
      - The authoring commit comes first, the mechanical commit after it.
@@ -319,9 +319,9 @@ Recorded on 2026-11-04 from the author's answers, and checked against Actuarii a
    - What git does keep: each commit holds the content and its record. Every governed path gets an `Actuarii-Record`
      trailer, `matches` or `changed outside the channel`, plus one `Actuarii-Rationale` per distinct rationale
      (`tools/git/commit_record.py:1-11`). That is why item 3 classifies per commit, from git alone.
-   - Counts 2, 3 and 5 can be recomputed from the trailers by anyone.
-   - Count 1 has only a lower bound in git, because two writes with the same rationale leave one trailer. It is exact
-     only in the database.
+   - Counts 2, 3 and 5 can be recomputed from the `Actuarii-Record` and `Human-Record` trailers by anyone.
+   - Count 1 comes only from the database's `writes` table, one row per write. The `Actuarii-Rationale` trailers are
+     not used for it, not even to count (item 8).
    - Count 4, the denied writes, never reaches a commit.
 
 **Decided in principle by the author on 2026-11-04.** The rules below are the agent's, and they are approved together
@@ -363,6 +363,16 @@ with the rest of this specification.
      passed (`97e9306` → `65c3ebf`), and the growth from 112 to 281 checked figures (`34b44b3` → `65c3ebf`)
      (`case-data.md` §5.1, §7).
 7. **The cascade is not reported for now.** The author's call. The split of item 3 is still counted.
+8. **The rationale is quarantined.** The author's decision, on the working hypothesis that a rationale is a
+   probabilistic answer with no established meaning. This includes the `audit_log.rationale` column and the
+   `Actuarii-Rationale` trailers.
+   - It is kept, because Actuarii stores it, but nothing reads it. No check, count, classification, label or figure
+     depends on its content, its presence or how many there are.
+   - The paper does not cite a rationale as the reason for a change. "Who did what" comes from the history of
+     `paper.md` and the `Human-Record` trailers (decision 6), never from rationales.
+   - It joins commit messages in what does not count as evidence (`outline.md`, decision 10, level 1).
+   - Testing the hypothesis is out of scope: the brief excludes whether a receipt's rationale is faithful
+     (`method-paper/BRIEF.md:93-94`). The quarantine is not a result. The paper states it as a working hypothesis.
 
 ## 11. What this does not do
 

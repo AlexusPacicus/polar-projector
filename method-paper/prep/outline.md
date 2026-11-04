@@ -106,6 +106,10 @@ candidates are in `related-work.md`; how references work is in `references-spec.
 16. **Old commits are recovered as snapshots** checked against `git show`. They cover the 9 rows and the growth from 112
     to 281 (`references-spec.md` §10, item 6). The author's idea.
 17. **The cascade is not reported for now.** The author's call.
+18. **The rationale is quarantined.** It is the author's working hypothesis that a receipt's rationale is a
+    probabilistic answer with no established meaning. It is kept but read by nothing: no check, count, classification,
+    label or figure, not even as a count of trailers. The paper states the quarantine as a hypothesis, not a result
+    (`references-spec.md` §10, item 8).
 
 ## The central sentence
 
@@ -157,7 +161,7 @@ says which ones the case closed:
 **How this paper closes them, by level (decision 10):**
 
 1. **Code output is the root.** Nothing else counts as evidence: not the manuscript, not the registry, not commit
-   messages.
+   messages, not the rationale of a receipt (decision 18).
 2. **The registry comes from code.** A generator writes `method-paper/claims.md` from the checks, which closes code →
    registry by construction.
    - Code can fill a row's figure, its artifact and its check, and perhaps its pre-registration label, from the
@@ -307,7 +311,7 @@ catch, and which they do not.
   framing, agreed in conversation.
 - Actuarii did not govern the original paper (`method-paper/BRIEF.md:96`).
 - The thesis applies to the pilot itself: the rationale in each receipt is text written by the model, not the reason
-  for the change (`method-paper/BRIEF.md:85-86`).
+  for the change (`method-paper/BRIEF.md:85-86`). It is quarantined (decision 18).
 
 ### 4. Limits (250; cut 300). Author.
 
