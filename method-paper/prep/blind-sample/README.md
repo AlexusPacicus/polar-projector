@@ -3,6 +3,9 @@
 Phase 0. Drawn on 2026-11-04 by an AI agent (Claude) in a cloud session, for `../matrix-spec.md` §8. That section
 fixes the frame, the strata, the allocation, the analysis and the rules for filling the sheet in.
 
+**Deferred with the matrix v1** (`../outline.md`, decision 20). Filling in the sheet is not part of the five days. The
+sheet is kept for when the v1 runs.
+
 ## Files
 
 | File | What it is |

@@ -9,6 +9,10 @@ Phase 1 code is then written to it.
 - Counts marked *exploratory* were made in this session while drafting. They are planning facts, not results.
 - The author's decisions of 2026-11-04 are recorded in §10.
 
+**Deferred** (`outline.md`, decision 20). The v1, its declarations and the comparison with the blind sample are not
+part of the five days. The note reports v0's result on the release as exploratory (`matrix/release/`). This
+specification and its decisions stand for a second version.
+
 ## 1. What the matrix answers
 
 **H1** (`outline.md`, Hypotheses): every result figure printed in the manuscript has a root in code output, reached

@@ -115,6 +115,32 @@ candidates are in `related-work.md`; how references work is in `references-spec.
     - the sample's allocation and seed, and the closed list of interactions, are approved;
     - the unclassified occurrences are not classified by hand: H1 is evaluated with and without them;
     - the author does not remember having read the v0 output in full, and the paper treats it as seen.
+20. **The scope for the five days, with a gate at the end of day 2.** The author's words: "sí, ajústalo con el corte
+    del día 2". Why: the work plan for November 2026 to January 2027 makes the note the first public output of the
+    Actuarii line, under 3,000 words, for the applications of week 2.
+    - *Kept:*
+      - references and Table 1, the before/after;
+      - Actuarii's five counts, with the split into authoring and mechanical writes;
+      - the quarantine of the rationale;
+      - one snapshot, `f59430a`, for the case producers.
+    - *Deferred to future lines, with nothing deleted:*
+      - the matrix v1, its declarations and the comparison with the blind sample, so the definitive H1 run and Table 2
+        go with them;
+      - the snapshots of older commits, so the 9 rows, the growth from 112 to 281 and H2 go with them;
+      - deriving the pre-registration labels from the commits; the manifest keeps only its flag for an exploratory
+        figure;
+      - the git-history producer.
+    - *What the note reports instead:* v0's result on the release, as exploratory (`matrix/release/`).
+    - **The gate.** At the end of day 2, 2026-11-06, `refs.py check`, `refs.py registry` and the kept producers must
+      pass their tests.
+      - If they do not, references are deferred too. The note is then written with the work plan's minimal content
+        and the brief's original design: the agent keeps `method-paper/claims.md`, one row per number, the verifier
+        gets its minimal change, and the five counts are reported as totals.
+      - The classifier of the split is not part of the gate. Its rule is registered on day 1, and the code can come
+        later, because it is applied to the history after Phase 1.
+    - *Dates:* the brief's. Day 5 is 2026-11-11. The work plan says 2026-11-06, and the author updates it.
+    - *Writing:* plain English, with no invented terms, as the work plan asks. The terms of these notes (edges,
+      residue, quarantine, cascade, the statuses) are working vocabulary and do not go into the note.
 
 ## The central sentence
 
@@ -192,13 +218,15 @@ interaction and confirmed by recomputation at the printed precision.
 
 - *Refuter:* a result figure without a checked root.
 - *Instrument:* the matrix, rebuilt from the specification in Phase 1.
+- *In the five days:* deferred (decision 20). The note reports v0's result on the release as exploratory, which does
+  not test H1.
 - *Why it is open:* the verifier checks from code to text. It takes each check's figure and looks for it in the
   manuscript (`tools/verify_paper_tables.py:599-627`). It reads the text back only for the Appendix B and C tables
   (`tools/verify_paper_tables.py:165-201`). No check starts from the other printed figures.
 - *Status:* the exploratory run of 2026-11-02 has already been seen (`matrix/summary.md`). With the instrument
   frozen, H1 is a confirmation and not a blind prediction, and the paper says so.
 
-**H2 (conditional on day 3).** Consistency checks do not see instrument errors; tests written from the claim, in both
+**H2 (deferred, decision 20).** Consistency checks do not see instrument errors; tests written from the claim, in both
 directions, see some of them.
 
 - *Refuter:* an instrument error that a consistency check catches on the state before the fix.
@@ -217,15 +245,16 @@ triangle and Table 1.
 | 1 | Introduction | Author | 250 | 100 | |
 | 1.1 | The case as it was | Agent drafts, author reviews | 300 | 200 | |
 | 2.1 | The edges the case had: the verifier | Agent drafts, author reviews | 300 | 200 | 1 |
-| 2.2 | The edges it lacked: the matrix (H1), the generated registry and references | Agent drafts, author approves every number | 550 | 450 | 2 |
-| 2.3 | What code does not govern (H2) | Agent drafts, author reviews | 300 | 0 | |
+| 2.2 | The edges it lacked: references and the generated registry; v0 as exploratory | Agent drafts, author approves every number | 750 | 450 | |
+| 2.3 | What code does not govern (H2): deferred | — | 0 | 0 | |
 | 3 | Pilot: this paper written under Actuarii | Agent counts, author interprets | 200 | 100 | |
-| 4 | Limits | Author | 250 | 300 | |
+| 4 | Limits | Author | 350 | 300 | |
 | 5 | Conclusion | Author | 100 | 0 | |
 | — | Who did what | Computed from the history | 100 | 50 | |
 | | **Total** | | **2,500** | **1,500** | |
 
-- **If H2 does not make it by day 3,** its 300 words go 100 to Limits, for the H2 paragraph, and 200 to §2.2.
+- **H2 is deferred** (decision 20). By the rule set for that case, its 300 words go 100 to Limits, for the H2
+  paragraph, and 200 to §2.2.
 - **The cut keeps the method, the case and the limits** (`method-paper/BRIEF.md:91-92`). Here that means §1.1, §2.1,
   §2.2 and §4. It also keeps the measurement and the authorship statement, because "done" requires them
   (`method-paper/BRIEF.md:64`, `:101-102`).
@@ -286,17 +315,12 @@ No text of its own; 2.1 opens it.
 - **The evidence:** only facts that come from code, namely the verifier's runs and the diffs. Commit messages do not
   count.
 
-### 2.2 The edges it lacked: the matrix, H1, the generated registry and references (550; cut 450). Agent drafts, author approves every number. Table 2.
+### 2.2 The edges it lacked: references and the generated registry; v0 as exploratory (750; cut 450). Agent drafts, author approves every number.
 
-- **Text → code: the matrix.**
-  - *The specification:* logical categories, the evidence each requires, and the root, interaction and checked
-    columns (decision 7).
-  - *How the instrument was verified:* one test per rule; planted-error tests, including errors the verifier lets
-    through; and agreement with the author's blind sample.
-  - *The result,* in Table 2: the case's figures as the verifier sees them and as the matrix sees them.
-  - *The example:* Appendix A's "vs. d = 16" column (`paper/polar-projector-paper.md:1095-1103`).
-  - *The declaration:* an exploratory run preceded the protocol (decision 3).
-- **Text → registry:** the matrix's registry column, which gives the rows that name each figure's checks.
+- **Text → code, on the case: v0, exploratory** (decision 20). The matrix v1 is deferred.
+  - *What it reports:* v0's result on the release (`matrix/release/`), declared exploratory, with the example of
+    Appendix A's "vs. d = 16" column.
+  - *Text → registry:* v0's registry column, exploratory too.
 - **Code → registry:** this paper's registry, generated by code. It is shown on this paper and not on the case,
   because the case's registry is not modified (`method-paper/BRIEF.md:93`).
 - **Code → text, located, and text → registry: references** (decision 11; `references-spec.md`).
@@ -304,10 +328,9 @@ No text of its own; 2.1 opens it.
   - Most of its cells are enforced by the build rather than observed, and the table marks which. The observations are
     the escapes and the keys printed more than once (`references-spec.md` §8).
 
-### 2.3 What code does not govern, H2 (300; cut 0). Conditional on day 3.
+### 2.3 What code does not govern, H2. Deferred (decision 20).
 
-TDD in both directions on four or five historical instrument errors (decision 8): which ones the claim-derived tests
-catch, and which they do not.
+Deferred with the snapshots of older commits it needs. Its words go 100 to Limits and 200 to §2.2.
 
 ### 3. Pilot: this paper written under Actuarii (200; cut 100). Agent counts, author interprets.
 
@@ -354,13 +377,14 @@ In the *after* column, "enforced" means that the build fails otherwise (rules C2
 |---|---|---|---|---|
 | Registry → code | Each row resolves to code | Yes, for `checked` rows: each names a check that exists | Each manifest entry resolves to an artifact field (enforced, C3) | `tools/verify_paper_tables.py:640-672` |
 | Code → text | Each figure agrees with code output and is found in the text | Yes, by presence, not location | Located: each occurrence carries its key and must equal the code output (enforced, C4) | `tools/verify_paper_tables.py:255`, `:599-627`, `:675-686`; `paper/claims.md:61-62` |
-| Text → code | Each printed result figure has a checked root | Only the Appendix B and C tables, located; the matrix (H1) measures the rest | Every numeral is a reference, an exclusion or a counted escape (enforced, C7) | `tools/verify_paper_tables.py:165-201` |
+| Text → code | Each printed result figure has a checked root | Only the Appendix B and C tables, located; v0 reads the rest, exploratory | Every numeral is a reference, an exclusion or a counted escape (enforced, C7) | `tools/verify_paper_tables.py:165-201` |
 | Code → registry | Each check has a row, and the rows come from code | No: no code writes the registry; a check can lose its row and CI stays green; the pre-registration labels are not checked against the commit order | The registry is generated and compared byte for byte (enforced, C6) | `matrix/test_matrix.py:107-116` (exploratory); `paper/claims.md:52-56` |
 | Text → registry | Each printed figure has a row | No: the checks start from the code or from the rows, never from the text | Each key has a manifest entry (enforced, C2) | `tools/verify_paper_tables.py:599-627`, `:640-672` |
 | Registry → text | Each row's claim is in the text, and no `remove` row is | Only through code, for `checked` rows; `remove` and `construction` rows unchecked | Each key is printed (enforced, C5); a row's wording stays prose | `tools/verify_paper_tables.py:656-657` |
 | None: the residue | What a sentence says about a figure | Not checked: the wording of the refutation criteria (their figures are checked through rows C11 to C13), the reasons for corrections, prose about provenance | Not checked; also a right number quoted under the wrong key | `paper/claims.md:14-21`, `:98-100`; `case-data.md` §5; `paper/polar-projector-paper.md:902-908` |
 
-**Table 2. Result figures seen from each direction.** Only the layout; the values come from the definitive run.
+**Table 2. Result figures seen from each direction.** Deferred with the matrix v1 (decision 20). The layout stays
+for a second version.
 
 | Result figures | Seen by the verifier (code → text) | Seen by the matrix (text → code) |
 |---|---|---|
@@ -373,8 +397,8 @@ In the *after* column, "enforced" means that the build fails otherwise (rules C2
 ## Numbers the paper would print
 
 Candidates for `method-paper/claims.md`, which code will generate (decision 10); each needs the author's approval
-(`method-paper/BRIEF.md:61`). The H1 figures do not appear here: they come from the definitive run. Under decision
-11 each becomes a key in `method-paper/figures.toml`, with a producer that computes it (`references-spec.md` §4).
+(`method-paper/BRIEF.md:61`). The v0 figures come from `matrix/release/`, as exploratory. Under decision 11 each
+becomes a key in `method-paper/figures.toml`, with a producer that computes it (`references-spec.md` §4).
 
 | Number | What it is | Source |
 |---|---|---|
@@ -383,9 +407,9 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 | 13 / 7 / 4 / 6 / 8 / 4 | Pre-registration label classes | `paper/claims.md:68-124`; rule in `case-data.md` §2 |
 | 281 | Figures checked against artifacts | Verifier at `f59430a` and `501c67f`; `case-data.md` §7 |
 | 261 / 20 | Figures located by presence / single-character figures | Same runs; `case-data.md` §7 |
-| 112 → 281 | Growth of checked figures | Verifier at `34b44b3` and `65c3ebf`; `case-data.md` §7 |
-| 9 | Checked rows whose figures the code review changed while the verifier passed | `97e9306` → `65c3ebf`; `case-data.md` §5.1, §7 |
-| 49–384 s | Protocol-to-results gaps of the registered experiments | `21e8e45`→`c265abb`, `1c363bb`→`1e9d217`; `case-data.md` §8 |
+| 112 → 281 | Growth of checked figures: deferred, not printed (decision 20) | Verifier at `34b44b3` and `65c3ebf`; `case-data.md` §7 |
+| 9 | Checked rows whose figures the code review changed while the verifier passed: deferred, not printed (decision 20) | `97e9306` → `65c3ebf`; `case-data.md` §5.1, §7 |
+| 49–384 s | Protocol-to-results gaps of the registered experiments: deferred, not printed (decision 20) | `21e8e45`→`c265abb`, `1c363bb`→`1e9d217`; `case-data.md` §8 |
 
 ## Plan from here
 
@@ -393,33 +417,33 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
   - the matrix specification is drafted (`matrix-spec.md`), for the author's approval;
   - the blind sample of 50 figures is drawn by code with a fixed seed (`blind-sample/`; `matrix-spec.md` §8). It does
     not exclude the figures the author has seen (decision 12);
-  - references: the specification is drafted (`references-spec.md`), for the author's approval.
+  - references: the specification is drafted (`references-spec.md`), for the author's approval;
+  - the scope for the five days and the gate of day 2 are set (decision 20).
 - **Day 1, 2026-11-05:**
-  - approve `references-spec.md` and decide its points still open (§10 there);
+  - approve `references-spec.md` and `matrix-spec.md`; the second waits for a second version (decision 20);
   - install Actuarii, and exclude the kit's code from ruff before the first push: CI would fail on 87 errors
     (`references-spec.md` §9);
   - the author updates the brief:
-    - the goal: the brief plus the matrix, with H1 the core and H2 conditional;
+    - the goal: the note with references and Table 1; the matrix and H2 deferred (decision 20);
     - the governed paths: `method-paper/figures.toml`, `method-paper/tools/`, `method-paper/producers/`,
-      `method-paper/results/`, `method-paper/case-history/` and `method-paper/blind-sample/` (`references-spec.md`
-      §9, `matrix-spec.md` §9). The definitive matrix lives in `producers/`; the v0 folder stays as exploration;
+      `method-paper/results/` and `method-paper/case-history/` (`references-spec.md` §9);
     - the measurement, with the split into authoring and mechanical writes (`references-spec.md` §10, item 3)
       registered before counting starts (`method-paper/BRIEF.md:36`, `:66-87`);
   - register the protocol, adapt the code to it, and freeze it.
-- **Days 2 and 3:**
-  - the producers and `refs.py`, with one test per rule, before any writing (`references-spec.md` §12);
-  - the definitive H1 run;
+- **Day 2, 2026-11-06:**
+  - the kept producers and `refs.py`, with one test per rule, before any writing (`references-spec.md` §12);
+  - **the gate at the end of the day** (decision 20).
+- **Day 3, 2026-11-09:**
   - generate `method-paper/claims.md` by code, and make the minimal verifier change
     (`method-paper/BRIEF.md:94-95`);
-  - writing;
-  - the H2 decision on day 3.
-- **Day 4:** the cut rule if the paper is not converging (`method-paper/BRIEF.md:91-92`).
-- **Day 5:** verify and publish (`method-paper/BRIEF.md:38`).
+  - writing.
+- **Day 4, 2026-11-10:** the cut rule if the paper is not converging (`method-paper/BRIEF.md:91-92`).
+- **Day 5, 2026-11-11:** verify and publish (`method-paper/BRIEF.md:38`).
 
 ## Still open
 
 1. The English wording of the central sentence (the author).
-2. The matrix specification: drafted, and its decisions taken (decision 19).
+2. The matrix specification: drafted and decided (decision 19), and deferred for a second version (decision 20).
 3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write:
    drafted (`references-spec.md` §4).
 4. **References are adopted (decisions 11 and 13 to 17).** Nothing in `references-spec.md` §10 is open. Its rules are
@@ -428,3 +452,4 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 6. Related work for the "dressing up" of findings, the reporting literature on spin. It is not yet searched, and
    nothing is cited without verification.
 7. The link check in `related-work.md`, which needs network access or a manual check.
+8. The work plan's date for the note, 2026-11-06, against the brief's day 5, 2026-11-11. The author updates the plan.

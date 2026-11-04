@@ -12,6 +12,15 @@ Revised twice the same day:
 - after the author's answers on the open points and a reading of Actuarii at `73eaf2b`, the decisions are recorded in
   section 10. Section 4 adds what Actuarii imposes on producers.
 
+**Scope for the five days** (`outline.md`, decision 20).
+
+- Everything here holds except what decision 20 defers:
+  - section 10, item 5 keeps only the manifest's flag for an exploratory figure;
+  - item 6 keeps only the `f59430a` snapshot;
+  - the git-history producer is deferred.
+- **The gate:** at the end of day 2, 2026-11-06, `refs.py check`, `refs.py registry` and the kept producers pass their
+  tests. If they do not, the references are deferred too (section 12).
+
 ## 1. The decision
 
 The author's words, 2026-11-04:
@@ -117,8 +126,8 @@ Code output is the root (`outline.md`, decision 10). There are three layers:
 |---|---|---|
 | Case registry | `paper/claims.md` in the `f59430a` snapshot (`matrix-spec.md` §1), parsed by the verifier's own rule (`tools/verify_paper_tables.py:640-672`) | Case facts (§1.1) |
 | Case verifier | `tools/verify_paper_tables.py` of the `f59430a` snapshot, imported and called there. The whole case is read at the release (`matrix-spec.md` §1) | Before column |
-| Git history | Commits, dates, intervals, read from `git log` on stdin | Case facts |
-| Matrix | The definitive H1 run (decision 3) | Before column, text → code; Table 2 |
+| Git history | Commits, dates, intervals, read from `git log` on stdin. Deferred (decision 20) | Case facts |
+| Matrix | For the five days, v0's output on the release (`matrix/release/matrix.csv`): a root made in Phase 0 outside the channel, read by a governed producer and flagged exploratory. The definitive run is deferred (decision 20) | Before column, text → code |
 | Self | The check's own report on `paper.md` (section 5) | After column |
 | Actuarii | The five pre-registered counts (`method-paper/BRIEF.md:73-87`), split as section 10, item 3 decides | §3 of the paper |
 
@@ -343,6 +352,9 @@ with the rest of this specification.
      (`fetch-depth: 0`).
    - *What it closes:* the labels were prose in the case, and they drifted (`case-data.md` §9, item 1). Here they are
      code.
+   - *In the five days* (decision 20): only the rule about weakening is kept. The manifest may flag a figure
+     exploratory, with its reason, and the registry prints the flag. Deriving the labels from the commits is
+     deferred.
 6. **Old commits are recovered as snapshots.** This was the author's idea, a module that only recovers old commits.
    - *What makes a snapshot necessary.* A governed module cannot run git (section 4). The shim also runs only scripts
      committed in `HEAD`, so the verifier of an old commit cannot run straight from git.
@@ -363,6 +375,8 @@ with the rest of this specification.
      passed (`97e9306` → `65c3ebf`), and the growth from 112 to 281 checked figures (`34b44b3` → `65c3ebf`)
      (`case-data.md` §5.1, §7). A fourth, `f59430a`, is the case as released, which the matrix and the case
      producers read (`matrix-spec.md` §1).
+   - *In the five days* (decision 20): only the `f59430a` snapshot. The three older snapshots, and the figures they
+     cover, are deferred.
 7. **The cascade is not reported for now.** The author's call. The split of item 3 is still counted.
 8. **The rationale is quarantined.** The author's decision, on the working hypothesis that a rationale is a
    probabilistic answer with no established meaning. This includes the `audit_log.rationale` column and the
@@ -384,16 +398,22 @@ with the rest of this specification.
 
 ## 12. Order of work after approval (Phase 1)
 
-1. The author approves this specification.
+What decision 20 keeps, in order.
+
+1. **Day 1.** The author approves this specification.
    - Install Actuarii.
    - Exclude the kit from ruff (section 9).
    - Set `governed_paths` and `python_script_dirs`.
-2. A manifest skeleton for the numbers listed in `outline.md` ("Numbers the paper would print").
-3. The case-registry, case-verifier and git-history producers. Each prints its artifact, and the agent writes it
-   through the channel.
-   - The three snapshots of item 6, and the CI step that compares them with `git show`.
-4. `refs.py check` and `refs.py registry`, with one test per rule. The registry includes the labels derived in item 5,
-   with one test per label.
-5. The classifier of section 10, item 3, with one test per clause.
-6. The hook in the verifier. Freeze the code.
-7. Writing. The self producer runs on the final `paper.md`.
+   - Register the rule of section 10, item 3.
+2. **Day 2.** A manifest skeleton for the numbers the note will print (`outline.md`, "Numbers the paper would print").
+3. **Day 2.** The `f59430a` snapshot, the CI step that compares it with `git show`, and the case-registry,
+   case-verifier and v0-matrix producers. Each prints its artifact, and the agent writes it through the channel.
+4. **Day 2.** `refs.py check` and `refs.py registry`, with one test per rule.
+5. **The gate, at the end of day 2, 2026-11-06.** Steps 3 and 4 pass their tests.
+   - If they do not, the references are deferred. The note follows the brief's original design.
+   - That design: the agent keeps `method-paper/claims.md`, the verifier gets its minimal change, and the five counts
+     are reported as totals.
+6. **Day 3.** The hook in the verifier. Freeze the code.
+7. **Before day 5.** The classifier of section 10, item 3, with one test per clause. It is applied to the history
+   after Phase 1.
+8. **Writing.** The self producer runs on the final `paper.md`.
