@@ -12,7 +12,10 @@ Revised twice the same day:
 - after the author's answers on the open points and a reading of Actuarii at `73eaf2b`, the decisions are recorded in
   section 10. Section 4 adds what Actuarii imposes on producers.
 
-**Scope for the five days** (`outline.md`, decision 20).
+**Deferred in full** (`outline.md`, decision 21). The note is the brief's short version, without references. This
+specification stays as the design for a later version; the scope below, from decision 20, is superseded.
+
+**Scope for the five days** (`outline.md`, decision 20; superseded by decision 21).
 
 - Everything here holds except what decision 20 defers:
   - section 10, item 5 keeps only the manifest's flag for an exploratory figure;

@@ -141,6 +141,39 @@ candidates are in `related-work.md`; how references work is in `references-spec.
     - *Dates:* the brief's. Day 5 is 2026-11-11. The work plan says 2026-11-06, and the author updates it.
     - *Writing:* plain English, with no invented terms, as the work plan asks. The terms of these notes (edges,
       residue, quarantine, cascade, the statuses) are working vocabulary and do not go into the note.
+21. **The note is the short version, as the work plan now says.** It supersedes decision 20.
+    - *Why.* The work plan, as changed on 2026-11-04, says: "se recortó a la versión corta del BRIEF: método, caso y
+      límites". It moves references, the matrix v1 and H2 to its future lines. The author's words in this session:
+      "sí, alinea el repo con el plan".
+    - *What the note is:* the brief's short version, about 1,500 words. It has the method, the case and the limits,
+      plus the measurement and the statement of who did what, which "done" requires (`method-paper/BRIEF.md:91-92`,
+      `:101-102`). The budgets are the word budget's Cut column.
+    - *Its design is the brief's original one.*
+      - The agent keeps `method-paper/claims.md`, one row per number, and each row cites where its number comes from.
+      - The verifier gets its minimal change, to check `paper.md` against `claims.md` (`method-paper/BRIEF.md:56-58`,
+        `:94-95`).
+      - The note uses the same check it describes, so the check's limit, presence and not location, applies to the
+        note too. The note says so.
+    - *Deferred, with nothing deleted:*
+      - references and everything they brought: producers, manifest, generated registry and snapshots
+        (`references-spec.md`);
+      - the matrix v1 and the blind sample (`matrix-spec.md`);
+      - H2.
+
+      They stay in `prep/` as the design for a later version, as the work plan's future lines record.
+    - *The measurement:* the five counts as pre-registered, reported as totals.
+      - The split of decision 13 and the two commits of decision 14 answered the cascade of writes that references
+        caused. Without references they are not needed, and they come back with them.
+      - The quarantine of the rationale (decision 18) stays.
+    - *Table 1:* only its Before column, the case.
+    - *v0's result:* optional, and the author's call. If the limits mention it, its figures cite
+      `matrix/release/summary.md` and are labelled exploratory.
+    - *Dates:* the target is Friday 2026-11-06, as the work plan says. The limit is Wednesday 2026-11-11, the brief's
+      fifth working day. The day-2 gate of decision 20 lapses.
+    - *Day 1, still:*
+      - install Actuarii and exclude its kit from ruff (`references-spec.md` §9);
+      - during Phase 1, no merges, only fast-forward (work plan, "Antes de empezar").
+    - *The brief:* a draft of its update, for the author, is in `brief-update-draft.md`.
 
 ## The central sentence
 
@@ -239,6 +272,8 @@ The budgets are planning targets, not repository facts. The full column sums to 
 Budgets count prose; tables and references fall outside them. §2 has no text of its own: 2.1 opens it with the
 triangle and Table 1.
 
+**Under decision 21, the Cut column is the budget.** §2.2 then covers what the case left open, without references.
+
 | § | Section | Writer | Words | Cut | Table |
 |---|---|---|---:|---:|---|
 | — | Abstract | Author | 150 | 100 | |
@@ -260,6 +295,9 @@ triangle and Table 1.
   (`method-paper/BRIEF.md:64`, `:101-102`).
 
 ## Section by section
+
+Under decision 21, these hold as the plan for the full version. The note itself is the short version: the sections
+with a budget in the Cut column, and nothing about references or the matrix v1.
 
 ### Abstract (150; cut 100). Author.
 
@@ -372,6 +410,7 @@ the verifier. *After:* this paper, its figures written as references. "A → B" 
 a check finds it, correctly, in B. This is a draft. Each row is checked against the code before it goes into the
 paper. In the paper, every cell is a reference to a producer's output; `references-spec.md` §7 gives the quantities.
 In the *after* column, "enforced" means that the build fails otherwise (rules C2 to C7 of `references-spec.md` §5).
+**Under decision 21, only the Before column goes into the note.** The After column is deferred with references.
 
 | Edge | What it checks | Before: the case | After: this paper | Evidence in the case |
 |---|---|---|---|---|
@@ -418,38 +457,32 @@ becomes a key in `method-paper/figures.toml`, with a producer that computes it (
   - the blind sample of 50 figures is drawn by code with a fixed seed (`blind-sample/`; `matrix-spec.md` §8). It does
     not exclude the figures the author has seen (decision 12);
   - references: the specification is drafted (`references-spec.md`), for the author's approval;
-  - the scope for the five days and the gate of day 2 are set (decision 20).
-- **Day 1, 2026-11-05:**
-  - approve `references-spec.md` and `matrix-spec.md`; the second waits for a second version (decision 20);
-  - install Actuarii, and exclude the kit's code from ruff before the first push: CI would fail on 87 errors
-    (`references-spec.md` §9);
-  - the author updates the brief:
-    - the goal: the note with references and Table 1; the matrix and H2 deferred (decision 20);
-    - the governed paths: `method-paper/figures.toml`, `method-paper/tools/`, `method-paper/producers/`,
-      `method-paper/results/` and `method-paper/case-history/` (`references-spec.md` §9);
-    - the measurement, with the split into authoring and mechanical writes (`references-spec.md` §10, item 3)
-      registered before counting starts (`method-paper/BRIEF.md:36`, `:66-87`);
-  - register the protocol, adapt the code to it, and freeze it.
-- **Day 2, 2026-11-06:**
-  - the kept producers and `refs.py`, with one test per rule, before any writing (`references-spec.md` §12);
-  - **the gate at the end of the day** (decision 20).
-- **Day 3, 2026-11-09:**
-  - generate `method-paper/claims.md` by code, and make the minimal verifier change
-    (`method-paper/BRIEF.md:94-95`);
-  - writing.
-- **Day 4, 2026-11-10:** the cut rule if the paper is not converging (`method-paper/BRIEF.md:91-92`).
-- **Day 5, 2026-11-11:** verify and publish (`method-paper/BRIEF.md:38`).
+  - the scope for the five days and the gate of day 2 are set (decision 20);
+  - the note is aligned with the work plan as the short version (decision 21), and a draft of the brief update is
+    left in `brief-update-draft.md`.
+- **Day 1, Thursday 2026-11-05:**
+  - install Actuarii, and exclude the kit from ruff before the first push;
+  - the author updates the brief (`brief-update-draft.md`) before counting starts;
+  - the agent starts `method-paper/claims.md` from `case-data.md` and makes the verifier's minimal change;
+  - writing: the agent drafts the method and the case; the author writes the introduction, the limits and the
+    conclusion.
+- **Day 2, Friday 2026-11-06, the target:** the writing ends, the verifier passes, and the note is published as it
+  stands, with its Zenodo DOI and the forum post.
+- **If it is not ready, up to day 5, Wednesday 2026-11-11, the limit:** the same, and it is published as it stands by
+  then.
 
 ## Still open
 
 1. The English wording of the central sentence (the author).
 2. The matrix specification: drafted and decided (decision 19), and deferred for a second version (decision 20).
-3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write:
-   drafted (`references-spec.md` §4).
-4. **References are adopted (decisions 11 and 13 to 17).** Nothing in `references-spec.md` §10 is open. Its rules are
-   approved with the specification on day 1.
+3. Which registry columns code fills: superseded by decision 21. The agent keeps `claims.md`, as the brief says.
+4. **References are deferred** (decision 21), with what they brought. `references-spec.md` stays as their design.
 5. Whether to use the manuscript's sentence on pre-registration as the example of drift (confirm it first).
 6. Related work for the "dressing up" of findings, the reporting literature on spin. It is not yet searched, and
    nothing is cited without verification.
 7. The link check in `related-work.md`, which needs network access or a manual check.
-8. The work plan's date for the note, 2026-11-06, against the brief's day 5, 2026-11-11. The author updates the plan.
+8. The dates: settled by decision 21, with a target of 2026-11-06 and a limit of 2026-11-11. The brief records them
+   on day 1.
+9. Whether the limits mention v0's exploratory result (decision 21).
+10. Zenodo: the GitHub integration, which has to be switched on before the release, or an upload. To decide before
+    publishing.
