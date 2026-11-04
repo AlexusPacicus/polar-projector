@@ -16,7 +16,7 @@ brief (`method-paper/BRIEF.md:4-5`). The author reviews this draft, edits it, an
    reads a receipt's rationale (`outline.md`, decision 18).
 6. **Out of scope** adds what Phase 0 specified and then deferred.
 
-Text in [brackets] is for the author to choose.
+Text in [brackets] is for the author to choose. Where count 4 is read from is settled: see the measurement section.
 
 ---
 
@@ -24,7 +24,7 @@ Text in [brackets] is for the author to choose.
 
 Committed by the author on 2026-11-02, before any work on the method paper starts. Drafted with Claude (claude.ai);
 reviewed, edited and committed by the author. Updated by the author on 2026-11-05, day 1, before Phase 1 counting
-starts. Agents working in this repository read this file before doing anything for the method paper, and do not
+starts, from a draft by Claude (`prep/brief-update-draft.md`). Agents working in this repository read this file before doing anything for the method paper, and do not
 modify it.
 
 ## Goal
@@ -132,7 +132,9 @@ Reported as an observation of one author over one week. No hypothesis is tested.
 
 - count 1 from Actuarii's local audit database, one row per write;
 - counts 2, 3 and 5 from the commit trailers;
-- count 4 from [the audit database | the session logs, where a denial leaves no row]: to be checked on day 1.
+- count 4 from the Claude Code session transcripts. Actuarii's write gate records nothing for a write it denies
+  (Actuarii at `73eaf2b`, `tools/hooks/require_boundary_validation.py:48`). Proposals that the validator refuses are
+  recorded in the audit database; they are not denied writes, and they are reported apart.
 
 No count reads a receipt's rationale, not even the number of rationale trailers.
 
