@@ -135,8 +135,8 @@ Code output is the root (`outline.md`, decision 10). There are three layers:
     in it (`.claude/settings.json:14-15`).
   - Each producer names its exact command in its docstring and rejects input without the expected header. CI writes
     the same command in the workflow.
-- **No producer can run code from an older commit.** That needs a checkout and a process. Section 10, item 6 deals
-  with the figures this affects.
+- **No producer can run code from an older commit.** That needs a checkout and a process. Section 10, item 6 recovers
+  the old commits as snapshots instead.
 
 **Two stances, as in the case:**
 
@@ -254,6 +254,7 @@ The brief currently governs four paths (`method-paper/BRIEF.md:66-71`). This spe
 - `method-paper/figures.toml`. The manifest holds author-approved content: the wording and the printed formats.
 - `method-paper/tools/`: `refs.py` and the classifier of section 10, item 3.
 - `method-paper/producers/`.
+- `method-paper/case-history/`: the snapshots of section 10, item 6.
 - `method-paper/results/`. The artifacts are the root (R7). Counts 3 and 5 of the measurement only see changes to
   governed paths (`method-paper/BRIEF.md:79`, `:81`), so an ungoverned artifact would not even show up as an escape.
 
@@ -296,7 +297,8 @@ Recorded on 2026-11-04 from the author's answers, and checked against Actuarii a
      - A governed change is mechanical if and only if its result is exactly what code requires:
        - `claims.md` equal to the output of `refs.py registry`;
        - an artifact equal to its producer's output;
-       - a diff to `paper.md` that only changes strings inside existing spans, each to the value C4 requires.
+       - a diff to `paper.md` that only changes strings inside existing spans, each to the value C4 requires;
+       - a file under `method-paper/case-history/<sha>/` equal to `git show <sha>:<path>` (item 6).
 
        Everything else is authoring. The rule is code, with one test per clause, frozen with the rest of the code.
      - Nothing is classified by a receipt's rationale. It is text written by the model (`method-paper/BRIEF.md:85-86`).
@@ -314,24 +316,53 @@ Recorded on 2026-11-04 from the author's answers, and checked against Actuarii a
        it.
 4. **The Actuarii counts run locally, not in CI.** The database sits under `.data/`, which git ignores (`README.md:69`).
    - The Actuarii producer therefore has no freshness check, and governance is its only trail (R7).
-   - Counts 2, 3 and 5 can be recomputed from git by anyone, because they come from commit trailers. Counts 1 and 4
-     come only from the local database.
+   - What git does keep: each commit holds the content and its record. Every governed path gets an `Actuarii-Record`
+     trailer, `matches` or `changed outside the channel`, plus one `Actuarii-Rationale` per distinct rationale
+     (`tools/git/commit_record.py:1-11`). That is why item 3 classifies per commit, from git alone.
+   - Counts 2, 3 and 5 can be recomputed from the trailers by anyone.
+   - Count 1 has only a lower bound in git, because two writes with the same rationale leave one trailer. It is exact
+     only in the database.
+   - Count 4, the denied writes, never reaches a commit.
 
-**Still open**
+**Decided in principle by the author on 2026-11-04.** The rules below are the agent's, and they are approved together
+with the rest of this specification.
 
-5. **Pre-registration labels as a manifest field,** checked against the order of commits. This would mechanize what the
-   case left as prose (`case-data.md` §9, item 1). *Recommendation:* leave it out of the five days and list it as
-   future work.
-6. **Figures that need an older commit.** Two of the candidates in `outline.md` need the verifier run at an older
-   commit: the growth from 112 to 281 checked figures, and the 9 rows the code review changed while the verifier
-   passed (`case-data.md` §5.1, §7). Under Actuarii v0.1 no governed producer can compute them (section 4).
-   - *Option A:* a CI job checks out each named commit, runs the producer there, and checks the committed artifact on
-     every push. The author writes the first artifact, with a `Human-Record` trailer.
-   - *Option B:* leave them out.
-   - *Recommendation:* A for the 9. It is direct evidence that a consistency check does not see instrument errors, which
-     is H2's ground. B for the growth figure, which is case history.
-7. **Report the cascade itself,** as mechanical writes per authoring write: an observation of what governance costs.
-   It adds to a pre-registered measurement, so it is the author's call on day 1.
+5. **Pre-registration labels come from the commits.** This was the author's idea. They are not a manifest field:
+   `refs.py registry` derives each key's label from the history of its producer and writes it into the registry.
+   - `yes (<sha>)`: the producer was committed in `<sha>` and has not changed since the first artifact holding the key.
+   - `post hoc (<sha>)`: the producer changed after one of its artifacts existed. `<sha>` is the first such change. Any
+     change marks every key of that producer, a bug fix included. The case labelled its own re-measurements the same
+     way (`paper/claims.md`, A5 and A6).
+   - `no`: the producer and the artifact arrived in the same commit. Under the shim this cannot happen, because a
+     producer runs only once it is committed. If an artifact arrives another way, the rule says `no`.
+   - **Why `yes` means something here.** Under Actuarii, no result can be seen before its producer is committed (section
+     4). What the commit order cannot see is a result seen outside the channel, such as the Phase 0 matrix. So the
+     manifest may *weaken* a key's label, with the reason, and never strengthen one. The H1 keys are weakened this way,
+     as `outline.md` already declares.
+   - *Input:* `git log` on stdin (section 4). CI regenerates the registry (C6), so its checkout needs the full history
+     (`fetch-depth: 0`).
+   - *What it closes:* the labels were prose in the case, and they drifted (`case-data.md` §9, item 1). Here they are
+     code.
+6. **Old commits are recovered as snapshots.** This was the author's idea, a module that only recovers old commits.
+   - *What makes a snapshot necessary.* A governed module cannot run git (section 4). The shim also runs only scripts
+     committed in `HEAD`, so the verifier of an old commit cannot run straight from git.
+   - *The snapshot.*
+     - For each named commit, the files its verifier reads are copied into `method-paper/case-history/<sha>/`, keeping
+       the tree layout (`tools/`, `paper/`, `bench/results/`).
+     - Each file is byte-identical to `git show <sha>:<path>`. The agent writes them through the channel, and they are
+       mechanical by the fourth clause of item 3.
+     - CI compares each file with `git show`, so a snapshot cannot drift from its commit.
+   - *The producer* adds one snapshot's `tools/` to `sys.path`, imports that verifier and calls its checks. It runs once
+     per snapshot, because loading two modules with the same name would need `importlib`. A second producer compares
+     the resulting artifacts.
+   - *Checked in this session.* The verifiers at `34b44b3`, `97e9306` and `65c3ebf` import no primitive, find their
+     inputs relative to their own file, and import only fixtures the current package still has.
+   - *Limit.* A snapshot runs against the current operator, not the operator of its commit. The count of checks and
+     their agreement with artifacts do not depend on it; the recomputed §B and §C do. No figure is taken from those.
+   - *What it covers.* Three snapshots cover both figures: the 9 rows the code review changed while the verifier
+     passed (`97e9306` → `65c3ebf`), and the growth from 112 to 281 checked figures (`34b44b3` → `65c3ebf`)
+     (`case-data.md` §5.1, §7).
+7. **The cascade is not reported for now.** The author's call. The split of item 3 is still counted.
 
 ## 11. What this does not do
 
@@ -342,14 +373,16 @@ Recorded on 2026-11-04 from the author's answers, and checked against Actuarii a
 
 ## 12. Order of work after approval (Phase 1)
 
-1. The author approves this specification and decides the points still open in section 10.
+1. The author approves this specification.
    - Install Actuarii.
    - Exclude the kit from ruff (section 9).
    - Set `governed_paths` and `python_script_dirs`.
 2. A manifest skeleton for the numbers listed in `outline.md` ("Numbers the paper would print").
 3. The case-registry, case-verifier and git-history producers. Each prints its artifact, and the agent writes it
    through the channel.
-4. `refs.py check` and `refs.py registry`, with one test per rule.
+   - The three snapshots of item 6, and the CI step that compares them with `git show`.
+4. `refs.py check` and `refs.py registry`, with one test per rule. The registry includes the labels derived in item 5,
+   with one test per label.
 5. The classifier of section 10, item 3, with one test per clause.
 6. The hook in the verifier. Freeze the code.
 7. Writing. The self producer runs on the final `paper.md`.

@@ -101,6 +101,11 @@ candidates are in `related-work.md`; how references work is in `references-spec.
 14. **Each cascade goes in two commits, authoring then mechanical.** The author's words: "sí, es en 2 commits".
     Actuarii stores per write only hashes, not content, so the rule is applied commit by commit
     (`references-spec.md` §10, item 3).
+15. **Pre-registration labels come from the commits,** derived by code from each producer's history. The manifest may
+    only weaken a label (`references-spec.md` §10, item 5). The author's idea.
+16. **Old commits are recovered as snapshots** checked against `git show`. They cover the 9 rows and the growth from 112
+    to 281 (`references-spec.md` §10, item 6). The author's idea.
+17. **The cascade is not reported for now.** The author's call.
 
 ## The central sentence
 
@@ -408,10 +413,8 @@ Candidates for `method-paper/claims.md`, which code will generate (decision 10);
 2. The matrix specification, edge by edge (2026-11-04).
 3. Which registry columns code fills, and how the author reviews the claim's wording, which code cannot write
    (2026-11-04).
-4. **References are adopted (decisions 11, 13 and 14).** Still open, in `references-spec.md` §10:
-   - pre-registration labels as a manifest field (item 5);
-   - figures that need the verifier at an older commit: the growth from 112 to 281, and the 9 rows (item 6);
-   - whether to report the cascade itself (item 7).
+4. **References are adopted (decisions 11 and 13 to 17).** Nothing in `references-spec.md` §10 is open. Its rules are
+   approved with the specification on day 1.
 5. Whether to use the manuscript's sentence on pre-registration as the example of drift (confirm it first).
 6. Related work for the "dressing up" of findings, the reporting literature on spin. It is not yet searched, and
    nothing is cited without verification.
