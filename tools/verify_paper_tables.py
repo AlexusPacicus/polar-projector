@@ -634,14 +634,15 @@ def _verify_presence(checks: list[tuple[str, str, float]]) -> int:
 # ---------------------------------------------------------------------------
 
 CLAIMS = Path(__file__).resolve().parent.parent / "paper" / "claims.md"
+METHOD_CLAIMS = Path(__file__).resolve().parent.parent / "method-paper" / "claims.md"
 SPECIAL_CHECKS = {"pytest", "recompute:§B", "recompute:§C"}
 
 
-def _verify_registry(labels: list[str]) -> int:
-    print("\nclaims registry — paper/claims.md against the checks above")
+def _verify_registry(labels: list[str], claims: Path = CLAIMS) -> int:
+    print(f"\nclaims registry — {claims.relative_to(claims.parent.parent)} against the checks above")
     failures = 0
     statuses: Counter[str] = Counter()
-    for line in CLAIMS.read_text(encoding="utf-8").splitlines():
+    for line in claims.read_text(encoding="utf-8").splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if not re.fullmatch(r"[ACPR]\d+", cells[0]):
             continue
@@ -720,6 +721,7 @@ def main() -> int:
     checks = _artifact_checks()
     presence_failures = _verify_presence(checks)
     reg_failures = _verify_registry([label for label, _, _ in checks])
+    reg_failures += _verify_registry([label for label, _, _ in checks], METHOD_CLAIMS)
 
     total = failures + cond_failures + table_failures + art_failures + presence_failures + reg_failures
     if total == 0:
