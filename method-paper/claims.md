@@ -1,6 +1,6 @@
 # Claims registry of the method paper
 
-Nothing enters `method-paper/paper.md` without a row here, and a row whose status is `checked` must name at least one check that `tools/verify_paper_tables.py` actually runs. This registry keeps the rule of `paper/claims.md`; it has one row per number in the paper, and no rows yet.
+Nothing enters `method-paper/paper.md` without a row here, and a row whose status is `checked` must name at least one check that `tools/verify_paper_tables.py` actually runs. This registry keeps the rule of `paper/claims.md`; it has one row per number in the paper.
 
 ## Vocabulary
 
