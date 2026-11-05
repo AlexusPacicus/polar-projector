@@ -1,0 +1,158 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(python3 tools/*)",
+      "Bash(python3 tools/*.py)",
+      "Bash(python3 tools/audit/*)",
+      "Bash(python3 tools/hooks/*)",
+      "Bash(python3 tools/boundary_validator/validator.py)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git rev-parse *)",
+      "Bash(git grep *)",
+      "Bash(git blame *)",
+      "Bash(git ls-files *)",
+      "Bash(git merge-base *)",
+      "Bash(git rev-list *)",
+      "Bash(git for-each-ref *)",
+      "Bash(pytest)",
+      "Bash(pytest *)",
+      "Bash(ls)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(df)",
+      "Bash(df *)",
+      "Bash(echo *)",
+      "Bash(sed -n *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(diff *)",
+      "Bash(cut *)",
+      "Bash(tr *)",
+      "Bash(jq *)",
+      "Bash(cmp *)",
+      "Bash(date)",
+      "Bash(date +*)",
+      "mcp__boundary-validator__validate_proposal"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "Bash(rm *)",
+      "Bash(python3 -c *)",
+      "Bash(python3 -m *)"
+    ],
+    "ask": [
+      "Bash(git add *)",
+      "Bash(git checkout -b *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git branch *)",
+      "Bash(git stash *)",
+      "Bash(git tag *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git push *)",
+      "Bash(git config *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git clean *)",
+      "Bash(git submodule *)",
+      "Bash(git rm *)",
+      "Bash(git worktree *)",
+      "Bash(gh issue *)",
+      "Bash(gh pr *)"
+    ]
+  },
+  "hooks": {
+    "ConfigChange": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/block_config_changes.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR\"/tools/hooks/session_python_gate.sh"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/announce_governance.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/require_boundary_validation.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/require_contract_context.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/confine_review_reads.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/deny_python_escapes.py"
+          }
+        ]
+      }
+    ]
+  },
+  "includeGitInstructions": false,
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "autoAllowBashIfSandboxed": false,
+    "filesystem": {
+      "denyWrite": [
+        "./.actuarii.json",
+        "./.claude",
+        "./.data/boundary_validator_audit.db",
+        "./.mcp.json",
+        "./AGENTS.md",
+        "./CLAUDE.md",
+        "./method-paper/BRIEF.md",
+        "./method-paper/claims.md",
+        "./method-paper/paper.md",
+        "./tools"
+      ]
+    }
+  }
+}

@@ -58,6 +58,17 @@ addopts = ["--strict-markers"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+# Actuarii's kit, copied into tools/ by its installer (method-paper/BRIEF.md, governed paths).
+extend-exclude = [
+    "tools/__init__.py",
+    "tools/audit",
+    "tools/boundary_validator",
+    "tools/check_pydantic.py",
+    "tools/git",
+    "tools/hooks",
+    "tools/install.py",
+    "tools/project_config.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "RUF"]
