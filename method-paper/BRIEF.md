@@ -1,19 +1,21 @@
 # Method paper: brief and pre-registration
 
 Committed by the author on 2026-11-02, before any work on the method paper starts. Drafted with Claude (claude.ai);
-reviewed, edited and committed by the author. Agents working in this repository read this file before doing anything
-for the method paper, and do not modify it.
+reviewed, edited and committed by the author. Updated by the author on 2026-11-05, day 1, before Phase 1 counting
+starts, from a draft by Claude (`prep/brief-update-draft.md`). Agents working in this repository read this file before
+doing anything for the method paper, and do not modify it.
 
 ## Goal
 
-**Primary.** A new paper of at most five pages (about 2,500 words, one or two tables) on how the Polar Projector paper
-kept every number tied to evidence: the claims registry, the pre-registration labels, the refutation criteria and the
-verifier that runs in CI. The Polar Projector paper is the case. It is not modified.
+**Primary.** A new paper of about 1,500 words, with one table, on how the Polar Projector paper kept every number tied
+to evidence: the claims registry, the pre-registration labels, the refutation criteria and the verifier that runs in
+CI. It covers the method, the case and the limits. The Polar Projector paper is the case. It is not modified.
 
 **Secondary.** Write the new paper with Actuarii governing the writes, and report what it recorded. This is a pilot
 observation, not a test of anything.
 
-**Deliverable.** The paper in this repository, with a Zenodo DOI. A forum post follows the week after.
+**Deliverable.** The paper in this repository, with a Zenodo DOI. A forum post goes out with the DOI; without a DOI
+there is no post.
 
 ## Layout
 
@@ -28,16 +30,33 @@ method-paper/
 ## Phases
 
 **Phase 0: preparation.** Cloud session, until 2026-11-04. Not governed by Actuarii: the Bash sandbox that Actuarii
-requires does not run in cloud sessions. Read-only on every existing file. Output goes only to `method-paper/prep/`, on
-the branch `prep/method-paper`. The paper declares this phase as agent work outside the governed channel.
+requires does not run in cloud sessions.
 
-**Phase 1: writing.** Local and governed, five working days from 2026-11-05.
+- It was read-only on every existing file, and its output went only to `method-paper/prep/`.
+- That output reached `main` by fast-forward on 2026-11-04, with the author's approval. The branch
+  `prep/method-paper` was then deleted, and the history keeps its commits.
+- Beyond its three tasks, it produced specifications for references and for a traceability matrix, a blind sample,
+  and a run of the exploratory matrix on the release. All of these are deferred (`prep/outline.md`, decisions 20
+  and 21).
+- The paper declares this phase as agent work outside the governed channel, including what it produced beyond its
+  tasks.
 
-- Day 1: install Actuarii, govern the paths listed below, confirm the measurement section of this file.
-- Days 2 to 4: writing.
-- Day 5: verify and publish as it stands.
+**Phase 1: writing.** Local and governed, from 2026-11-05. The target for publication is 2026-11-06. The limit is
+2026-11-11, the fifth working day.
+
+- **Day 1:**
+  - install Actuarii and govern the paths listed below;
+  - confirm the measurement section of this file;
+  - start `claims.md` and make the verifier's minimal change;
+  - writing.
+- **Day 2:** writing, then verify, and publish as it stands if it is ready.
+- **Up to day 5:** the same, and publish as it stands by then.
+- During Phase 1 there are no merges, only fast-forward.
 
 ## Phase 0 tasks
+
+Done on 2026-11-04. The links in `related-work.md` were confirmed by the author on 2026-11-05. All open except two
+secondary copies, in references 2 and 3, whose DOIs open.
 
 Produce three files in `method-paper/prep/`. Every number in them cites the file and line, or the commit, it comes
 from.
@@ -70,6 +89,12 @@ The paper states who did what.
 - `method-paper/claims.md`
 - `tools/verify_paper_tables.py`
 
+Actuarii's installer also always governs `.actuarii.json`, `AGENTS.md`, `CLAUDE.md`, `.claude/**`, `.mcp.json` and
+`tools/**`. `tools/**` covers the verifier, because the installer copies the kit into `tools/`.
+
+Outside these paths, Phase 1 changes `pyproject.toml` once: it excludes the kit from ruff, which CI runs over
+`tools/`. That change comes before the first push.
+
 ## Measurement (pre-registered)
 
 Counted over Phase 1 only:
@@ -82,17 +107,32 @@ Counted over Phase 1 only:
 
 Reported as an observation of one author over one week. No hypothesis is tested.
 
+**Where each count is read from:**
+
+- count 1 from Actuarii's local audit database, one row per write;
+- counts 2, 3 and 5 from the commit trailers;
+- count 4 from the Claude Code session transcripts. Actuarii's write gate records nothing for a write it denies
+  (Actuarii at `73eaf2b`, `tools/hooks/require_boundary_validation.py:48`). Proposals that the validator refuses are
+  recorded in the audit database; they are not denied writes, and they are reported apart.
+
+No count reads a receipt's rationale, not even the number of rationale trailers.
+
 Known limits of the measurement: the rationale in each receipt is written by the model and is not the reason for the
 change; "changed outside the channel" does not mean "written by the human"; a `Human-Record` trailer is a declaration
 by the author, not a proof.
 
 ## Limits
 
-- **Length:** at most five pages. Cut rule on day 4: if the paper is not converging, cut it to the method, the case
-  and the limits, about 1,500 words.
-- **Out of scope:** changes to the Polar Projector paper and to `paper/claims.md`; new Actuarii features; the
-  question of whether a receipt's rationale is faithful; Actuarii v0.2. In the verifier, only the minimal change needed
-  to also check `method-paper/paper.md` against `method-paper/claims.md`.
+- **Length:** about 1,500 words, one table.
+- **Out of scope:**
+  - changes to the Polar Projector paper and to `paper/claims.md`;
+  - new Actuarii features;
+  - the question of whether a receipt's rationale is faithful;
+  - Actuarii v0.2;
+  - what Phase 0 specified and deferred: figures written as references, the traceability matrix v1 with its blind
+    sample, and H2.
+- **The verifier:** only the minimal change needed to also check `method-paper/paper.md` against
+  `method-paper/claims.md`.
 - **Honesty:** Actuarii did not govern the original paper, and the new paper does not say it did.
 
 ## Done
