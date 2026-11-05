@@ -587,6 +587,7 @@ def _artifact_checks() -> list[tuple[str, str, float]]:
 # ---------------------------------------------------------------------------
 
 PAPER = Path(__file__).resolve().parent.parent / "paper" / "polar-projector-paper.md"
+METHOD_PAPER = Path(__file__).resolve().parent.parent / "method-paper" / "paper.md"
 
 # Checked figures registered for phase 4 and not yet written into the manuscript.
 # They are reported, not failed; phase 4 is done when this tuple is empty.
@@ -596,9 +597,9 @@ AWAITING_TEXT: tuple[str, ...] = ()
 NOT_A_PRINTED_FIGURE: tuple[str, ...] = ()
 
 
-def _verify_presence(checks: list[tuple[str, str, float]]) -> int:
-    print("\nmanuscript presence — each checked string must be printed in the paper")
-    text = PAPER.read_text(encoding="utf-8").replace("\u2212", "-")
+def _verify_presence(checks: list[tuple[str, str, float]], paper: Path = PAPER) -> int:
+    print(f"\nmanuscript presence — each checked string must be printed in {paper.relative_to(paper.parent.parent)}")
+    text = paper.read_text(encoding="utf-8").replace("\u2212", "-")
     text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)
     # Section references and headings are not figures: "§3.2", "§3.2-3.4", "### 3.2" would
     # otherwise count as printing 3.2 (or 3.4).
@@ -644,7 +645,7 @@ def _verify_registry(labels: list[str], claims: Path = CLAIMS) -> int:
     statuses: Counter[str] = Counter()
     for line in claims.read_text(encoding="utf-8").splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if not re.fullmatch(r"[ACPR]\d+", cells[0]):
+        if not re.fullmatch(r"[ACPRM]\d+", cells[0]):
             continue
         if len(cells) != 6:
             # A "|" inside a cell (e.g. |λ|) splits the row; skipping it would silently
@@ -671,6 +672,16 @@ def _verify_registry(labels: list[str], claims: Path = CLAIMS) -> int:
     print("  " + ", ".join(f"{n} {s}" for s, n in sorted(statuses.items())))
     print(f"  {'all checked claims resolve to existing checks' if failures == 0 else f'{failures} unresolved'}")
     return failures
+
+
+def _registry_checks(checks: list[tuple[str, str, float]], claims: Path) -> list[tuple[str, str, float]]:
+    """The checks that the `checked` rows of a registry name, for the presence check of its manuscript."""
+    tokens: list[str] = []
+    for line in claims.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 6 and re.fullmatch(r"[ACPRM]\d+", cells[0]) and cells[2] == "checked":
+            tokens += re.findall(r"`([^`]+)`", cells[5])
+    return [c for c in checks if any(c[0].startswith(t) for t in tokens)]
 
 
 def _verify_artifacts() -> int:
@@ -722,6 +733,7 @@ def main() -> int:
     presence_failures = _verify_presence(checks)
     reg_failures = _verify_registry([label for label, _, _ in checks])
     reg_failures += _verify_registry([label for label, _, _ in checks], METHOD_CLAIMS)
+    presence_failures += _verify_presence(_registry_checks(checks, METHOD_CLAIMS), METHOD_PAPER)
 
     total = failures + cond_failures + table_failures + art_failures + presence_failures + reg_failures
     if total == 0:
