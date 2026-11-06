@@ -597,8 +597,8 @@ AWAITING_TEXT: tuple[str, ...] = ()
 NOT_A_PRINTED_FIGURE: tuple[str, ...] = ()
 
 
-def _verify_presence(checks: list[tuple[str, str, float]], paper: Path = PAPER) -> int:
-    print(f"\nmanuscript presence — each checked string must be printed in {paper.relative_to(paper.parent.parent)}")
+def _presence(checks: list[tuple[str, str, float]], paper: Path) -> tuple[list[tuple[str, str]], list[str], int]:
+    """The absent and awaiting checks of a manuscript, and how many are single characters. Prints nothing."""
     text = paper.read_text(encoding="utf-8").replace("\u2212", "-")
     text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)
     # Section references and headings are not figures: "§3.2", "§3.2-3.4", "### 3.2" would
@@ -621,6 +621,12 @@ def _verify_presence(checks: list[tuple[str, str, float]], paper: Path = PAPER) 
             awaiting.append(label)
             continue
         missing.append((label, published))
+    return missing, awaiting, unlocatable
+
+
+def _verify_presence(checks: list[tuple[str, str, float]], paper: Path = PAPER) -> int:
+    print(f"\nmanuscript presence — each checked string must be printed in {paper.relative_to(paper.parent.parent)}")
+    missing, awaiting, unlocatable = _presence(checks, paper)
     for label, published in missing:
         print(f"  ABSENT    {label:44} {published!r} is not printed in the manuscript")
     print(f"  {len(checks) - len(missing) - len(awaiting) - unlocatable} present, {len(missing)} absent, "
@@ -643,10 +649,7 @@ def _verify_registry(labels: list[str], claims: Path = CLAIMS) -> int:
     print(f"\nclaims registry — {claims.relative_to(claims.parent.parent)} against the checks above")
     failures = 0
     statuses: Counter[str] = Counter()
-    for line in claims.read_text(encoding="utf-8").splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if not re.fullmatch(r"[ACPRM]\d+", cells[0]):
-            continue
+    for cells in _registry_rows(claims):
         if len(cells) != 6:
             # A "|" inside a cell (e.g. |λ|) splits the row; skipping it would silently
             # drop the claim from every check below.
@@ -677,11 +680,69 @@ def _verify_registry(labels: list[str], claims: Path = CLAIMS) -> int:
 def _registry_checks(checks: list[tuple[str, str, float]], claims: Path) -> list[tuple[str, str, float]]:
     """The checks that the `checked` rows of a registry name, for the presence check of its manuscript."""
     tokens: list[str] = []
-    for line in claims.read_text(encoding="utf-8").splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) == 6 and re.fullmatch(r"[ACPRM]\d+", cells[0]) and cells[2] == "checked":
+    for cells in _registry_rows(claims):
+        if len(cells) == 6 and cells[2] == "checked":
             tokens += re.findall(r"`([^`]+)`", cells[5])
     return [c for c in checks if any(c[0].startswith(t) for t in tokens)]
+
+
+# ---------------------------------------------------------------------------
+# Case figures (method-paper/paper.md): the method paper describes the Polar
+# Projector paper as its case and prints counts about it. Like the artifact
+# checks, each stores the STRING the method paper prints and compares it with
+# the count taken from the case's files as they stand, so that a checked row of
+# method-paper/claims.md can name it and its string must be printed there.
+# ---------------------------------------------------------------------------
+
+
+def _registry_rows(claims: Path) -> list[list[str]]:
+    """The cells of each claim row of a registry, malformed rows included."""
+    rows = []
+    for line in claims.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if re.fullmatch(r"[ACPRM]\d+", cells[0]):
+            rows.append(cells)
+    return rows
+
+
+def _case_checks(
+    checks: list[tuple[str, str, float]], claims: Path = CLAIMS, paper: Path = PAPER
+) -> list[tuple[str, str, float]]:
+    """(label, printed-in-the-method-paper, counted-from-the-case)."""
+    statuses = Counter(cells[2] for cells in _registry_rows(claims) if len(cells) == 6)
+    missing, awaiting, unlocatable = _presence(checks, paper)
+    return [
+        ("case registry rows", "42", sum(statuses.values())),
+        ("case registry checked", "31", statuses["checked"]),
+        ("case registry construction", "4", statuses["construction"]),
+        ("case registry remove", "7", statuses["remove"]),
+        ("case artifact figures", "281", len(checks)),
+        ("case presence found", "261", len(checks) - len(missing) - len(awaiting) - unlocatable),
+        ("case presence single-character", "20", unlocatable),
+    ]
+
+
+def _verify_case(case: list[tuple[str, str, float]]) -> int:
+    print("\ncase figures — what method-paper/paper.md prints about the case, against the case's files")
+    failures = 0
+    for label, printed, counted in case:
+        ok = _agree(counted, printed)
+        failures += int(not ok)
+        if not ok:
+            print(f"  MISMATCH  {label:34} method paper={printed:>6}  case={counted!r}")
+    print(f"  {len(case) - failures}/{len(case)} figures agree with the case")
+    return failures
+
+
+def _verify_method_paper(
+    checks: list[tuple[str, str, float]], claims: Path = METHOD_CLAIMS, paper: Path = METHOD_PAPER
+) -> int:
+    """The method paper's registry and manuscript; its rows can also name the case figures."""
+    case = _case_checks(checks)
+    failures = _verify_case(case)
+    failures += _verify_registry([label for label, _, _ in checks + case], claims)
+    failures += _verify_presence(_registry_checks(checks + case, claims), paper)
+    return failures
 
 
 def _verify_artifacts() -> int:
@@ -732,16 +793,16 @@ def main() -> int:
     checks = _artifact_checks()
     presence_failures = _verify_presence(checks)
     reg_failures = _verify_registry([label for label, _, _ in checks])
-    reg_failures += _verify_registry([label for label, _, _ in checks], METHOD_CLAIMS)
-    presence_failures += _verify_presence(_registry_checks(checks, METHOD_CLAIMS), METHOD_PAPER)
+    method_failures = _verify_method_paper(checks)
 
-    total = failures + cond_failures + table_failures + art_failures + presence_failures + reg_failures
+    total = (failures + cond_failures + table_failures + art_failures + presence_failures + reg_failures
+             + method_failures)
     if total == 0:
         print("\nVerdict: ALL PASS")
     else:
         print(f"\nVerdict: {cond_failures} §B row(s), {failures} §C row(s), {table_failures} printed-table cell(s), "
               f"{art_failures} artifact figure(s) mismatched, {presence_failures} absent from the manuscript, "
-              f"{reg_failures} registry reference(s) unresolved")
+              f"{reg_failures} registry reference(s) unresolved, {method_failures} in the method paper")
     return 0 if total == 0 else 1
 
 
