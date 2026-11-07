@@ -23,3 +23,7 @@ paper/build/
 # macOS Finder metadata
 .DS_Store
 .data/
+
+# Method paper, Phase 0 notes: kept on disk; only the case data stays in the repository
+method-paper/prep/*
+!method-paper/prep/case-data.md
