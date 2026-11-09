@@ -1,4 +1,6 @@
 # Keeping every number tied to evidence: a claims registry and a verifier in CI
+## 1 Introduction
+Any text that cites figures from outside itself, from code, data or experiments, can differ from its source, whether it is written by a person or by an AI. Working with LLMs makes writing faster, but it also produces more text than there is time to check. The mechanical part of this check, making sure that each figure matches its source, can be done by code. This way, people can devote their attention to what code does not judge: whether the reasoning holds up.
 
 ## 2.1 What the verifier checked
 
