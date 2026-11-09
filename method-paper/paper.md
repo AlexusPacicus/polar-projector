@@ -1,7 +1,9 @@
 # Keeping every number tied to evidence: a claims registry and a verifier in CI
 ## 1 Introduction
+
 Any text that cites figures from outside itself, from code, data or experiments, can differ from its source, whether it is written by a person or by an AI. Working with LLMs makes writing faster, but it also produces more text than there is time to check. The mechanical part of this check, making sure that each figure matches its source, can be done by code. This way, people can devote their attention to what code does not judge: whether the reasoning holds up.
 
+This report presents a method for keeping every figure in a text tied to its source: a registry with one row per figure, and a verifier that runs in continuous integration (CI) and checks that every registered figure matches its source. Figures in the text that are not in the registry are not checked. The case is my Polar Projector paper, as it was published. The report was written in one week with Actuarii, my governance kit for coding agents. With it, the agent can write to governed paths only with a receipt issued by a validator outside the model, and each commit that changes a governed path records which writes went through that channel and which did not. The report counts what was recorded.
 ## 2.1 What the verifier checked
 
 Table 1 lists, for each direction between the registry, the code and the text, whether a check in the case started
