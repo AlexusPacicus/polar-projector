@@ -4,6 +4,16 @@
 Any text that cites figures from outside itself, from code, data or experiments, can differ from its source, whether it is written by a person or by an AI. Working with LLMs makes writing faster, but it also produces more text than there is time to check. The mechanical part of this check, making sure that each figure matches its source, can be done by code. This way, people can devote their attention to what code does not judge: whether the reasoning holds up.
 
 This report presents a method for keeping every figure in a text tied to its source: a registry with one row per figure, and a verifier that runs in continuous integration (CI) and checks that every registered figure matches its source. Figures in the text that are not in the registry are not checked. The case is my Polar Projector paper, as it was published. The report was written in one week with Actuarii, my governance kit for coding agents. With it, the agent can write to governed paths only with a receipt issued by a validator outside the model, and each commit that changes a governed path records which writes went through that channel and which did not. The report counts what was recorded.
+
+## 1.1 The case as it was
+
+The Polar Projector is an operator that places a note's embedding without reading the corpus, so its cost per vector does not depend on the size of the corpus. It returns a projection coefficient and an orthogonal residual. The paper mainly measures that cost and the recall of each query's nearest neighbours.
+
+The registry, `paper/claims.md`, holds one row per claim, with an identifier and a status, and its rule is that nothing enters the text without a row. It has 42 rows: 31 `checked`, whose figures the verifier checks; 4 `construction`, facts read from the code, which name their source instead of a check; and 7 `remove`, which must not appear in the paper.
+
+Not every experiment in the paper was pre-registered, so each row carries a label: `yes (commit)`, if the protocol was committed before its results; `no`, if the script and the results entered in the same commit; and `post hoc`, if it was specified after seeing the result. What backs each label is the order of the commits.
+
+
 ## 2.1 What the verifier checked
 
 Table 1 lists, for each direction between the registry, the code and the text, whether a check in the case started
