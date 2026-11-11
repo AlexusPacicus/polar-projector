@@ -1,9 +1,14 @@
 # Keeping every number tied to evidence: a claims registry and a verifier in CI
+
+## Abstract
+
+Any text that cites figures from code, data or experiments can drift from its source, whether it is written by a person or an AI. This report describes a method for keeping every figure tied to its source: a registry with one row per figure, and a verifier in CI that checks that every figure registered as checked matches its artifact. The case is my Polar Projector paper: the verifier checks the registered figures, but not whether the code does what the text describes, as happened with figures that passed it and were later retracted. As a pilot, the report was written with Actuarii, my governance kit for coding agents, and it counts which writes went through its channel. The method gives traceability, not reproducibility.
+
 ## 1 Introduction
 
 Any text that cites figures from outside itself, from code, data or experiments, can differ from its source, whether it is written by a person or by an AI. Working with LLMs makes writing faster, but it also produces more text than there is time to check. The mechanical part of this check, making sure that each figure matches its source, can be done by code. This way, people can devote their attention to what code does not judge: whether the reasoning holds up.
 
-This report presents a method for keeping every figure in a text tied to its source: a registry with one row per figure, and a verifier that runs in continuous integration (CI) and checks that every registered figure matches its source. Figures in the text that are not in the registry are not checked. The case is my Polar Projector paper, as it was published. The report was written in one week with Actuarii, my governance kit for coding agents. With it, the agent can write to governed paths only with a receipt issued by a validator outside the model, and each commit that changes a governed path records which writes went through that channel and which did not. The report counts what was recorded.
+This report presents a method for keeping every figure in a text tied to its source: a registry with one row per figure, and a verifier that runs in continuous integration (CI) and checks that every figure registered as checked matches its source. Figures in the text that are not in the registry are not checked. The case is my Polar Projector paper, as it was published. The report was written in one week with Actuarii, my governance kit for coding agents. With it, the agent can write to governed paths only with a receipt issued by a validator outside the model, and each commit that changes a governed path records which writes went through that channel and which did not. The report counts what was recorded.
 
 ## 1.1 The case as it was
 
@@ -12,7 +17,6 @@ The Polar Projector is an operator that places a note's embedding without readin
 The registry, `paper/claims.md`, holds one row per claim, with an identifier and a status, and its rule is that nothing enters the text without a row. It has 42 rows: 31 `checked`, whose figures the verifier checks; 4 `construction`, facts read from the code, which name their source instead of a check; and 7 `remove`, which must not appear in the paper.
 
 Not every experiment in the paper was pre-registered, so each row carries a label: `yes (commit)`, if the protocol was committed before its results; `no`, if the script and the results entered in the same commit; and `post hoc`, if it was specified after seeing the result. What backs each label is the order of the commits.
-
 
 ## 2.1 What the verifier checked
 
@@ -76,7 +80,7 @@ rule, not by code. "Outside the channel" does not mean written by the human; the
 declaration. The write and denial counts come from local records outside the repository; CI checks no count. No
 hypothesis is tested.
 
-## 4. Limits
+## 4 Limits
 
 The verifier works in any order: it compares the text with the artifacts whenever it runs. Pre-registration only needs the protocol to be committed before the results. Committing the claim and its row first adds one more guarantee: the claim cannot be chosen once the results are known. The case did not follow that full order: the registry was created when part of the manuscript already existed, and not every experiment was pre-registered.
 
@@ -88,8 +92,12 @@ The method gives traceability, not reproducibility. Each registered figure is ti
 
 The method has been applied to only one case, a paper by a single author. The pilot observes one week, the week in which this note was written, and the verifier itself was written by an LLM. It is an early observation, not an evaluation: it remains to be seen whether the method works for other texts, other authors or other verifiers.
 
+## 5 Conclusion
+
+The method checks on every push that every figure registered as checked still matches its artifact, without relying on manual review. What it does not judge is whether the code does what the text describes: that still needs review, as C16 showed. The next step is to tie the entire laboratory to the text, not just the figures, and to test the method on other texts.
+
 ## Who did what
 
-The author wrote the introduction, the contribution, §1.1, the limits and the abstract, and approved every figure. The
+The author wrote the introduction, the contribution, §1.1, the limits, the conclusion and the abstract, and approved every figure. The
 agent drafted §2.1, Table 1, §2.2 and §3, kept the registry and changed the verifier through the governed channel. The
 preparation work was done by an agent outside the channel, as §3 says.
