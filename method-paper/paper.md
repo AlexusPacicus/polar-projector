@@ -44,3 +44,19 @@ second.
 | Registry → text | Each row's claim is printed, and no `remove` row is | Only through code, for checked rows | — |
 | None | What a sentence says about a figure | Not checked | — |
 
+## 2.2 The same check on this note
+
+This note has a registry of its own, `method-paper/claims.md`, with one row per figure; each row says where its figure
+comes from.
+
+The verifier changed as little as possible to cover the note. It now reads the note's registry and its text as well, and
+it adds one check for each figure the note prints about the case. Each check stores the figure as it is printed and, on
+every run, compares it with a count made on the case's files as they stand now (`_case_checks` in
+`tools/verify_paper_tables.py`).
+
+The note's registry goes through the same checks as the case's registry in §2.1. Every row marked `checked` must name a
+check that exists, and every figure so checked must appear in the note.
+
+The same limit holds. The verifier confirms that a figure is printed in the note, not where. The single-character
+figures of §1.1 are compared with the case, but they are not searched for in the text.
+
