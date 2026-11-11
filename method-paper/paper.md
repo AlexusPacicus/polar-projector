@@ -60,3 +60,14 @@ check that exists, and every figure so checked must appear in the note.
 The same limit holds. The verifier confirms that a figure is printed in the note, not where. The single-character
 figures of §1.1 are compared with the case, but they are not searched for in the text.
 
+## 4. Limits
+
+The verifier works in any order: it compares the text with the artifacts whenever it runs. Pre-registration only needs the protocol to be committed before the results. Committing the claim and its row first adds one more guarantee: the claim cannot be chosen once the results are known. The case did not follow that full order: the registry was created when part of the manuscript already existed, and not every experiment was pre-registered.
+
+The order of the commits backs the label yes (commit), but it does not show whether the protocol changed after a result was seen. This happened in E1, the paper’s drift experiment: after the first run, the way the results were aggregated changed, and the change went into the results commit (1e9d217), whose message explains it. Its rows are still labelled as pre-registered.
+
+A figure in the text that matches its artifact does not prove that the code does what the text describes. The text, the code and the checks all come from the same author, so their agreement does not show that any of them is right. This happened with C16: its figures passed the verifier and were later retracted, because the code that produced them re-transformed every earlier point with each batch. The verifier did not catch it; a code review done with agents did. Tests written from the claim before the code, with checks in both directions between the registry, the text and the code, in the order set out in the first paragraph, would catch part of this; the rest needs judgment about what the code measures. Neither was tested here.
+
+The method gives traceability, not reproducibility. Each registered figure is tied to the stored artifact that contains it, but not to the data, the environment or the procedure that produced it: the verifier compares with what was stored and does not recompute it, except in the tables in Appendices B and C. Achieving complete reproducibility, the entire laboratory, is left for future work.
+
+The method has been applied to only one case, a paper by a single author. The pilot observes one week, the week in which this note was written, and the verifier itself was written by an LLM. It is an early observation, not an evaluation: it remains to be seen whether the method works for other texts, other authors or other verifiers.
