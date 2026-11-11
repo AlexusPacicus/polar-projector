@@ -60,6 +60,22 @@ check that exists, and every figure so checked must appear in the note.
 The same limit holds. The verifier confirms that a figure is printed in the note, not where. The single-character
 figures of §1.1 are compared with the case, but they are not searched for in the text.
 
+## 3 This note written under Actuarii
+
+The pilot has one author and one week, from installing Actuarii (2f7ce81, outside the range) to cutoff d41bd0b. Later
+commits, this one and the abstract's among them, are not counted. An agent did the preparation outside the channel,
+including what it produced beyond its tasks. Actuarii did not govern the case.
+
+The agent made 42 governed writes with a receipt, leaving out an edit the author rejected. The range has 4 commits with
+a Human-Record trailer and 0 changes to governed paths with neither receipt nor trailer. The gate denied 4 writes.
+Separately, the validator rejected 1 proposal. One governed file, method-paper/paper.md, changed outside the channel,
+in 4 commits: the author's sections, written by hand, as the author declares.
+
+The model writes each receipt's rationale, which is not the reason for the change. No count reads it, by a written
+rule, not by code. "Outside the channel" does not mean written by the human; the Human-Record trailer is a
+declaration. The write and denial counts come from local records outside the repository; CI checks no count. No
+hypothesis is tested.
+
 ## 4. Limits
 
 The verifier works in any order: it compares the text with the artifacts whenever it runs. Pre-registration only needs the protocol to be committed before the results. Committing the claim and its row first adds one more guarantee: the claim cannot be chosen once the results are known. The case did not follow that full order: the registry was created when part of the manuscript already existed, and not every experiment was pre-registered.
@@ -71,3 +87,9 @@ A figure in the text that matches its artifact does not prove that the code does
 The method gives traceability, not reproducibility. Each registered figure is tied to the stored artifact that contains it, but not to the data, the environment or the procedure that produced it: the verifier compares with what was stored and does not recompute it, except in the tables in Appendices B and C. Achieving complete reproducibility, the entire laboratory, is left for future work.
 
 The method has been applied to only one case, a paper by a single author. The pilot observes one week, the week in which this note was written, and the verifier itself was written by an LLM. It is an early observation, not an evaluation: it remains to be seen whether the method works for other texts, other authors or other verifiers.
+
+## Who did what
+
+The author wrote the introduction, the contribution, §1.1, the limits and the abstract, and approved every figure. The
+agent drafted §2.1, Table 1, §2.2 and §3, kept the registry and changed the verifier through the governed channel. The
+preparation work was done by an agent outside the channel, as §3 says.
