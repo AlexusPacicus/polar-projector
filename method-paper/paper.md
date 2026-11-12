@@ -73,7 +73,7 @@ including what it produced beyond its tasks. Actuarii did not govern the case.
 The agent made 42 governed writes with a receipt, leaving out an edit the author rejected. The range has 4 commits with
 a Human-Record trailer and 0 changes to governed paths with neither receipt nor trailer. The gate denied 4 writes.
 Separately, the validator rejected 1 proposal. One governed file, method-paper/paper.md, changed outside the channel,
-in 4 commits: the author's sections, written by hand, as the author declares.
+in 4 commits: the author’s sections, written by the author with language corrections from Claude in a chat session, outside the channel.
 
 The model writes each receipt's rationale, which is not the reason for the change. No count reads it, by a written
 rule, not by code. "Outside the channel" does not mean written by the human; the Human-Record trailer is a
@@ -101,3 +101,4 @@ The method checks on every push that every figure registered as checked still ma
 The author wrote the introduction, the contribution, §1.1, the limits, the conclusion and the abstract, and approved every figure. The
 agent drafted §2.1, Table 1, §2.2 and §3, kept the registry and changed the verifier through the governed channel. The
 preparation work was done by an agent outside the channel, as §3 says.
+The author’s sections were written with suggestions and language corrections from Claude, in a chat session outside the channel. Claude also assembled a first draft of the abstract, in Spanish, from the author’s own sentences; the author rewrote part of it and translated it.
